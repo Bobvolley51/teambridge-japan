@@ -36,7 +36,7 @@ async function runSearch(query) {
     supabase.from('events').select('id, title, category, start_time').ilike('title', like).limit(5),
     supabase.from('tasks').select('id, title, status, priority').ilike('title', like).limit(5),
     supabase.from('announcements').select('id, title, content').ilike('title', like).limit(5),
-    supabase.from('trips').select('id, destination, depart_date').ilike('destination', like).limit(5),
+    supabase.from('travel_trips').select('id, title, start_date, location').ilike('title', like).limit(5),
     supabase.from('profiles').select('id, display_name, role, email').or(`display_name.ilike.${like},email.ilike.${like}`).limit(5),
   ]);
 
@@ -53,7 +53,7 @@ async function runSearch(query) {
     results.push({ type: 'announcement', id: a.id, title: a.title, sub: a.content?.slice(0, 60) ?? '' });
   }
   for (const tr of trips ?? []) {
-    results.push({ type: 'trip', id: tr.id, title: tr.destination, sub: tr.depart_date ?? '' });
+    results.push({ type: 'trip', id: tr.id, title: tr.title, sub: [tr.start_date, tr.location].filter(Boolean).join(' · ') });
   }
   for (const p of profiles ?? []) {
     results.push({ type: 'profile', id: p.id, title: p.display_name || p.email, sub: p.role ?? '' });

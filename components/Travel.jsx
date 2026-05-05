@@ -6,7 +6,7 @@ import { useToast } from '@/lib/toast';
 import { SkeletonCardBlock } from './Skeleton';
 import styles from './Travel.module.css';
 
-const EDIT_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
+const EDIT_ROLES = ['Staff/Orga', 'GM'];
 
 function buildTemplate(startDate, lang) {
   const d0 = startDate;
@@ -540,9 +540,12 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
 
   const loadTrips = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('travel_trips').select('*').order('start_date', { ascending: false });
-    setTrips(data ?? []);
-    setLoading(false);
+    try {
+      const { data } = await supabase.from('travel_trips').select('*').order('start_date', { ascending: false });
+      setTrips(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const loadTripData = useCallback(async (tripId) => {
