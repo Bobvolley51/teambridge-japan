@@ -1,0 +1,681 @@
+/* components/Chat.module.css */
+
+.wrapper {
+  display: flex;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 170px;
+  flex-shrink: 0;
+  background: #f9fafb;
+  border-right: 1px solid #e5e7eb;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 2px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 4px 6px;
+}
+
+.manageBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+.manageBtn:hover { color: #4b5563; background: #e5e7eb; }
+
+.channelItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s, color 0.1s;
+}
+
+.channelItem:hover { background: #f3f4f6; color: #374151; }
+
+.channelActive {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.hash {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Chat area */
+.chatArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.headerChannel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.headerDesc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 8px;
+}
+
+.headerCount {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  font-size: 13px;
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+.errorDismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+/* Message list */
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loadingText,
+.emptyText {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Message */
+.message {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.messageMe {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatarMe {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.messageBody {
+  max-width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.messageMe .messageHeader {
+  flex-direction: row-reverse;
+}
+
+.userName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.time {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.content {
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.55;
+  background: #f3f4f6;
+  padding: 8px 11px;
+  border-radius: 12px;
+  border-top-left-radius: 3px;
+  margin: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.messageMe .content {
+  background: #2563eb;
+  color: #ffffff;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 3px;
+}
+
+.translateBtn {
+  font-size: 11px;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  font-family: inherit;
+  align-self: flex-start;
+  transition: color 0.15s;
+}
+
+.translateBtn:hover:not(:disabled) { color: #4f46e5; }
+.translateBtn:disabled { opacity: 0.5; }
+
+.translation {
+  font-size: 12px;
+  color: #4b5563;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  line-height: 1.5;
+}
+
+.translationLabel {
+  font-weight: 600;
+  margin-right: 5px;
+  color: #6366f1;
+}
+
+/* Input bar */
+.inputBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.input:focus { border-color: #6366f1; background: #ffffff; }
+.input:disabled { opacity: 0.6; }
+
+.sendButton {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.sendButton:hover:not(:disabled) { background: #1d4ed8; }
+.sendButton:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Channel Management Modal ───────────────────────────────── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.manageModal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.manageHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.manageBack {
+  font-size: 12px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+.manageBack:hover { background: #f3f4f6; }
+
+.manageTitle {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.manageClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.1s;
+}
+.manageClose:hover { background: #f3f4f6; color: #374151; }
+
+.manageError {
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  padding: 8px 20px;
+  flex-shrink: 0;
+}
+
+.manageBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.createChannelBtn {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  align-self: flex-start;
+  transition: background 0.15s;
+  margin-bottom: 6px;
+}
+.createChannelBtn:hover { background: #1d4ed8; }
+
+.channelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.channelRowInfo { flex: 1; min-width: 0; }
+
+.channelRowName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.channelRowDesc {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channelRowActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rowBtn {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+}
+.rowBtn:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+.rowBtnDanger { color: #dc2626; border-color: #fecaca; }
+.rowBtnDanger:hover { background: #fef2f2; border-color: #f87171; }
+
+.formLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: -4px;
+}
+
+.formInput {
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.formInput:focus { border-color: #6366f1; background: #fff; }
+
+.formSelect {
+  flex: 1;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.formSelect:focus { border-color: #6366f1; }
+
+.slugPreview {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: monospace;
+  margin-top: -6px;
+}
+
+.saveBtn {
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  align-self: flex-start;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.saveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.addMemberRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.emptyMembers {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.memberName {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+}
+
+/* ── @mention inline highlight ──────────────────────────────── */
+
+.mention {
+  display: inline;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.messageMe .mention {
+  background: rgba(255,255,255,0.25);
+  color: #ffffff;
+}
+
+/* ── @mention autocomplete dropdown ─────────────────────────── */
+
+.inputWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mentionDropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 16px;
+  right: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.mentionItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f3f4f6;
+}
+.mentionItem:last-child { border-bottom: none; }
+.mentionItem:hover { background: #f9fafb; }
+
+.mentionItemActive { background: #eff6ff; }
+.mentionItemActive:hover { background: #dbeafe; }
+
+.mentionName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.mentionEmail {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ── Mobile Chat ─────────────────────────────── */
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobileChanBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mobileChanBtn:active { background: #e5e7eb; }
+
+.mobileOverlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    top: 44px;
+    left: 0;
+    bottom: 60px;
+    width: 220px;
+    z-index: 50;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+    background: #f9fafb;
+  }
+
+  .sidebarMobileOpen {
+    display: flex;
+  }
+
+  .mobileChanBtn {
+    display: flex;
+  }
+
+  .mobileOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.3);
+  }
+}

@@ -1,0 +1,240 @@
+/* components/WellnessCheck.module.css */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.headerEmoji { font-size: 34px; }
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Progress bar */
+.progress {
+  height: 3px;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.progressBar {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.3s ease;
+}
+
+/* Questions */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.qBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qText {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.qNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Scale row */
+.scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scaleLabel {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.scaleBtns {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.scaleBtn {
+  flex: 1;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  padding: 0;
+}
+
+.scaleBtn:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px 20px;
+  border-top: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.skipBtn {
+  padding: 8px 16px;
+  font-size: 13px;
+  background: none;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.skipBtn:hover { background: #f9fafb; }
+
+.submitBtn {
+  padding: 8px 28px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.submitBtn:hover:not(:disabled) { background: #1d4ed8; }
+.submitBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.privacyNote {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.backBtn {
+  padding: 8px 16px;
+  font-size: 13px;
+  background: none;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.backBtn:hover { background: #f9fafb; }
+
+/* Body parts grid */
+.partsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.partBtn {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: center;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.12s;
+}
+.partBtn:hover { border-color: #f87171; background: #fef2f2; color: #dc2626; }
+
+.partBtnSelected {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.noPainHint {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  margin-top: 4px;
+}
