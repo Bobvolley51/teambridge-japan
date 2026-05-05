@@ -18,9 +18,11 @@ import SessionRPE            from '@/components/SessionRPE';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
 import NotificationBell      from '@/components/NotificationBell';
 import PrivacyNotice, { PRIVACY_VERSION } from '@/components/PrivacyNotice';
+import { ToastProvider } from '@/lib/toast';
 import Tactics               from '@/components/Tactics';
 import Travel                from '@/components/Travel';
 import PlayerStats           from '@/components/PlayerStats';
+import GlobalSearch          from '@/components/GlobalSearch';
 import styles                from './page.module.css';
 
 const NAV_BASE = [
@@ -54,6 +56,8 @@ export default function Home() {
   const [showRPE,          setShowRPE]          = useState(false);
   const [pendingRPEEvents, setPendingRPEEvents] = useState([]);
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
+  const [unreadChat,       setUnreadChat]       = useState(0);
+  const [showSearch,       setShowSearch]       = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -63,6 +67,32 @@ export default function Home() {
     );
     return () => subscription.unsubscribe();
   }, []);
+
+  // Global search keyboard shortcut
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Unread chat badge — count new messages while user is away from Chat tab
+  useEffect(() => {
+    if (!session?.user) return;
+    const userId = session.user.id;
+    const ch = supabase.channel('unread-chat')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
+        if (p.new.sender_id !== userId) {
+          setUnreadChat(n => n + 1);
+        }
+      })
+      .subscribe();
+    return () => ch.unsubscribe();
+  }, [session?.user?.id]);
 
   const checkPerfAlerts = async () => {
     const since = new Date();
@@ -217,6 +247,7 @@ export default function Home() {
   ];
 
   return (
+    <ToastProvider>
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.logo}>
@@ -224,6 +255,9 @@ export default function Home() {
           <span className={styles.logoText}>{lang === 'ja' ? 'チームブリッジ' : 'TeamBridge Japan'}</span>
         </div>
         <div className={styles.headerRight}>
+          <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
+            🔍
+          </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
           <NotificationBell userId={user.id} lang={lang} onNavigate={setNav} />
@@ -236,11 +270,14 @@ export default function Home() {
           {nav_items.map(item => (
             <button key={item.id}
               className={`${styles.navItem} ${nav===item.id?styles.navActive:''}`}
-              onClick={() => setNav(item.id)}>
+              onClick={() => { setNav(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
               <span className={styles.navIcon}>{item.icon}</span>
               {item.label[lang]}
               {item.id === 'performance' && perfAlertCount > 0 && (
                 <span className={styles.navBadge}>{perfAlertCount}</span>
+              )}
+              {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
+                <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
               )}
             </button>
           ))}
@@ -265,17 +302,24 @@ export default function Home() {
         {nav_items.map(item => (
           <button key={item.id}
             className={`${styles.mobileNavItem} ${nav===item.id?styles.mobileNavActive:''}`}
-            onClick={() => setNav(item.id)}>
+            onClick={() => { setNav(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
             <span className={styles.mobileNavIconWrap}>
               {item.icon}
               {item.id === 'performance' && perfAlertCount > 0 && (
                 <span className={styles.mobileNavBadge}>{perfAlertCount}</span>
+              )}
+              {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
+                <span className={styles.mobileNavBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
               )}
             </span>
             {item.label[lang]}
           </button>
         ))}
       </nav>
+
+      {showSearch && (
+        <GlobalSearch lang={lang} onNavigate={setNav} onClose={() => setShowSearch(false)} />
+      )}
 
       {showPrivacy && (
         <PrivacyNotice
@@ -305,5 +349,6 @@ export default function Home() {
         />
       )}
     </div>
+    </ToastProvider>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/toast';
+import { SkeletonCardBlock } from './Skeleton';
 import styles from './Tasks.module.css';
 
 const COLUMNS = [
@@ -71,38 +73,87 @@ function PriorityDot({ priority }) {
 
 // ── Task card ─────────────────────────────────────────────────────────────────
 
-function TaskCard({ task, lang, profiles, onEdit, onDelete }) {
+const SWIPE_THRESHOLD = 72;
+
+function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
   const assignee = profiles.find(p => p.id === task.assigned_to);
   const assigneeName = assignee ? profileName(assignee) : (task.assignee || null);
   const overdue = isOverdue(task.due_date);
 
+  const touchX   = useRef(null);
+  const [offset, setOffset] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+
+  const handleTouchStart = (e) => {
+    touchX.current = e.touches[0].clientX;
+    setSwiping(false);
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchX.current === null) return;
+    const dx = e.touches[0].clientX - touchX.current;
+    if (Math.abs(dx) > 8) setSwiping(true);
+    setOffset(Math.max(-120, Math.min(120, dx)));
+  };
+
+  const handleTouchEnd = () => {
+    if (offset > SWIPE_THRESHOLD && task.status !== 'done') {
+      onMove(task.id, 'done');
+    } else if (offset < -SWIPE_THRESHOLD) {
+      onDelete(task.id);
+    }
+    setOffset(0);
+    setSwiping(false);
+    touchX.current = null;
+  };
+
+  const showComplete = offset > 20 && task.status !== 'done';
+  const showDelete   = offset < -20;
+
   return (
-    <div
-      className={styles.card}
-      draggable
-      onDragStart={(e) => e.dataTransfer.setData('taskId', task.id)}
-      onClick={() => onEdit(task)}
-    >
-      <p className={styles.cardTitle}>{task.title}</p>
-      {task.description && (
-        <p className={styles.cardDesc}>{task.description}</p>
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 10 }}>
+      {/* Swipe hint backgrounds */}
+      {showComplete && (
+        <div style={{ position: 'absolute', inset: 0, background: '#dcfce7', display: 'flex', alignItems: 'center', paddingLeft: 16, borderRadius: 10 }}>
+          <span style={{ fontSize: 18 }}>✅</span>
+        </div>
       )}
-      {task.due_date && (
-        <span className={`${styles.dueChip} ${overdue ? styles.overdueChip : ''}`}>
-          {overdue ? '⚠ ' : '📅 '}{formatDue(task.due_date, lang)}
-        </span>
+      {showDelete && (
+        <div style={{ position: 'absolute', inset: 0, background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 16, borderRadius: 10 }}>
+          <span style={{ fontSize: 18 }}>🗑️</span>
+        </div>
       )}
-      <div className={styles.cardFooter}>
-        {assigneeName
-          ? <span className={styles.assignee}>{assigneeName}</span>
-          : <span />}
-        <div className={styles.cardRight}>
-          <PriorityDot priority={task.priority} />
-          <button
-            className={styles.deleteBtn}
-            onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
-            aria-label={tr('delete', lang)}
-          >×</button>
+      <div
+        className={styles.card}
+        draggable={!swiping}
+        onDragStart={(e) => e.dataTransfer.setData('taskId', task.id)}
+        onClick={() => !swiping && onEdit(task)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ transform: `translateX(${offset}px)`, transition: offset === 0 ? 'transform 0.2s ease' : 'none', willChange: 'transform' }}
+      >
+        <p className={styles.cardTitle}>{task.title}</p>
+        {task.description && (
+          <p className={styles.cardDesc}>{task.description}</p>
+        )}
+        {task.due_date && (
+          <span className={`${styles.dueChip} ${overdue ? styles.overdueChip : ''}`}>
+            {overdue ? '⚠ ' : '📅 '}{formatDue(task.due_date, lang)}
+          </span>
+        )}
+        <div className={styles.cardFooter}>
+          {assigneeName
+            ? <span className={styles.assignee}>{assigneeName}</span>
+            : <span />}
+          <div className={styles.cardRight}>
+            <PriorityDot priority={task.priority} />
+            <button
+              className={styles.deleteBtn}
+              onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+              aria-label={tr('delete', lang)}
+            >×</button>
+          </div>
         </div>
       </div>
     </div>
@@ -277,6 +328,7 @@ function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onC
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Tasks({ lang = 'en', profile }) {
+  const toast = useToast();
   const [tasks,          setTasks]          = useState([]);
   const [profiles,       setProfiles]       = useState([]);
   const [loading,        setLoading]        = useState(true);
@@ -336,6 +388,7 @@ export default function Tasks({ lang = 'en', profile }) {
     if (form.id) {
       const { error: err } = await supabase.from('tasks').update(payload).eq('id', form.id);
       if (err) { setError('Could not update task: ' + err.message); return; }
+      toast(lang === 'ja' ? 'タスクを更新しました' : 'Task updated', 'success');
     } else {
       const optimistic = { ...payload, id: crypto.randomUUID(), created_at: new Date().toISOString(), _optimistic: true };
       setTasks(prev => [...prev, optimistic]);
@@ -345,9 +398,10 @@ export default function Tasks({ lang = 'en', profile }) {
         setTasks(prev => prev.filter(t => t.id !== optimistic.id));
         return;
       }
+      toast(lang === 'ja' ? 'タスクを作成しました' : 'Task created', 'success');
     }
     setEditingTask(null);
-  }, [profiles]);
+  }, [profiles, lang, toast]);
 
   const moveTask = useCallback(async (taskId, newStatus) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
@@ -360,7 +414,8 @@ export default function Tasks({ lang = 'en', profile }) {
     setEditingTask(null);
     const { error: err } = await supabase.from('tasks').delete().eq('id', taskId);
     if (err) setError('Could not delete task: ' + err.message);
-  }, []);
+    else toast(lang === 'ja' ? 'タスクを削除しました' : 'Task deleted', 'info');
+  }, [lang, toast]);
 
   const handleFilterChange = useCallback((type, value) => {
     if (type === 'priority') setFilterPriority(value);
@@ -379,7 +434,13 @@ export default function Tasks({ lang = 'en', profile }) {
       return a.due_date.localeCompare(b.due_date);
     });
 
-  if (loading) return <div className={styles.loading}>{tr('loading', lang)}</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', gap: 16, padding: '16px 0' }}>
+      <SkeletonCardBlock lines={4} />
+      <SkeletonCardBlock lines={4} />
+      <SkeletonCardBlock lines={3} />
+    </div>
+  );
 
   return (
     <div className={styles.wrapper}>
@@ -433,6 +494,7 @@ export default function Tasks({ lang = 'en', profile }) {
                       profiles={profiles}
                       onEdit={setEditingTask}
                       onDelete={deleteTask}
+                      onMove={moveTask}
                     />
                   ))
                 }

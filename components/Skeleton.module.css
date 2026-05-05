@@ -1,0 +1,64 @@
+/* Skeleton shimmer loader */
+.base {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+  display: block;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Preset shapes */
+.line {
+  composes: base;
+  height: 14px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.lineShort {
+  composes: base;
+  height: 14px;
+  width: 60%;
+  margin-bottom: 8px;
+}
+
+.lineThin {
+  composes: base;
+  height: 10px;
+  width: 80%;
+  margin-bottom: 6px;
+}
+
+.circle {
+  composes: base;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.card {
+  composes: base;
+  border-radius: 12px;
+  width: 100%;
+}
+
+/* Composed blocks */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

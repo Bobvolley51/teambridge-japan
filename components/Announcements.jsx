@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/date';
+import { useToast } from '@/lib/toast';
 import styles from './Announcements.module.css';
 
 const PRIORITY_CONFIG = {
@@ -131,6 +132,7 @@ function NewAnnouncementForm({ lang, onPost, onClose }) {
 }
 
 export default function Announcements({ lang = 'en', currentUserName = 'Team Member' }) {
+  const toast = useToast();
   const [announcements, setAnnouncements] = useState([]);
   const [readCounts,    setReadCounts]    = useState({});
   const [totalUsers,    setTotalUsers]    = useState(null);
@@ -219,6 +221,7 @@ export default function Announcements({ lang = 'en', currentUserName = 'Team Mem
     }).select('id').single();
 
     if (err) { setError('Could not post: ' + err.message); return; }
+    toast(lang === 'ja' ? 'お知らせを投稿しました' : 'Announcement posted', 'success');
 
     const { data: profiles } = await supabase.from('profiles').select('id');
     if (profiles?.length) {

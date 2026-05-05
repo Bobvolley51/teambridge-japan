@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/date';
+import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -287,9 +288,15 @@ export default function Dashboard({
       </div>
 
       {loading ? (
-        <div className={styles.loadingWrap}>
-          <span className={styles.loadingDot} />
-          <span>{lang === 'ja' ? '読込中...' : 'Loading…'}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <SkeletonCardBlock lines={4} />
+            <SkeletonCardBlock lines={4} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <SkeletonCardBlock lines={3} />
+            <SkeletonCardBlock lines={3} />
+          </div>
         </div>
       ) : (
         <>

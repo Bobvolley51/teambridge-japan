@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/toast';
+import { SkeletonLine } from './Skeleton';
 import styles from './Calendar.module.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -792,6 +794,7 @@ function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
 // ── Main Calendar ─────────────────────────────────────────────────────────────
 
 export default function Calendar({ lang = 'en', currentUserName = '', role = 'Player', currentUserId = null }) {
+  const toast = useToast();
   const today = new Date();
   const [view,      setView]      = useState('month');
   const [current,   setCurrent]   = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -925,7 +928,9 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
 
         <div className={styles.upHead}>{lang === 'ja' ? '今後の予定' : 'Upcoming'}</div>
         {loading ? (
-          <p className={styles.loadTxt}>{lang === 'ja' ? '読込中...' : 'Loading…'}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+            {[70, 55, 80, 60].map((w, i) => <SkeletonLine key={i} width={`${w}%`} height={13} style={{ marginBottom: 0 }} />)}
+          </div>
         ) : upcomingEvents.length === 0 ? (
           <p className={styles.emptyTxt}>{lang === 'ja' ? '予定がありません。' : 'No upcoming events.'}</p>
         ) : (
@@ -952,16 +957,21 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
 
       {canEdit && showForm && (
         <EventForm lang={lang} initialDate={formDate} currentUserName={currentUserName} currentUserId={currentUserId}
-          profiles={profiles} onSave={loadEvents} onClose={() => setShowForm(false)} />
+          profiles={profiles}
+          onSave={() => { loadEvents(); toast(lang === 'ja' ? '予定を作成しました' : 'Event created', 'success'); }}
+          onClose={() => setShowForm(false)} />
       )}
       {canEdit && editingEvent && (
         <EventForm lang={lang} event={editingEvent} currentUserName={currentUserName} currentUserId={currentUserId}
-          profiles={profiles} onSave={loadEvents} onClose={() => setEditingEvent(null)} />
+          profiles={profiles}
+          onSave={() => { loadEvents(); toast(lang === 'ja' ? '予定を更新しました' : 'Event updated', 'success'); }}
+          onClose={() => setEditingEvent(null)} />
       )}
       {detailEv && (
         <EventDetail event={detailEv} lang={lang} canEdit={canEdit} currentUserId={currentUserId}
           onEdit={ev => { setDetailEv(null); setEditingEvent(ev); }}
-          onDelete={loadEvents} onClose={() => setDetailEv(null)} />
+          onDelete={() => { loadEvents(); toast(lang === 'ja' ? '予定を削除しました' : 'Event deleted', 'info'); }}
+          onClose={() => setDetailEv(null)} />
       )}
     </div>
   );

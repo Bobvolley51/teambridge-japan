@@ -44,6 +44,26 @@
   gap: 6px;
 }
 
+.searchBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.1s, border-color 0.1s;
+  color: #6b7280;
+}
+
+.searchBtn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .langBtn {
   font-size: 11px;
   padding: 3px 10px;

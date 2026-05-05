@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SkeletonList } from './Skeleton';
 import styles from './Chat.module.css';
 
 const MAX_HISTORY = 50;
@@ -585,9 +586,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         {/* Message list */}
         <div className={styles.messageList}>
           {loading && (
-            <p className={styles.loadingText}>
-              {uiLang === 'ja' ? 'メッセージを読み込み中...' : 'Loading messages…'}
-            </p>
+            <div style={{ padding: '16px 8px' }}>
+              <SkeletonList rows={5} />
+            </div>
           )}
           {!loading && messages.length === 0 && (
             <p className={styles.emptyText}>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/toast';
+import { SkeletonCardBlock } from './Skeleton';
 import styles from './Travel.module.css';
 
 const EDIT_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
@@ -514,6 +516,7 @@ function PackingSection({ trip, packingItems, myChecks, setMyChecks, canEdit, us
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
+  const toast   = useToast();
   const canEdit = EDIT_ROLES.includes(profile?.role);
   const userId  = profile?.id ?? null;
 
@@ -587,6 +590,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
     setTrips(prev => prev.filter(t => t.id !== trip.id));
     if (selectedTrip?.id === trip.id) setSelectedTrip(null);
     setDeleting(null);
+    toast(lang === 'ja' ? '旅程を削除しました' : 'Trip deleted', 'info');
   };
 
   const handleDeleteItem = async (item) => {
@@ -618,7 +622,11 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
         </div>
         <div className={styles.tripList}>
           {loading ? (
-            <div className={styles.hint}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
+              <SkeletonCardBlock lines={2} />
+              <SkeletonCardBlock lines={2} />
+              <SkeletonCardBlock lines={2} />
+            </div>
           ) : trips.length === 0 ? (
             <div className={styles.hint}>{lang === 'ja' ? '旅程がありません。' : 'No trips yet.'}</div>
           ) : trips.map(trip => {
@@ -708,7 +716,10 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
             {/* Daily rundown */}
             <div className={styles.rundown}>
               {loadingData ? (
-                <div className={styles.hint}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <SkeletonCardBlock lines={3} />
+                  <SkeletonCardBlock lines={3} />
+                </div>
               ) : tripDates.map((date, dayIdx) => {
                 const dayItems = (itemsByDate[date] ?? []).slice().sort((a, b) => {
                   if (!a.item_time && !b.item_time) return 0;
@@ -765,6 +776,9 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
             if (editingTrip) {
               const { data } = await supabase.from('travel_trips').select('*').eq('id', editingTrip.id).single();
               if (data) setSelectedTrip(data);
+              toast(lang === 'ja' ? '旅程を更新しました' : 'Trip updated', 'success');
+            } else {
+              toast(lang === 'ja' ? '旅程を作成しました' : 'Trip created', 'success');
             }
           }}
           onClose={() => setShowTripModal(false)} />
@@ -772,7 +786,8 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
       {showItemModal && selectedTrip && (
         <ItemModal item={editingItem} tripId={selectedTrip.id} tripDates={tripDates} lang={lang}
           defaultDate={itemDefaultDate} defaultType={itemDefaultType}
-          onSave={() => loadTripData(selectedTrip.id)} onClose={() => setShowItemModal(false)} />
+          onSave={() => { loadTripData(selectedTrip.id); toast(lang === 'ja' ? '項目を保存しました' : 'Item saved', 'success'); }}
+          onClose={() => setShowItemModal(false)} />
       )}
     </div>
   );
