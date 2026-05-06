@@ -27,6 +27,7 @@ function addDays(dateStr, n) {
 }
 
 function getDates(start, end) {
+  if (!start) return [];
   const dates = [];
   let cur = start;
   const last = end ?? start;
@@ -298,6 +299,64 @@ function QuickAdd({ tripId, date, lang, onAdded }) {
   );
 }
 
+// ── Packing list sub-component ────────────────────────────────────────────────
+
+function PackingSection({ packItems, myChecks, canEdit, lang, onToggle, onAdd, onDelete }) {
+  const [newItem, setNewItem] = useState('');
+  const [open, setOpen] = useState(false);
+  const packed = packItems.filter(i => myChecks.has(i.id)).length;
+
+  if (packItems.length === 0 && !canEdit) return null;
+
+  return (
+    <div className={styles.packSection}>
+      <button className={styles.packToggle} onClick={() => setOpen(v => !v)}>
+        🧳 {lang === 'ja' ? '持ち物リスト' : 'Packing List'}
+        {packItems.length > 0 && (
+          <span className={`${styles.packProgress} ${packed === packItems.length ? styles.packProgressDone : ''}`}>
+            {packed}/{packItems.length}
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className={styles.packBody}>
+          {packItems.length === 0 ? (
+            <div className={styles.hint}>{lang === 'ja' ? 'まだ持ち物がありません。' : 'No items yet.'}</div>
+          ) : (
+            <div className={styles.packingList}>
+              {packItems.map(item => {
+                const checked = myChecks.has(item.id);
+                return (
+                  <div key={item.id} className={`${styles.packingItem} ${checked ? styles.packingItemDone : ''}`}>
+                    <button className={`${styles.packCheckbox} ${checked ? styles.packCheckboxDone : ''}`}
+                      onClick={() => onToggle(item.id)}>{checked ? '✓' : ''}</button>
+                    <span className={styles.packTitle}>{item.title}</span>
+                    {canEdit && (
+                      <button className={styles.packDeleteBtn} onClick={() => onDelete(item.id)}>×</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {canEdit && (
+            <div className={styles.packAddRow}>
+              <input className={styles.packInput} value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { onAdd(newItem); setNewItem(''); } }}
+                placeholder={lang === 'ja' ? 'パスポート、ユニフォーム… Enter' : 'Passport, jersey… Enter to add'} />
+              <button className={styles.packAddBtn} disabled={!newItem.trim()}
+                onClick={() => { onAdd(newItem); setNewItem(''); }}>+</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
@@ -379,9 +438,11 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
       setManaging(false);
       loadTripData(selectedTrip.id);
     } else {
+      setLoadingData(false);
       setItems([]); setParticipants([]); setPackItems([]); setMyChecks(new Set());
     }
-  }, [selectedTrip?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTrip?.id, loadTripData]);
 
   const deleteTrip = async (trip) => {
     if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"?`)) return;
@@ -463,7 +524,14 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
             return (
               <div key={trip.id}
                 className={`${styles.tripRow} ${selectedTrip?.id === trip.id ? styles.tripRowActive : ''} ${s === 'ongoing' ? styles.tripRowOngoing : s === 'past' ? styles.tripRowPast : ''}`}
-                onClick={() => setSelectedTrip(selectedTrip?.id === trip.id ? null : trip)}>
+                onClick={() => {
+                  if (selectedTrip?.id === trip.id) {
+                    setSelectedTrip(null);
+                  } else {
+                    setLoadingData(true);
+                    setSelectedTrip(trip);
+                  }
+                }}>
                 <div className={styles.tripRowTop}>
                   <span className={styles.tripRowTitle}>{trip.title}</span>
                   <StatusBadge trip={trip} lang={lang} />
@@ -700,64 +768,6 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
           onSave={() => { loadTripData(selectedTrip.id); toast(lang === 'ja' ? '項目を保存しました' : 'Item saved', 'success'); }}
           onClose={() => setItemFormOpen(false)}
         />
-      )}
-    </div>
-  );
-}
-
-// ── Packing list sub-component ────────────────────────────────────────────────
-
-function PackingSection({ packItems, myChecks, canEdit, lang, onToggle, onAdd, onDelete }) {
-  const [newItem, setNewItem] = useState('');
-  const [open, setOpen] = useState(false);
-  const packed = packItems.filter(i => myChecks.has(i.id)).length;
-
-  if (packItems.length === 0 && !canEdit) return null;
-
-  return (
-    <div className={styles.packSection}>
-      <button className={styles.packToggle} onClick={() => setOpen(v => !v)}>
-        🧳 {lang === 'ja' ? '持ち物リスト' : 'Packing List'}
-        {packItems.length > 0 && (
-          <span className={`${styles.packProgress} ${packed === packItems.length ? styles.packProgressDone : ''}`}>
-            {packed}/{packItems.length}
-          </span>
-        )}
-        <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div className={styles.packBody}>
-          {packItems.length === 0 ? (
-            <div className={styles.hint}>{lang === 'ja' ? 'まだ持ち物がありません。' : 'No items yet.'}</div>
-          ) : (
-            <div className={styles.packingList}>
-              {packItems.map(item => {
-                const checked = myChecks.has(item.id);
-                return (
-                  <div key={item.id} className={`${styles.packingItem} ${checked ? styles.packingItemDone : ''}`}>
-                    <button className={`${styles.packCheckbox} ${checked ? styles.packCheckboxDone : ''}`}
-                      onClick={() => onToggle(item.id)}>{checked ? '✓' : ''}</button>
-                    <span className={styles.packTitle}>{item.title}</span>
-                    {canEdit && (
-                      <button className={styles.packDeleteBtn} onClick={() => onDelete(item.id)}>×</button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {canEdit && (
-            <div className={styles.packAddRow}>
-              <input className={styles.packInput} value={newItem}
-                onChange={e => setNewItem(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { onAdd(newItem); setNewItem(''); } }}
-                placeholder={lang === 'ja' ? 'パスポート、ユニフォーム… Enter' : 'Passport, jersey… Enter to add'} />
-              <button className={styles.packAddBtn} disabled={!newItem.trim()}
-                onClick={() => { onAdd(newItem); setNewItem(''); }}>+</button>
-            </div>
-          )}
-        </div>
       )}
     </div>
   );
