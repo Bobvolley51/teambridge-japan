@@ -18,6 +18,15 @@ const ROLE_COLORS = {
   Player:       styles.rolePlayer,
 };
 
+const ROLE_DOT_COLORS = {
+  GM:           styles.dotGM,
+  Headcoach:    styles.dotHeadcoach,
+  Athletic:     styles.dotAthletic,
+  Therapist:    styles.dotTherapist,
+  'Staff/Orga': styles.dotStaffOrga,
+  Player:       styles.dotPlayer,
+};
+
 function timeAgo(iso, lang) {
   const diff = Math.floor((Date.now() - new Date(iso)) / 60000);
   if (diff < 1)   return lang === 'ja' ? 'たった今' : 'just now';
@@ -25,6 +34,107 @@ function timeAgo(iso, lang) {
   const h = Math.floor(diff / 60);
   if (h < 24)    return lang === 'ja' ? `${h}時間前` : `${h}h ago`;
   return lang === 'ja' ? `${Math.floor(h/24)}日前` : `${Math.floor(h/24)}d ago`;
+}
+
+// ── App Usage Stats (Headcoach only) ────────────────────────
+
+function AppStats({ profiles, lang }) {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+    const sinceIso  = since.toISOString();
+    const sinceDate = since.toISOString().slice(0, 10);
+
+    Promise.all([
+      supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', sinceIso),
+      supabase.from('wellness_responses').select('user_id').gte('response_date', sinceDate),
+      supabase.from('session_rpe').select('id', { count: 'exact', head: true }).gte('event_date', sinceDate),
+      supabase.from('tasks').select('status'),
+    ]).then(([msgs, wellness, rpe, tasks]) => {
+      const uniqueWellness = new Set((wellness.data ?? []).map(r => r.user_id)).size;
+      const taskList = tasks.data ?? [];
+      setStats({
+        messages:      msgs.count ?? 0,
+        wellnessUsers: uniqueWellness,
+        playerCount:   profiles.filter(p => p.role === 'Player').length,
+        rpe:           rpe.count ?? 0,
+        tasksDone:     taskList.filter(t => t.status === 'done').length,
+        tasksTotal:    taskList.length,
+      });
+    });
+  }, [profiles]);
+
+  const roleCounts = {};
+  for (const p of profiles) roleCounts[p.role] = (roleCounts[p.role] ?? 0) + 1;
+  const maxCount = Math.max(...Object.values(roleCounts), 1);
+
+  const tiles = [
+    {
+      icon: '💬',
+      value: stats?.messages ?? '…',
+      label: lang === 'ja' ? 'チャット (7日)' : 'Chat messages (7d)',
+    },
+    {
+      icon: '💪',
+      value: stats ? `${stats.wellnessUsers}/${stats.playerCount}` : '…',
+      label: lang === 'ja' ? 'ウェルネス提出 (7日)' : 'Wellness submitted (7d)',
+      highlight: stats && stats.playerCount > 0 && stats.wellnessUsers === stats.playerCount,
+    },
+    {
+      icon: '📊',
+      value: stats?.rpe ?? '…',
+      label: lang === 'ja' ? 'RPE記録 (7日)' : 'RPE entries (7d)',
+    },
+    {
+      icon: '✅',
+      value: stats ? `${stats.tasksDone}/${stats.tasksTotal}` : '…',
+      label: lang === 'ja' ? 'タスク完了' : 'Tasks completed',
+      highlight: stats && stats.tasksTotal > 0 && stats.tasksDone === stats.tasksTotal,
+    },
+  ];
+
+  return (
+    <div className={styles.statsSection}>
+      <div className={styles.statsBlock}>
+        <div className={styles.statsBlockTitle}>
+          {lang === 'ja' ? '直近7日間の活動' : 'Activity — last 7 days'}
+        </div>
+        <div className={styles.statsTiles}>
+          {tiles.map(tile => (
+            <div key={tile.label} className={`${styles.statsTile} ${tile.highlight ? styles.statsTileGreen : ''}`}>
+              <span className={styles.statsTileIcon}>{tile.icon}</span>
+              <span className={styles.statsTileValue}>{tile.value}</span>
+              <span className={styles.statsTileLabel}>{tile.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.statsBlock}>
+        <div className={styles.statsBlockTitle}>
+          {lang === 'ja' ? 'チーム構成' : 'Team composition'}
+          <span className={styles.statsBlockSub}>{profiles.length} {lang === 'ja' ? '名' : 'users'}</span>
+        </div>
+        <div className={styles.roleBreakdown}>
+          {ROLES.filter(r => roleCounts[r]).map(role => (
+            <div key={role} className={styles.roleBreakdownRow}>
+              <span className={`${styles.roleDot} ${ROLE_DOT_COLORS[role] ?? ''}`} />
+              <span className={styles.roleBreakdownName}>{role}</span>
+              <div className={styles.roleBreakdownBarWrap}>
+                <div
+                  className={styles.roleBreakdownFill}
+                  style={{ width: `${(roleCounts[role] / maxCount) * 100}%` }}
+                />
+              </div>
+              <span className={styles.roleBreakdownCount}>{roleCounts[role]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Edit User Modal ──────────────────────────────────────────
@@ -179,7 +289,7 @@ function DeleteModal({ profile, lang, currentUserId, onDelete, onClose }) {
 
 // ── Main Component ───────────────────────────────────────────
 
-export default function RoleManager({ lang = 'en', currentUserId }) {
+export default function RoleManager({ lang = 'en', currentUserId, currentUserRole }) {
   const [profiles,    setProfiles]    = useState([]);
   const [requests,    setRequests]    = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -189,6 +299,8 @@ export default function RoleManager({ lang = 'en', currentUserId }) {
   const [success,     setSuccess]     = useState(null);
   const [editProfile, setEditProfile] = useState(null);
   const [delProfile,  setDelProfile]  = useState(null);
+  const [activeTab,   setActiveTab]   = useState('users');
+  const isHeadcoach = currentUserRole === 'Headcoach';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -250,7 +362,23 @@ export default function RoleManager({ lang = 'en', currentUserId }) {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <span className={styles.headerTitle}>{lang === 'ja' ? 'ユーザー管理' : 'User Management'}</span>
-        <span className={styles.headerSub}>{lang === 'ja' ? `${profiles.length}名` : `${profiles.length} users`}</span>
+        <div className={styles.headerRight}>
+          {isHeadcoach && (
+            <div className={styles.tabGroup}>
+              <button
+                className={`${styles.tabBtn} ${activeTab === 'users' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveTab('users')}>
+                {lang === 'ja' ? 'ユーザー' : 'Users'}
+              </button>
+              <button
+                className={`${styles.tabBtn} ${activeTab === 'stats' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveTab('stats')}>
+                📈 {lang === 'ja' ? '統計' : 'Stats'}
+              </button>
+            </div>
+          )}
+          <span className={styles.headerSub}>{lang === 'ja' ? `${profiles.length}名` : `${profiles.length} users`}</span>
+        </div>
       </div>
 
       {error   && <div className={styles.errorBanner}>{error}<button onClick={() => setError(null)}>✕</button></div>}
@@ -287,8 +415,13 @@ export default function RoleManager({ lang = 'en', currentUserId }) {
         </div>
       )}
 
+      {/* ── Stats tab ── */}
+      {!loading && isHeadcoach && activeTab === 'stats' && (
+        <AppStats profiles={profiles} lang={lang} />
+      )}
+
       {/* ── User list ── */}
-      {loading ? (
+      {activeTab === 'users' && (loading ? (
         <div className={styles.loading}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
       ) : (
         <div className={styles.table}>
@@ -364,7 +497,7 @@ export default function RoleManager({ lang = 'en', currentUserId }) {
             <p className={styles.empty}>{lang === 'ja' ? 'ユーザーが見つかりません。' : 'No users found.'}</p>
           )}
         </div>
-      )}
+      ))}
 
       {/* ── Edit modal ── */}
       {editProfile && (

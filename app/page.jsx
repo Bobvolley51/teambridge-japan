@@ -293,7 +293,7 @@ export default function Home() {
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}
           {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} />}
-          {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} />}
+          {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} />}
         </main>
       </div>
 
