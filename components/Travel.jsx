@@ -69,7 +69,7 @@ function StatusBadge({ trip, lang }) {
   return <span className={`${styles.badge} ${cls}`}>{label}</span>;
 }
 
-// ── Trip Form (create/edit) ────────────────────────────────────────────────────
+// ── Trip Form ────────────────────────────────────────────────────────────────
 
 function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
   const isNew = !trip;
@@ -169,7 +169,7 @@ function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
   );
 }
 
-// ── Item Form (create/edit) ────────────────────────────────────────────────────
+// ── Item Form ────────────────────────────────────────────────────────────────
 
 function ItemForm({ item, tripId, tripDates, lang, defaultDate, onSave, onClose }) {
   const [type,  setType]  = useState(item?.item_type ?? 'other');
@@ -245,7 +245,7 @@ function ItemForm({ item, tripId, tripDates, lang, defaultDate, onSave, onClose 
   );
 }
 
-// ── Quick add row (editors only) ──────────────────────────────────────────────
+// ── Quick add row ────────────────────────────────────────────────────────────
 
 function QuickAdd({ tripId, date, lang, onAdded }) {
   const [type,  setType]  = useState('other');
@@ -299,78 +299,15 @@ function QuickAdd({ tripId, date, lang, onAdded }) {
   );
 }
 
-// ── Packing list sub-component ────────────────────────────────────────────────
-
-function PackingSection({ packItems, myChecks, canEdit, lang, onToggle, onAdd, onDelete }) {
-  const [newItem, setNewItem] = useState('');
-  const [open, setOpen] = useState(false);
-  const packed = packItems.filter(i => myChecks.has(i.id)).length;
-
-  if (packItems.length === 0 && !canEdit) return null;
-
-  return (
-    <div className={styles.packSection}>
-      <button className={styles.packToggle} onClick={() => setOpen(v => !v)}>
-        🧳 {lang === 'ja' ? '持ち物リスト' : 'Packing List'}
-        {packItems.length > 0 && (
-          <span className={`${styles.packProgress} ${packed === packItems.length ? styles.packProgressDone : ''}`}>
-            {packed}/{packItems.length}
-          </span>
-        )}
-        <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div className={styles.packBody}>
-          {packItems.length === 0 ? (
-            <div className={styles.hint}>{lang === 'ja' ? 'まだ持ち物がありません。' : 'No items yet.'}</div>
-          ) : (
-            <div className={styles.packingList}>
-              {packItems.map(item => {
-                const checked = myChecks.has(item.id);
-                return (
-                  <div key={item.id} className={`${styles.packingItem} ${checked ? styles.packingItemDone : ''}`}>
-                    <button className={`${styles.packCheckbox} ${checked ? styles.packCheckboxDone : ''}`}
-                      onClick={() => onToggle(item.id)}>{checked ? '✓' : ''}</button>
-                    <span className={styles.packTitle}>{item.title}</span>
-                    {canEdit && (
-                      <button className={styles.packDeleteBtn} onClick={() => onDelete(item.id)}>×</button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {canEdit && (
-            <div className={styles.packAddRow}>
-              <input className={styles.packInput} value={newItem}
-                onChange={e => setNewItem(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { onAdd(newItem); setNewItem(''); } }}
-                placeholder={lang === 'ja' ? 'パスポート、ユニフォーム… Enter' : 'Passport, jersey… Enter to add'} />
-              <button className={styles.packAddBtn} disabled={!newItem.trim()}
-                onClick={() => { onAdd(newItem); setNewItem(''); }}>+</button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   const toast   = useToast();
   const canEdit = EDIT_ROLES.includes(profile?.role);
-  const userId  = profile?.id ?? null;
 
   const [trips,        setTrips]        = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [items,        setItems]        = useState([]);
-  const [participants, setParticipants] = useState([]);
-  const [allProfiles,  setAllProfiles]  = useState([]);
-  const [packItems,    setPackItems]    = useState([]);
-  const [myChecks,     setMyChecks]     = useState(new Set());
   const [loading,      setLoading]      = useState(true);
   const [loadingData,  setLoadingData]  = useState(false);
   const [error,        setError]        = useState('');
@@ -380,9 +317,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   const [itemFormOpen, setItemFormOpen] = useState(false);
   const [editingItem,  setEditingItem]  = useState(null);
   const [addDate,      setAddDate]      = useState(null);
-  const [managing,     setManaging]     = useState(false);
 
-  // Load trip list
   const loadTrips = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -398,60 +333,29 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
     }
   }, []);
 
-  // Load detail data for a selected trip
-  const loadTripData = useCallback(async (tripId) => {
-    // Wraps a Supabase promise so it resolves (not rejects) after 6s
-    const safe = (p) => Promise.race([
-      p,
-      new Promise(res => setTimeout(() => res({ data: null, error: null }), 6000)),
-    ]);
-
+  const loadItems = useCallback(async (tripId) => {
     setLoadingData(true);
     try {
-      const { data: itemsData } = await safe(
-        supabase.from('travel_items')
-          .select('*').eq('trip_id', tripId)
-          .order('item_date').order('item_time', { nullsFirst: false })
-      );
-      setItems(itemsData ?? []);
+      const { data } = await supabase
+        .from('travel_items')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('item_date')
+        .order('item_time');
+      setItems(data ?? []);
     } finally {
-      setLoadingData(false); // show timetable immediately
+      setLoadingData(false);
     }
-
-    // Secondary data in parallel — timeouts prevent a hanging query from
-    // blocking the rest of the UI.
-    const [{ data: partsData }, { data: packData }] = await Promise.all([
-      safe(supabase.from('travel_participants').select('profile_id').eq('trip_id', tripId)),
-      safe(supabase.from('travel_packing_items').select('*').eq('trip_id', tripId).order('sort_order').order('created_at')),
-    ]);
-    setParticipants(partsData ?? []);
-    setPackItems(packData ?? []);
-
-    if (packData?.length && userId) {
-      const { data: checks } = await safe(
-        supabase.from('travel_packing_checks')
-          .select('item_id').eq('user_id', userId).in('item_id', packData.map(i => i.id))
-      );
-      setMyChecks(new Set((checks ?? []).map(c => c.item_id)));
-    } else {
-      setMyChecks(new Set());
-    }
-  }, [userId]);
+  }, []);
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, email, role').order('display_name')
-      .then(({ data }) => { if (data) setAllProfiles(data); });
-  }, []);
-
-  useEffect(() => {
     if (selectedTrip) {
-      setManaging(false);
-      loadTripData(selectedTrip.id);
+      loadItems(selectedTrip.id);
     } else {
+      setItems([]);
       setLoadingData(false);
-      setItems([]); setParticipants([]); setPackItems([]); setMyChecks(new Set());
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTrip?.id]);
@@ -468,39 +372,6 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
     if (!window.confirm(lang === 'ja' ? `「${item.title}」を削除しますか？` : `Delete "${item.title}"?`)) return;
     await supabase.from('travel_items').delete().eq('id', item.id);
     setItems(p => p.filter(i => i.id !== item.id));
-  };
-
-  const toggleParticipant = async (profileId) => {
-    const isIn = participants.some(p => p.profile_id === profileId);
-    if (isIn) {
-      await supabase.from('travel_participants').delete().eq('trip_id', selectedTrip.id).eq('profile_id', profileId);
-      setParticipants(p => p.filter(pt => pt.profile_id !== profileId));
-    } else {
-      await supabase.from('travel_participants').insert({ trip_id: selectedTrip.id, profile_id: profileId });
-      setParticipants(p => [...p, { profile_id: profileId }]);
-    }
-  };
-
-  const toggleCheck = async (itemId) => {
-    if (!userId) return;
-    const checked = myChecks.has(itemId);
-    setMyChecks(prev => { const n = new Set(prev); checked ? n.delete(itemId) : n.add(itemId); return n; });
-    if (checked) {
-      await supabase.from('travel_packing_checks').delete().eq('item_id', itemId).eq('user_id', userId);
-    } else {
-      await supabase.from('travel_packing_checks').insert({ item_id: itemId, user_id: userId });
-    }
-  };
-
-  const addPackItem = async (title) => {
-    if (!title.trim()) return;
-    await supabase.from('travel_packing_items').insert({ trip_id: selectedTrip.id, title: title.trim(), sort_order: packItems.length });
-    loadTripData(selectedTrip.id);
-  };
-
-  const deletePackItem = async (id) => {
-    await supabase.from('travel_packing_items').delete().eq('id', id);
-    setPackItems(p => p.filter(i => i.id !== id));
   };
 
   const tripDates = selectedTrip ? getDates(selectedTrip.start_date, selectedTrip.end_date) : [];
@@ -575,7 +446,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
         ) : (
           <div className={styles.scrollArea}>
 
-            {/* ── Trip info card ── */}
+            {/* Trip info card */}
             <div className={styles.infoCard}>
               <div className={styles.infoCardHeader}>
                 <div>
@@ -609,7 +480,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                 </div>
               </div>
 
-              {/* Logistics row */}
+              {/* Logistics tiles */}
               <div className={styles.logisticsRow}>
                 {selectedTrip.flight_number && (
                   <div className={styles.logItem}>
@@ -642,54 +513,9 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                   </div>
                 )}
               </div>
-
-              {/* Participants */}
-              <div className={styles.participantsRow}>
-                <span className={styles.participantsLabel}>
-                  👥 {lang === 'ja' ? '参加メンバー' : 'Traveling'} ({participants.length})
-                </span>
-                {canEdit && (
-                  <button className={styles.manageBtn} onClick={() => setManaging(v => !v)}>
-                    {managing ? (lang === 'ja' ? '完了' : 'Done') : (lang === 'ja' ? '管理' : 'Manage')}
-                  </button>
-                )}
-              </div>
-
-              {managing && canEdit ? (
-                <div className={styles.participantGrid}>
-                  {allProfiles.map(p => {
-                    const isIn = participants.some(pt => pt.profile_id === p.id);
-                    const name = p.display_name || p.email.split('@')[0];
-                    return (
-                      <button key={p.id}
-                        className={`${styles.participantToggle} ${isIn ? styles.participantToggleOn : ''}`}
-                        onClick={() => toggleParticipant(p.id)}>
-                        {isIn ? '✓ ' : ''}{name}
-                        {p.role && <span className={styles.toggleRole}>{p.role}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : participants.length === 0 ? (
-                <div className={styles.hint} style={{ padding: '6px 0' }}>
-                  {lang === 'ja' ? 'まだ参加者が登録されていません。' : 'No participants listed yet.'}
-                </div>
-              ) : (
-                <div className={styles.avatarRow}>
-                  {participants.map(p => {
-                    const prof = allProfiles.find(ap => ap.id === p.profile_id);
-                    const name = prof?.display_name || prof?.email?.split('@')[0] || '?';
-                    return (
-                      <div key={p.profile_id} className={styles.avatarChip} title={name}>
-                        {name.slice(0, 2).toUpperCase()}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
-            {/* ── Day-by-day timetable ── */}
+            {/* Day-by-day timetable */}
             <div className={styles.timetable}>
               {tripDates.length === 0 && (
                 <div className={styles.hint}>{lang === 'ja' ? '日程が設定されていません。' : 'No dates set for this trip.'}</div>
@@ -735,27 +561,18 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                           </div>
                         );
                       })}
-                      {canEdit && <QuickAdd tripId={selectedTrip.id} date={date} lang={lang} onAdded={() => loadTripData(selectedTrip.id)} />}
+                      {canEdit && <QuickAdd tripId={selectedTrip.id} date={date} lang={lang} onAdded={() => loadItems(selectedTrip.id)} />}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* ── Packing list ── */}
-            <PackingSection
-              packItems={packItems} myChecks={myChecks}
-              canEdit={canEdit} lang={lang}
-              onToggle={toggleCheck}
-              onAdd={addPackItem}
-              onDelete={deletePackItem}
-            />
-
           </div>
         )}
       </div>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       {tripFormOpen && (
         <TripForm
           trip={editingTrip} lang={lang} currentUserName={currentUserName}
@@ -777,7 +594,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
         <ItemForm
           item={editingItem} tripId={selectedTrip.id} tripDates={tripDates}
           lang={lang} defaultDate={addDate}
-          onSave={() => { loadTripData(selectedTrip.id); toast(lang === 'ja' ? '項目を保存しました' : 'Item saved', 'success'); }}
+          onSave={() => { loadItems(selectedTrip.id); toast(lang === 'ja' ? '項目を保存しました' : 'Item saved', 'success'); }}
           onClose={() => setItemFormOpen(false)}
         />
       )}
