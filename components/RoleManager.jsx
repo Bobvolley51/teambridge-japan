@@ -38,6 +38,14 @@ function timeAgo(iso, lang) {
 
 // ── App Usage Stats (Headcoach only) ────────────────────────
 
+function lastSeenDot(lastSeen) {
+  if (!lastSeen) return styles.dotGray;
+  const h = (Date.now() - new Date(lastSeen)) / 3600000;
+  if (h < 24)  return styles.dotGreen;
+  if (h < 168) return styles.dotYellow;
+  return styles.dotRed;
+}
+
 function AppStats({ profiles, lang }) {
   const [stats, setStats] = useState(null);
 
@@ -50,25 +58,40 @@ function AppStats({ profiles, lang }) {
     Promise.all([
       supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', sinceIso),
       supabase.from('wellness_responses').select('user_id').gte('response_date', sinceDate),
-      supabase.from('session_rpe').select('id', { count: 'exact', head: true }).gte('event_date', sinceDate),
+      supabase.from('session_rpe').select('user_id').gte('event_date', sinceDate),
       supabase.from('tasks').select('status'),
-    ]).then(([msgs, wellness, rpe, tasks]) => {
-      const uniqueWellness = new Set((wellness.data ?? []).map(r => r.user_id)).size;
-      const taskList = tasks.data ?? [];
+      supabase.from('messages').select('sender_id').gte('created_at', sinceIso),
+    ]).then(([msgs, wellness, rpe, tasks, msgPerUser]) => {
+      const wellnessList  = wellness.data  ?? [];
+      const rpeList       = rpe.data       ?? [];
+      const msgList       = msgPerUser.data ?? [];
+      const taskList      = tasks.data     ?? [];
+
+      const perUser = {};
+      for (const r of wellnessList) {
+        if (!perUser[r.user_id]) perUser[r.user_id] = { wellness: 0, rpe: 0, messages: 0 };
+        perUser[r.user_id].wellness++;
+      }
+      for (const r of rpeList) {
+        if (!perUser[r.user_id]) perUser[r.user_id] = { wellness: 0, rpe: 0, messages: 0 };
+        perUser[r.user_id].rpe++;
+      }
+      for (const r of msgList) {
+        if (!perUser[r.sender_id]) perUser[r.sender_id] = { wellness: 0, rpe: 0, messages: 0 };
+        perUser[r.sender_id].messages++;
+      }
+
       setStats({
         messages:      msgs.count ?? 0,
-        wellnessUsers: uniqueWellness,
+        wellnessUsers: new Set(wellnessList.map(r => r.user_id)).size,
         playerCount:   profiles.filter(p => p.role === 'Player').length,
-        rpe:           rpe.count ?? 0,
+        rpe:           rpeList.length,
         tasksDone:     taskList.filter(t => t.status === 'done').length,
         tasksTotal:    taskList.length,
+        perUser,
       });
     });
   }, [profiles]);
-
-  const roleCounts = {};
-  for (const p of profiles) roleCounts[p.role] = (roleCounts[p.role] ?? 0) + 1;
-  const maxCount = Math.max(...Object.values(roleCounts), 1);
 
   const since7 = new Date(Date.now() - 7 * 86400000).toISOString();
   const activeUsers = profiles.filter(p => p.last_seen_at && p.last_seen_at >= since7).length;
@@ -123,23 +146,43 @@ function AppStats({ profiles, lang }) {
 
       <div className={styles.statsBlock}>
         <div className={styles.statsBlockTitle}>
-          {lang === 'ja' ? 'チーム構成' : 'Team composition'}
-          <span className={styles.statsBlockSub}>{profiles.length} {lang === 'ja' ? '名' : 'users'}</span>
+          {lang === 'ja' ? 'ユーザーごとの活動 (7日)' : 'Per-user activity — last 7 days'}
         </div>
-        <div className={styles.roleBreakdown}>
-          {ROLES.filter(r => roleCounts[r]).map(role => (
-            <div key={role} className={styles.roleBreakdownRow}>
-              <span className={`${styles.roleDot} ${ROLE_DOT_COLORS[role] ?? ''}`} />
-              <span className={styles.roleBreakdownName}>{role}</span>
-              <div className={styles.roleBreakdownBarWrap}>
-                <div
-                  className={styles.roleBreakdownFill}
-                  style={{ width: `${(roleCounts[role] / maxCount) * 100}%` }}
-                />
+        <div className={styles.userStatTable}>
+          <div className={styles.userStatHead}>
+            <span>{lang === 'ja' ? 'ユーザー' : 'User'}</span>
+            <span>{lang === 'ja' ? '最終ログイン' : 'Last seen'}</span>
+            <span title={lang === 'ja' ? 'ウェルネス' : 'Wellness'}>💪</span>
+            <span title="RPE">📊</span>
+            <span title={lang === 'ja' ? 'チャット' : 'Chat'}>💬</span>
+          </div>
+          {profiles.map(p => {
+            const name = p.display_name || p.email.split('@')[0];
+            const u    = stats?.perUser?.[p.id] ?? { wellness: 0, rpe: 0, messages: 0 };
+            const dot  = lastSeenDot(p.last_seen_at);
+            const lastSeen = p.last_seen_at
+              ? timeAgo(p.last_seen_at, lang)
+              : (lang === 'ja' ? 'なし' : 'Never');
+            return (
+              <div key={p.id} className={styles.userStatRow}>
+                <div className={styles.userStatName}>
+                  <span className={`${styles.activityDot} ${dot}`} />
+                  <span className={styles.userStatLabel}>{name}</span>
+                  <span className={`${styles.roleBadge} ${ROLE_COLORS[p.role] ?? ''}`}>{p.role}</span>
+                </div>
+                <span className={styles.userStatLastSeen}>{lastSeen}</span>
+                <span className={`${styles.userStatVal} ${u.wellness > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {stats ? u.wellness : '…'}
+                </span>
+                <span className={`${styles.userStatVal} ${u.rpe > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {stats ? u.rpe : '…'}
+                </span>
+                <span className={`${styles.userStatVal} ${u.messages > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {stats ? u.messages : '…'}
+                </span>
               </div>
-              <span className={styles.roleBreakdownCount}>{roleCounts[role]}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
