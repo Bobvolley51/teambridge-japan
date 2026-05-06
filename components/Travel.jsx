@@ -400,29 +400,41 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
 
   // Load detail data for a selected trip
   const loadTripData = useCallback(async (tripId) => {
+    // Wraps a Supabase promise so it resolves (not rejects) after 6s
+    const safe = (p) => Promise.race([
+      p,
+      new Promise(res => setTimeout(() => res({ data: null, error: null }), 6000)),
+    ]);
+
     setLoadingData(true);
     try {
-      const { data: itemsData }  = await supabase.from('travel_items')
-        .select('*').eq('trip_id', tripId).order('item_date').order('item_time', { nullsFirst: false });
+      const { data: itemsData } = await safe(
+        supabase.from('travel_items')
+          .select('*').eq('trip_id', tripId)
+          .order('item_date').order('item_time', { nullsFirst: false })
+      );
       setItems(itemsData ?? []);
-
-      const { data: partsData }  = await supabase.from('travel_participants')
-        .select('profile_id').eq('trip_id', tripId);
-      setParticipants(partsData ?? []);
-
-      const { data: packData }   = await supabase.from('travel_packing_items')
-        .select('*').eq('trip_id', tripId).order('sort_order').order('created_at');
-      setPackItems(packData ?? []);
-
-      if (packData?.length && userId) {
-        const { data: checks } = await supabase.from('travel_packing_checks')
-          .select('item_id').eq('user_id', userId).in('item_id', packData.map(i => i.id));
-        setMyChecks(new Set((checks ?? []).map(c => c.item_id)));
-      } else {
-        setMyChecks(new Set());
-      }
     } finally {
-      setLoadingData(false);
+      setLoadingData(false); // show timetable immediately
+    }
+
+    // Secondary data in parallel — timeouts prevent a hanging query from
+    // blocking the rest of the UI.
+    const [{ data: partsData }, { data: packData }] = await Promise.all([
+      safe(supabase.from('travel_participants').select('profile_id').eq('trip_id', tripId)),
+      safe(supabase.from('travel_packing_items').select('*').eq('trip_id', tripId).order('sort_order').order('created_at')),
+    ]);
+    setParticipants(partsData ?? []);
+    setPackItems(packData ?? []);
+
+    if (packData?.length && userId) {
+      const { data: checks } = await safe(
+        supabase.from('travel_packing_checks')
+          .select('item_id').eq('user_id', userId).in('item_id', packData.map(i => i.id))
+      );
+      setMyChecks(new Set((checks ?? []).map(c => c.item_id)));
+    } else {
+      setMyChecks(new Set());
     }
   }, [userId]);
 
@@ -442,7 +454,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
       setItems([]); setParticipants([]); setPackItems([]); setMyChecks(new Set());
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTrip?.id, loadTripData]);
+  }, [selectedTrip?.id]);
 
   const deleteTrip = async (trip) => {
     if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"?`)) return;
