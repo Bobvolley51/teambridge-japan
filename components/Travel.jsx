@@ -350,16 +350,6 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
 
-  useEffect(() => {
-    if (selectedTrip) {
-      loadItems(selectedTrip.id);
-    } else {
-      setItems([]);
-      setLoadingData(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTrip?.id]);
-
   const deleteTrip = async (trip) => {
     if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"?`)) return;
     await supabase.from('travel_trips').delete().eq('id', trip.id);
@@ -410,9 +400,10 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                 onClick={() => {
                   if (selectedTrip?.id === trip.id) {
                     setSelectedTrip(null);
+                    setItems([]);
                   } else {
-                    setLoadingData(true);
                     setSelectedTrip(trip);
+                    loadItems(trip.id);
                   }
                 }}>
                 <div className={styles.tripRowTop}>
