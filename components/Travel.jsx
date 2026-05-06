@@ -3,34 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
-import { SkeletonCardBlock } from './Skeleton';
 import styles from './Travel.module.css';
 
-const EDIT_ROLES = ['Staff/Orga', 'GM'];
-
-function buildTemplate(startDate, lang) {
-  const d0 = startDate;
-  const d1 = addDays(startDate, 1);
-  const d2 = addDays(startDate, 2);
-  const j = lang === 'ja';
-  return [
-    { item_date: d0, item_time: null,    item_type: 'other',    title: j ? '集合' : 'Team meeting' },
-    { item_date: d0, item_time: null,    item_type: 'transfer', title: j ? '出発（バス）' : 'Bus departure' },
-    { item_date: d0, item_time: null,    item_type: 'flight',   title: j ? 'フライト' : 'Flight' },
-    { item_date: d0, item_time: null,    item_type: 'hotel',    title: j ? 'ホテルチェックイン' : 'Hotel check-in' },
-    { item_date: d0, item_time: null,    item_type: 'meal',     title: j ? 'チームディナー' : 'Team dinner' },
-    { item_date: d1, item_time: '09:00', item_type: 'recovery', title: j ? '朝の活性化' : 'Morning activation' },
-    { item_date: d1, item_time: '12:00', item_type: 'meal',     title: j ? '試合前食事' : 'Pre-match meal' },
-    { item_date: d1, item_time: null,    item_type: 'training', title: j ? 'ウォームアップ' : 'Warm-up' },
-    { item_date: d1, item_time: null,    item_type: 'match',    title: j ? '試合' : 'Match' },
-    { item_date: d1, item_time: null,    item_type: 'meal',     title: j ? '試合後食事' : 'Post-match meal' },
-    { item_date: d2, item_time: '09:00', item_type: 'recovery', title: j ? '朝の活性化' : 'Morning activation' },
-    { item_date: d2, item_time: '12:00', item_type: 'meal',     title: j ? '試合前食事' : 'Pre-match meal' },
-    { item_date: d2, item_time: null,    item_type: 'training', title: j ? 'ウォームアップ' : 'Warm-up' },
-    { item_date: d2, item_time: null,    item_type: 'match',    title: j ? '試合' : 'Match' },
-    { item_date: d2, item_time: null,    item_type: 'flight',   title: j ? '帰りのフライト' : 'Return flight' },
-  ];
-}
+const EDIT_ROLES = ['Staff/Orga', 'GM', 'Headcoach'];
 
 const ITEM_TYPES = [
   { key: 'flight',   icon: '✈️', en: 'Flight',   ja: 'フライト'     },
@@ -44,7 +19,6 @@ const ITEM_TYPES = [
 ];
 
 function typeInfo(key) { return ITEM_TYPES.find(t => t.key === key) ?? ITEM_TYPES[7]; }
-function pad(n) { return String(n).padStart(2, '0'); }
 
 function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -52,15 +26,15 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-function getDates(startDate, endDate) {
+function getDates(start, end) {
   const dates = [];
-  let cur = startDate;
-  const last = endDate ?? startDate;
+  let cur = start;
+  const last = end ?? start;
   while (cur <= last) { dates.push(cur); cur = addDays(cur, 1); }
   return dates;
 }
 
-function fmtFull(dateStr, lang) {
+function fmtLong(dateStr, lang) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString(
     lang === 'ja' ? 'ja-JP' : 'en-GB',
     { weekday: 'long', month: 'long', day: 'numeric' }
@@ -74,162 +48,114 @@ function fmtShort(dateStr, lang) {
   );
 }
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-
 function getTripStatus(trip) {
   const today = new Date().toISOString().slice(0, 10);
   const end   = trip.end_date ?? trip.start_date;
-  if (end < today) return { status: 'past' };
-  if (trip.start_date <= today) return { status: 'ongoing' };
-  return { status: 'upcoming', days: Math.ceil((new Date(trip.start_date + 'T00:00:00') - new Date()) / 86400000) };
+  if (end < today)              return 'past';
+  if (trip.start_date <= today) return 'ongoing';
+  return 'upcoming';
 }
 
 function StatusBadge({ trip, lang }) {
-  const { status, days } = getTripStatus(trip);
-  if (status === 'past')    return <span className={`${styles.badge} ${styles.badgePast}`}>{lang === 'ja' ? '終了' : 'Past'}</span>;
-  if (status === 'ongoing') return <span className={`${styles.badge} ${styles.badgeOngoing}`}>{lang === 'ja' ? '進行中' : 'Ongoing'}</span>;
-  const label = days === 0 ? (lang === 'ja' ? '今日' : 'Today')
+  const s = getTripStatus(trip);
+  const days = Math.ceil((new Date(trip.start_date + 'T00:00:00') - new Date()) / 86400000);
+  if (s === 'past')    return <span className={`${styles.badge} ${styles.badgePast}`}>{lang === 'ja' ? '終了' : 'Past'}</span>;
+  if (s === 'ongoing') return <span className={`${styles.badge} ${styles.badgeOngoing}`}>{lang === 'ja' ? '進行中' : 'Ongoing'}</span>;
+  const label = days <= 0 ? (lang === 'ja' ? '今日' : 'Today')
               : days === 1 ? (lang === 'ja' ? '明日' : 'Tomorrow')
               : lang === 'ja' ? `${days}日後` : `In ${days}d`;
   const cls = days <= 1 ? styles.badgeToday : days <= 7 ? styles.badgeSoon : styles.badgeUpcoming;
   return <span className={`${styles.badge} ${cls}`}>{label}</span>;
 }
 
-// ── Type Picker ───────────────────────────────────────────────────────────────
+// ── Trip Form (create/edit) ────────────────────────────────────────────────────
 
-function TypePicker({ value, onChange, lang }) {
-  return (
-    <div className={styles.typeGrid}>
-      {ITEM_TYPES.map(t => (
-        <button key={t.key} type="button"
-          className={`${styles.typeGridBtn} ${value === t.key ? styles.typeGridActive : ''}`}
-          onClick={() => onChange(t.key)}>
-          <span className={styles.typeGridIcon}>{t.icon}</span>
-          <span className={styles.typeGridLabel}>{t[lang]}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ── Trip Modal ────────────────────────────────────────────────────────────────
-
-function TripModal({ trip, lang, currentUserName, onSave, onClose }) {
+function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
   const isNew = !trip;
-  const [title,        setTitle]        = useState(trip?.title          ?? '');
-  const [startDate,    setStartDate]    = useState(trip?.start_date     ?? '');
-  const [endDate,      setEndDate]      = useState(trip?.end_date       ?? '');
-  const [location,     setLocation]     = useState(trip?.location       ?? '');
-  const [flightNumber, setFlightNumber] = useState(trip?.flight_number  ?? '');
-  const [hotelName,    setHotelName]    = useState(trip?.hotel_name     ?? '');
-  const [hotelAddress, setHotelAddress] = useState(trip?.hotel_address  ?? '');
-  const [notes,        setNotes]        = useState(trip?.notes          ?? '');
-  const [useTemplate,  setUseTemplate]  = useState(false);
-  const [saving,       setSaving]       = useState(false);
-  const [error,        setError]        = useState(null);
-
-  const handleTemplateToggle = (checked) => {
-    setUseTemplate(checked);
-    if (checked && startDate) setEndDate(addDays(startDate, 2));
-  };
-
-  const handleStartChange = (val) => {
-    setStartDate(val);
-    if (useTemplate && val) setEndDate(addDays(val, 2));
-  };
+  const [f, setF] = useState({
+    title:         trip?.title          ?? '',
+    start_date:    trip?.start_date     ?? '',
+    end_date:      trip?.end_date       ?? '',
+    location:      trip?.location       ?? '',
+    flight_number: trip?.flight_number  ?? '',
+    hotel_name:    trip?.hotel_name     ?? '',
+    hotel_address: trip?.hotel_address  ?? '',
+    notes:         trip?.notes          ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const effEnd = useTemplate && startDate ? addDays(startDate, 2) : endDate;
-    if (effEnd && effEnd < startDate) {
+    if (!f.title.trim() || !f.start_date) return;
+    if (f.end_date && f.end_date < f.start_date) {
       setError(lang === 'ja' ? '終了日は開始日以降にしてください。' : 'End date must be on or after start date.');
       return;
     }
     setSaving(true);
     const payload = {
-      title:          title.trim(),
-      start_date:     startDate,
-      end_date:       effEnd || null,
-      location:       location.trim()     || null,
-      flight_number:  flightNumber.trim() || null,
-      hotel_name:     hotelName.trim()    || null,
-      hotel_address:  hotelAddress.trim() || null,
-      notes:          notes.trim()        || null,
+      title:         f.title.trim(),
+      start_date:    f.start_date,
+      end_date:      f.end_date      || null,
+      location:      f.location.trim()      || null,
+      flight_number: f.flight_number.trim() || null,
+      hotel_name:    f.hotel_name.trim()    || null,
+      hotel_address: f.hotel_address.trim() || null,
+      notes:         f.notes.trim()         || null,
     };
-
     if (trip) {
       const { error: err } = await supabase.from('travel_trips').update(payload).eq('id', trip.id);
       if (err) { setError(err.message); setSaving(false); return; }
     } else {
-      const { data: newTrip, error: err } = await supabase
-        .from('travel_trips').insert({ ...payload, created_by: currentUserName }).select().single();
+      const { error: err } = await supabase.from('travel_trips').insert({ ...payload, created_by: currentUserName });
       if (err) { setError(err.message); setSaving(false); return; }
-      if (useTemplate && newTrip) {
-        await supabase.from('travel_items').insert(
-          buildTemplate(startDate, lang).map(it => ({ ...it, trip_id: newTrip.id }))
-        );
-      }
     }
-    onSave(); onClose();
+    onSave();
+    onClose();
   };
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.modalHead}>
-          <span>{trip ? (lang === 'ja' ? '旅程を編集' : 'Edit Trip') : (lang === 'ja' ? '新しい旅程' : 'New Trip')}</span>
+          <span>{isNew ? (lang === 'ja' ? '新しい旅程' : 'New Trip') : (lang === 'ja' ? '旅程を編集' : 'Edit Trip')}</span>
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
         <form className={styles.form} onSubmit={handleSubmit}>
-          {isNew && (
-            <label className={styles.templateToggle}>
-              <input type="checkbox" checked={useTemplate} onChange={e => handleTemplateToggle(e.target.checked)} />
-              <span className={styles.templateLabel}>🏐 {lang === 'ja' ? '3日間アウェー戦テンプレートを使用' : 'Use 3-day away game template'}</span>
-            </label>
-          )}
-
           <label className={styles.label}>{lang === 'ja' ? 'タイトル *' : 'Title *'}</label>
-          <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)}
-            required autoFocus placeholder={lang === 'ja' ? '例: アウェー戦 vs 東京' : 'e.g. Away Game vs Tokyo'} />
+          <input className={styles.input} value={f.title} onChange={e => set('title', e.target.value)} required autoFocus
+            placeholder={lang === 'ja' ? '例: アウェー戦 vs 東京' : 'e.g. Away Game vs Tokyo'} />
 
           <div className={styles.fieldRow}>
             <div className={styles.fieldCol}>
               <label className={styles.label}>{lang === 'ja' ? '開始日 *' : 'Start *'}</label>
-              <input className={styles.input} type="date" value={startDate}
-                onChange={e => handleStartChange(e.target.value)} required />
+              <input className={styles.input} type="date" value={f.start_date} onChange={e => set('start_date', e.target.value)} required />
             </div>
             <div className={styles.fieldCol}>
               <label className={styles.label}>{lang === 'ja' ? '終了日' : 'End'}</label>
-              <input className={styles.input} type="date" value={endDate}
-                min={startDate} disabled={useTemplate} onChange={e => setEndDate(e.target.value)} />
-              {useTemplate && <span className={styles.templateHint}>+2 days (auto)</span>}
+              <input className={styles.input} type="date" value={f.end_date} min={f.start_date} onChange={e => set('end_date', e.target.value)} />
             </div>
           </div>
 
           <label className={styles.label}>{lang === 'ja' ? '場所' : 'Location'}</label>
-          <input className={styles.input} value={location} onChange={e => setLocation(e.target.value)}
+          <input className={styles.input} value={f.location} onChange={e => set('location', e.target.value)}
             placeholder={lang === 'ja' ? '例: 東京' : 'e.g. Tokyo'} />
 
-          <div className={styles.fieldRow}>
-            <div className={styles.fieldCol}>
-              <label className={styles.label}>{lang === 'ja' ? 'フライト番号' : 'Flight no.'}</label>
-              <input className={styles.input} value={flightNumber} onChange={e => setFlightNumber(e.target.value)}
-                placeholder="e.g. NH123" />
-            </div>
-            <div className={styles.fieldCol}>
-              <label className={styles.label}>{lang === 'ja' ? 'ホテル名' : 'Hotel name'}</label>
-              <input className={styles.input} value={hotelName} onChange={e => setHotelName(e.target.value)}
-                placeholder={lang === 'ja' ? '例: 東京ホテル' : 'e.g. Tokyo Hotel'} />
-            </div>
-          </div>
+          <label className={styles.label}>{lang === 'ja' ? 'フライト番号' : 'Flight no.'}</label>
+          <input className={styles.input} value={f.flight_number} onChange={e => set('flight_number', e.target.value)} placeholder="e.g. NH123" />
+
+          <label className={styles.label}>{lang === 'ja' ? 'ホテル名' : 'Hotel name'}</label>
+          <input className={styles.input} value={f.hotel_name} onChange={e => set('hotel_name', e.target.value)}
+            placeholder={lang === 'ja' ? '例: 東京ホテル' : 'e.g. Toyoko Inn Tokyo'} />
 
           <label className={styles.label}>{lang === 'ja' ? 'ホテル住所' : 'Hotel address'}</label>
-          <input className={styles.input} value={hotelAddress} onChange={e => setHotelAddress(e.target.value)}
-            placeholder={lang === 'ja' ? '例: 東京都渋谷区...' : 'e.g. 1-1 Shibuya, Tokyo'} />
+          <input className={styles.input} value={f.hotel_address} onChange={e => set('hotel_address', e.target.value)}
+            placeholder={lang === 'ja' ? '例: 東京都新宿区1-1-1' : 'e.g. 1-1 Shinjuku, Tokyo'} />
 
           <label className={styles.label}>{lang === 'ja' ? 'メモ' : 'Notes'}</label>
-          <textarea className={styles.textarea} value={notes} onChange={e => setNotes(e.target.value)}
-            rows={2} placeholder={lang === 'ja' ? '集合場所、持ち物など...' : 'Meeting point, notes...'} />
+          <textarea className={styles.textarea} value={f.notes} onChange={e => set('notes', e.target.value)}
+            rows={2} placeholder={lang === 'ja' ? '集合場所、持ち物など...' : 'Meeting point, luggage rules…'} />
 
           {error && <div className={styles.formErr}>{error}</div>}
           <div className={styles.modalFoot}>
@@ -242,26 +168,28 @@ function TripModal({ trip, lang, currentUserName, onSave, onClose }) {
   );
 }
 
-// ── Item Modal ────────────────────────────────────────────────────────────────
+// ── Item Form (create/edit) ────────────────────────────────────────────────────
 
-function ItemModal({ item, tripId, tripDates, lang, defaultDate, defaultType, onSave, onClose }) {
-  const [itemType, setItemType] = useState(item?.item_type ?? defaultType ?? 'other');
-  const [date,     setDate]     = useState(item?.item_date ?? defaultDate ?? tripDates[0] ?? '');
-  const [time,     setTime]     = useState(item?.item_time ?? '');
-  const [title,    setTitle]    = useState(item?.title ?? '');
-  const [desc,     setDesc]     = useState(item?.description ?? '');
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState(null);
+function ItemForm({ item, tripId, tripDates, lang, defaultDate, onSave, onClose }) {
+  const [type,  setType]  = useState(item?.item_type ?? 'other');
+  const [date,  setDate]  = useState(item?.item_date ?? defaultDate ?? tripDates[0] ?? '');
+  const [time,  setTime]  = useState(item?.item_time ?? '');
+  const [title, setTitle] = useState(item?.title ?? '');
+  const [desc,  setDesc]  = useState(item?.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!title.trim()) return;
     setSaving(true);
-    const payload = { item_type: itemType, item_date: date, item_time: time || null, title: title.trim(), description: desc.trim() || null };
+    const payload = { item_type: type, item_date: date, item_time: time || null, title: title.trim(), description: desc.trim() || null };
     const { error: err } = item
       ? await supabase.from('travel_items').update(payload).eq('id', item.id)
       : await supabase.from('travel_items').insert({ ...payload, trip_id: tripId });
     if (err) { setError(err.message); setSaving(false); return; }
-    onSave(); onClose();
+    onSave();
+    onClose();
   };
 
   return (
@@ -273,7 +201,17 @@ function ItemModal({ item, tripId, tripDates, lang, defaultDate, defaultType, on
         </div>
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.label}>{lang === 'ja' ? '種類' : 'Type'}</label>
-          <TypePicker value={itemType} onChange={setItemType} lang={lang} />
+          <div className={styles.typeGrid}>
+            {ITEM_TYPES.map(t => (
+              <button key={t.key} type="button"
+                className={`${styles.typeGridBtn} ${type === t.key ? styles.typeGridActive : ''}`}
+                onClick={() => setType(t.key)}>
+                <span className={styles.typeGridIcon}>{t.icon}</span>
+                <span className={styles.typeGridLabel}>{t[lang]}</span>
+              </button>
+            ))}
+          </div>
+
           <div className={styles.fieldRow}>
             <div className={styles.fieldCol}>
               <label className={styles.label}>{lang === 'ja' ? '日付' : 'Day'}</label>
@@ -286,12 +224,15 @@ function ItemModal({ item, tripId, tripDates, lang, defaultDate, defaultType, on
               <input className={styles.input} type="time" value={time} onChange={e => setTime(e.target.value)} />
             </div>
           </div>
+
           <label className={styles.label}>{lang === 'ja' ? 'タイトル *' : 'Title *'}</label>
           <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)}
-            required autoFocus placeholder={lang === 'ja' ? '例: 出発' : 'e.g. Departure'} />
+            required autoFocus placeholder={lang === 'ja' ? '例: 出発' : 'e.g. Bus departure'} />
+
           <label className={styles.label}>{lang === 'ja' ? '詳細' : 'Details'}</label>
           <textarea className={styles.textarea} value={desc} onChange={e => setDesc(e.target.value)}
-            rows={2} placeholder={lang === 'ja' ? '集合場所、持ち物など...' : 'Meeting point, notes...'} />
+            rows={2} placeholder={lang === 'ja' ? '住所、番号など...' : 'Address, notes, flight no.…'} />
+
           {error && <div className={styles.formErr}>{error}</div>}
           <div className={styles.modalFoot}>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
@@ -303,26 +244,24 @@ function ItemModal({ item, tripId, tripDates, lang, defaultDate, defaultType, on
   );
 }
 
-// ── Quick Add Row ─────────────────────────────────────────────────────────────
+// ── Quick add row (editors only) ──────────────────────────────────────────────
 
 function QuickAdd({ tripId, date, lang, onAdded }) {
-  const [type,       setType]       = useState('other');
-  const [time,       setTime]       = useState('');
-  const [title,      setTitle]      = useState('');
-  const [saving,     setSaving]     = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [type,  setType]  = useState('other');
+  const [time,  setTime]  = useState('');
+  const [title, setTitle] = useState('');
+  const [open,  setOpen]  = useState(false);
+  const [saving, setSaving] = useState(false);
   const pickerRef = useRef(null);
   const titleRef  = useRef(null);
 
   useEffect(() => {
-    function handleClick(e) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    const close = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  const handleAdd = async () => {
+  const add = async () => {
     if (!title.trim() || saving) return;
     setSaving(true);
     await supabase.from('travel_items').insert({ trip_id: tripId, item_date: date, item_time: time || null, title: title.trim(), item_type: type });
@@ -332,20 +271,16 @@ function QuickAdd({ tripId, date, lang, onAdded }) {
   };
 
   const t = typeInfo(type);
-
   return (
     <div className={styles.quickAdd}>
       <div className={styles.quickAddTypeWrap} ref={pickerRef}>
-        <button type="button" className={styles.quickAddTypeBtn}
-          onClick={() => setPickerOpen(v => !v)} title={lang === 'ja' ? '種類を選択' : 'Select type'}>
-          {t.icon}
-        </button>
-        {pickerOpen && (
+        <button type="button" className={styles.quickAddTypeBtn} onClick={() => setOpen(v => !v)}>{t.icon}</button>
+        {open && (
           <div className={styles.quickAddPicker}>
             {ITEM_TYPES.map(it => (
               <button key={it.key} type="button"
                 className={`${styles.quickAddPickerItem} ${type === it.key ? styles.quickAddPickerActive : ''}`}
-                onClick={() => { setType(it.key); setPickerOpen(false); titleRef.current?.focus(); }}>
+                onClick={() => { setType(it.key); setOpen(false); titleRef.current?.focus(); }}>
                 {it.icon} {it[lang]}
               </button>
             ))}
@@ -353,167 +288,17 @@ function QuickAdd({ tripId, date, lang, onAdded }) {
         )}
       </div>
       <input type="time" className={styles.quickAddTime} value={time} onChange={e => setTime(e.target.value)} />
-      <input ref={titleRef} type="text" className={styles.quickAddTitle}
-        value={title} onChange={e => setTitle(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleAdd()}
+      <input ref={titleRef} type="text" className={styles.quickAddTitle} value={title}
+        onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
         placeholder={lang === 'ja' ? '項目を入力して Enter...' : 'Add item and press Enter…'} />
-      <button type="button" className={styles.quickAddSubmit}
-        disabled={!title.trim() || saving} onClick={handleAdd}>
+      <button type="button" className={styles.quickAddSubmit} disabled={!title.trim() || saving} onClick={add}>
         {saving ? '…' : '+'}
       </button>
     </div>
   );
 }
 
-// ── Participants Section ──────────────────────────────────────────────────────
-
-function ParticipantsSection({ trip, participants, allProfiles, canEdit, lang, onUpdate }) {
-  const [managing, setManaging] = useState(false);
-
-  const toggle = async (profileId) => {
-    const isIn = participants.some(p => p.profile_id === profileId);
-    if (isIn) {
-      await supabase.from('travel_participants').delete().eq('trip_id', trip.id).eq('profile_id', profileId);
-    } else {
-      await supabase.from('travel_participants').insert({ trip_id: trip.id, profile_id: profileId });
-    }
-    onUpdate();
-  };
-
-  return (
-    <div className={styles.infoSection}>
-      <div className={styles.infoSectionHead}>
-        <span className={styles.infoSectionTitle}>👥 {lang === 'ja' ? '参加メンバー' : 'Traveling'}</span>
-        <span className={styles.infoSectionCount}>{participants.length}</span>
-        {canEdit && (
-          <button className={styles.manageBtn} onClick={() => setManaging(v => !v)}>
-            {managing ? (lang === 'ja' ? '完了' : 'Done') : (lang === 'ja' ? '管理' : 'Manage')}
-          </button>
-        )}
-      </div>
-
-      {managing && canEdit ? (
-        <div className={styles.participantGrid}>
-          {allProfiles.map(p => {
-            const isIn = participants.some(pt => pt.profile_id === p.id);
-            const name = p.display_name || p.email.split('@')[0];
-            return (
-              <button key={p.id}
-                className={`${styles.participantToggle} ${isIn ? styles.participantToggleOn : ''}`}
-                onClick={() => toggle(p.id)}>
-                {isIn ? '✓ ' : ''}{name}
-                {p.role && <span className={styles.toggleRole}>{p.role}</span>}
-              </button>
-            );
-          })}
-        </div>
-      ) : participants.length === 0 ? (
-        <p className={styles.infoEmpty}>{lang === 'ja' ? '参加者が登録されていません。' : 'No participants listed yet.'}</p>
-      ) : (
-        <div className={styles.avatarRow}>
-          {participants.map(p => {
-            const prof = allProfiles.find(ap => ap.id === p.profile_id);
-            const name = prof?.display_name || prof?.email?.split('@')[0] || '?';
-            return (
-              <div key={p.profile_id} className={styles.avatarChip} title={name}>
-                {name.slice(0, 2).toUpperCase()}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Packing Section ───────────────────────────────────────────────────────────
-
-function PackingSection({ trip, packingItems, myChecks, setMyChecks, canEdit, userId, lang, onUpdate }) {
-  const [newItem, setNewItem] = useState('');
-  const [saving,  setSaving]  = useState(false);
-
-  const addItem = async () => {
-    if (!newItem.trim() || saving) return;
-    setSaving(true);
-    await supabase.from('travel_packing_items').insert({ trip_id: trip.id, title: newItem.trim(), sort_order: packingItems.length });
-    setNewItem('');
-    setSaving(false);
-    onUpdate();
-  };
-
-  const deleteItem = async (id) => {
-    await supabase.from('travel_packing_items').delete().eq('id', id);
-    onUpdate();
-  };
-
-  const toggleCheck = async (itemId) => {
-    if (!userId) return;
-    const isChecked = myChecks.has(itemId);
-    setMyChecks(prev => {
-      const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
-      return next;
-    });
-    if (isChecked) {
-      await supabase.from('travel_packing_checks').delete().eq('item_id', itemId).eq('user_id', userId);
-    } else {
-      await supabase.from('travel_packing_checks').insert({ item_id: itemId, user_id: userId });
-    }
-  };
-
-  const packed = packingItems.filter(i => myChecks.has(i.id)).length;
-
-  return (
-    <div className={styles.infoSection}>
-      <div className={styles.infoSectionHead}>
-        <span className={styles.infoSectionTitle}>🧳 {lang === 'ja' ? '持ち物リスト' : 'Packing List'}</span>
-        {packingItems.length > 0 && (
-          <span className={`${styles.packProgress} ${packed === packingItems.length ? styles.packProgressDone : ''}`}>
-            {packed}/{packingItems.length}
-          </span>
-        )}
-      </div>
-
-      {packingItems.length === 0 ? (
-        <p className={styles.infoEmpty}>
-          {canEdit
-            ? (lang === 'ja' ? '下記から持ち物を追加してください。' : 'Add packing items below.')
-            : (lang === 'ja' ? '持ち物リストはまだありません。' : 'No packing list yet.')}
-        </p>
-      ) : (
-        <div className={styles.packingList}>
-          {packingItems.map(item => {
-            const checked = myChecks.has(item.id);
-            return (
-              <div key={item.id} className={`${styles.packingItem} ${checked ? styles.packingItemDone : ''}`}>
-                <button className={`${styles.packCheckbox} ${checked ? styles.packCheckboxDone : ''}`}
-                  onClick={() => toggleCheck(item.id)}>
-                  {checked ? '✓' : ''}
-                </button>
-                <span className={styles.packTitle}>{item.title}</span>
-                {canEdit && (
-                  <button className={styles.packDeleteBtn} onClick={() => deleteItem(item.id)}>×</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {canEdit && (
-        <div className={styles.packAddRow}>
-          <input className={styles.packInput} value={newItem}
-            onChange={e => setNewItem(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addItem()}
-            placeholder={lang === 'ja' ? '例: パスポート、ユニフォーム… Enter で追加' : 'e.g. Passport, jersey… Enter to add'} />
-          <button className={styles.packAddBtn} onClick={addItem} disabled={!newItem.trim() || saving}>+</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   const toast   = useToast();
@@ -524,49 +309,56 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [items,        setItems]        = useState([]);
   const [participants, setParticipants] = useState([]);
-  const [packingItems, setPackingItems] = useState([]);
-  const [myChecks,     setMyChecks]     = useState(new Set());
   const [allProfiles,  setAllProfiles]  = useState([]);
+  const [packItems,    setPackItems]    = useState([]);
+  const [myChecks,     setMyChecks]     = useState(new Set());
   const [loading,      setLoading]      = useState(true);
   const [loadingData,  setLoadingData]  = useState(false);
+  const [error,        setError]        = useState('');
 
-  const [showTripModal,   setShowTripModal]   = useState(false);
-  const [editingTrip,     setEditingTrip]     = useState(null);
-  const [showItemModal,   setShowItemModal]   = useState(false);
-  const [editingItem,     setEditingItem]     = useState(null);
-  const [itemDefaultDate, setItemDefaultDate] = useState(null);
-  const [itemDefaultType, setItemDefaultType] = useState(null);
-  const [deleting,        setDeleting]        = useState(null);
+  const [tripFormOpen, setTripFormOpen] = useState(false);
+  const [editingTrip,  setEditingTrip]  = useState(null);
+  const [itemFormOpen, setItemFormOpen] = useState(false);
+  const [editingItem,  setEditingItem]  = useState(null);
+  const [addDate,      setAddDate]      = useState(null);
+  const [managing,     setManaging]     = useState(false);
 
+  // Load trip list
   const loadTrips = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const { data } = await supabase.from('travel_trips').select('*').order('start_date', { ascending: false });
+      const { data, error: err } = await supabase
+        .from('travel_trips').select('*').order('start_date', { ascending: false });
+      if (err) throw err;
       setTrips(data ?? []);
+    } catch (e) {
+      setError(e.message ?? 'Could not load trips');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Load detail data for a selected trip
   const loadTripData = useCallback(async (tripId) => {
     setLoadingData(true);
     try {
-      const [itemsRes, partsRes, packRes] = await Promise.all([
-        supabase.from('travel_items').select('*').eq('trip_id', tripId).order('item_date').order('item_time'),
-        supabase.from('travel_participants').select('profile_id').eq('trip_id', tripId),
-        supabase.from('travel_packing_items').select('*').eq('trip_id', tripId).order('sort_order').order('created_at'),
-      ]);
+      const { data: itemsData }  = await supabase.from('travel_items')
+        .select('*').eq('trip_id', tripId).order('item_date').order('item_time', { nullsFirst: false });
+      setItems(itemsData ?? []);
 
-      setItems(itemsRes.data ?? []);
-      setParticipants(partsRes.data ?? []);
-      const pItems = packRes.data ?? [];
-      setPackingItems(pItems);
+      const { data: partsData }  = await supabase.from('travel_participants')
+        .select('profile_id').eq('trip_id', tripId);
+      setParticipants(partsData ?? []);
 
-      if (pItems.length > 0 && userId) {
-        const { data: checksData } = await supabase
-          .from('travel_packing_checks').select('item_id').eq('user_id', userId)
-          .in('item_id', pItems.map(i => i.id));
-        setMyChecks(new Set((checksData ?? []).map(c => c.item_id)));
+      const { data: packData }   = await supabase.from('travel_packing_items')
+        .select('*').eq('trip_id', tripId).order('sort_order').order('created_at');
+      setPackItems(packData ?? []);
+
+      if (packData?.length && userId) {
+        const { data: checks } = await supabase.from('travel_packing_checks')
+          .select('item_id').eq('user_id', userId).in('item_id', packData.map(i => i.id));
+        setMyChecks(new Set((checks ?? []).map(c => c.item_id)));
       } else {
         setMyChecks(new Set());
       }
@@ -575,31 +367,67 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
     }
   }, [userId]);
 
+  useEffect(() => { loadTrips(); }, [loadTrips]);
+
   useEffect(() => {
-    loadTrips();
     supabase.from('profiles').select('id, display_name, email, role').order('display_name')
-      .then(({ data }) => setAllProfiles(data ?? []));
-  }, [loadTrips]);
+      .then(({ data }) => { if (data) setAllProfiles(data); });
+  }, []);
 
   useEffect(() => {
-    if (selectedTrip) loadTripData(selectedTrip.id);
-    else { setItems([]); setParticipants([]); setPackingItems([]); setMyChecks(new Set()); }
-  }, [selectedTrip, loadTripData]);
+    if (selectedTrip) {
+      setManaging(false);
+      loadTripData(selectedTrip.id);
+    } else {
+      setItems([]); setParticipants([]); setPackItems([]); setMyChecks(new Set());
+    }
+  }, [selectedTrip?.id]);
 
-  const handleDeleteTrip = async (trip) => {
-    if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"? This cannot be undone.`)) return;
-    setDeleting(trip.id);
+  const deleteTrip = async (trip) => {
+    if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"?`)) return;
     await supabase.from('travel_trips').delete().eq('id', trip.id);
-    setTrips(prev => prev.filter(t => t.id !== trip.id));
+    setTrips(p => p.filter(t => t.id !== trip.id));
     if (selectedTrip?.id === trip.id) setSelectedTrip(null);
-    setDeleting(null);
     toast(lang === 'ja' ? '旅程を削除しました' : 'Trip deleted', 'info');
   };
 
-  const handleDeleteItem = async (item) => {
+  const deleteItem = async (item) => {
     if (!window.confirm(lang === 'ja' ? `「${item.title}」を削除しますか？` : `Delete "${item.title}"?`)) return;
     await supabase.from('travel_items').delete().eq('id', item.id);
-    setItems(prev => prev.filter(i => i.id !== item.id));
+    setItems(p => p.filter(i => i.id !== item.id));
+  };
+
+  const toggleParticipant = async (profileId) => {
+    const isIn = participants.some(p => p.profile_id === profileId);
+    if (isIn) {
+      await supabase.from('travel_participants').delete().eq('trip_id', selectedTrip.id).eq('profile_id', profileId);
+      setParticipants(p => p.filter(pt => pt.profile_id !== profileId));
+    } else {
+      await supabase.from('travel_participants').insert({ trip_id: selectedTrip.id, profile_id: profileId });
+      setParticipants(p => [...p, { profile_id: profileId }]);
+    }
+  };
+
+  const toggleCheck = async (itemId) => {
+    if (!userId) return;
+    const checked = myChecks.has(itemId);
+    setMyChecks(prev => { const n = new Set(prev); checked ? n.delete(itemId) : n.add(itemId); return n; });
+    if (checked) {
+      await supabase.from('travel_packing_checks').delete().eq('item_id', itemId).eq('user_id', userId);
+    } else {
+      await supabase.from('travel_packing_checks').insert({ item_id: itemId, user_id: userId });
+    }
+  };
+
+  const addPackItem = async (title) => {
+    if (!title.trim()) return;
+    await supabase.from('travel_packing_items').insert({ trip_id: selectedTrip.id, title: title.trim(), sort_order: packItems.length });
+    loadTripData(selectedTrip.id);
+  };
+
+  const deletePackItem = async (id) => {
+    await supabase.from('travel_packing_items').delete().eq('id', id);
+    setPackItems(p => p.filter(i => i.id !== id));
   };
 
   const tripDates = selectedTrip ? getDates(selectedTrip.start_date, selectedTrip.end_date) : [];
@@ -613,31 +441,29 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   return (
     <div className={styles.wrapper}>
 
-      {/* ── Sidebar ── */}
+      {/* ── Sidebar ─────────────────────────────── */}
       <div className={styles.sidebar}>
         <div className={styles.sidebarHead}>
           <span className={styles.sidebarTitle}>{lang === 'ja' ? '旅程' : 'Travel'}</span>
           {canEdit && (
-            <button className={styles.addTripBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true); }}>
+            <button className={styles.addTripBtn} onClick={() => { setEditingTrip(null); setTripFormOpen(true); }}>
               + {lang === 'ja' ? '追加' : 'New'}
             </button>
           )}
         </div>
         <div className={styles.tripList}>
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
-              <SkeletonCardBlock lines={2} />
-              <SkeletonCardBlock lines={2} />
-              <SkeletonCardBlock lines={2} />
-            </div>
+            <div className={styles.hint}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
+          ) : error ? (
+            <div className={styles.hint} style={{ color: '#ef4444' }}>{error}</div>
           ) : trips.length === 0 ? (
             <div className={styles.hint}>{lang === 'ja' ? '旅程がありません。' : 'No trips yet.'}</div>
           ) : trips.map(trip => {
-            const { status } = getTripStatus(trip);
+            const s = getTripStatus(trip);
             return (
               <div key={trip.id}
-                className={`${styles.tripRow} ${selectedTrip?.id === trip.id ? styles.tripRowActive : ''} ${status === 'ongoing' ? styles.tripRowOngoing : status === 'past' ? styles.tripRowPast : ''}`}
-                onClick={() => setSelectedTrip(trip)}>
+                className={`${styles.tripRow} ${selectedTrip?.id === trip.id ? styles.tripRowActive : ''} ${s === 'ongoing' ? styles.tripRowOngoing : s === 'past' ? styles.tripRowPast : ''}`}
+                onClick={() => setSelectedTrip(selectedTrip?.id === trip.id ? null : trip)}>
                 <div className={styles.tripRowTop}>
                   <span className={styles.tripRowTitle}>{trip.title}</span>
                   <StatusBadge trip={trip} lang={lang} />
@@ -653,77 +479,142 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Content ─────────────────────────────── */}
       <div className={styles.content}>
         {!selectedTrip ? (
-          <div className={styles.emptyState}>{lang === 'ja' ? '旅程を選択してください。' : 'Select a trip to view the itinerary.'}</div>
+          <div className={styles.emptyState}>
+            <div>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>✈️</div>
+              <div>{lang === 'ja' ? '旅程を選択してください。' : 'Select a trip to view the itinerary.'}</div>
+            </div>
+          </div>
+        ) : loadingData ? (
+          <div className={styles.emptyState}>
+            <div style={{ color: '#9ca3af', fontSize: 13 }}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
+          </div>
         ) : (
-          <>
-            {/* Trip header */}
-            <div className={styles.tripHeader}>
-              <div className={styles.tripHeaderInfo}>
-                <h2 className={styles.tripTitle}>{selectedTrip.title}</h2>
-                <div className={styles.tripMeta}>
-                  📅 {fmtShort(selectedTrip.start_date, lang)}
-                  {selectedTrip.end_date && selectedTrip.end_date !== selectedTrip.start_date
-                    ? ` – ${fmtShort(selectedTrip.end_date, lang)}` : ''}
-                  {selectedTrip.location && <> &nbsp;·&nbsp; 📍 {selectedTrip.location}</>}
-                  &nbsp;·&nbsp; {tripDates.length} {lang === 'ja' ? '日間' : tripDates.length === 1 ? 'day' : 'days'}
+          <div className={styles.scrollArea}>
+
+            {/* ── Trip info card ── */}
+            <div className={styles.infoCard}>
+              <div className={styles.infoCardHeader}>
+                <div>
+                  <div className={styles.tripTitle}>
+                    {selectedTrip.title}
+                    <StatusBadge trip={selectedTrip} lang={lang} />
+                  </div>
+                  <div className={styles.tripDates}>
+                    📅&nbsp;
+                    {fmtShort(selectedTrip.start_date, lang)}
+                    {selectedTrip.end_date && selectedTrip.end_date !== selectedTrip.start_date
+                      ? ` – ${fmtShort(selectedTrip.end_date, lang)}` : ''}
+                    &nbsp;·&nbsp;{tripDates.length} {lang === 'ja' ? '日間' : tripDates.length === 1 ? 'day' : 'days'}
+                    {selectedTrip.location && <>&nbsp;·&nbsp;📍 {selectedTrip.location}</>}
+                  </div>
                 </div>
-                {(selectedTrip.flight_number || selectedTrip.hotel_name) && (
-                  <div className={styles.tripDetailChips}>
-                    {selectedTrip.flight_number && (
-                      <span className={styles.detailChip}>✈️ {selectedTrip.flight_number}</span>
-                    )}
-                    {selectedTrip.hotel_name && (
-                      <span className={styles.detailChip}>
-                        🏨 {selectedTrip.hotel_name}
-                        {selectedTrip.hotel_address ? ` — ${selectedTrip.hotel_address}` : ''}
-                      </span>
-                    )}
+                <div className={styles.infoCardActions}>
+                  {canEdit && (
+                    <>
+                      <button className={styles.editTripBtn} onClick={() => { setEditingTrip(selectedTrip); setTripFormOpen(true); }}>
+                        ✏️ {lang === 'ja' ? '編集' : 'Edit'}
+                      </button>
+                      <button className={styles.deleteTripBtn} onClick={() => deleteTrip(selectedTrip)}>
+                        {lang === 'ja' ? '削除' : 'Delete'}
+                      </button>
+                    </>
+                  )}
+                  <button className={styles.printBtn} onClick={() => window.print()}>
+                    🖨 {lang === 'ja' ? '印刷' : 'Print'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Logistics row */}
+              <div className={styles.logisticsRow}>
+                {selectedTrip.flight_number && (
+                  <div className={styles.logItem}>
+                    <span className={styles.logIcon}>✈️</span>
+                    <div>
+                      <div className={styles.logLabel}>{lang === 'ja' ? 'フライト' : 'Flight'}</div>
+                      <div className={styles.logValue}>{selectedTrip.flight_number}</div>
+                    </div>
                   </div>
                 )}
-                {selectedTrip.notes && <div className={styles.tripNotes}>{selectedTrip.notes}</div>}
-              </div>
-              <div className={styles.tripHeaderActions}>
-                {canEdit && (
-                  <>
-                    <button className={styles.editTripBtn} onClick={() => { setEditingTrip(selectedTrip); setShowTripModal(true); }}>
-                      ✏️ {lang === 'ja' ? '編集' : 'Edit'}
-                    </button>
-                    <button className={styles.deleteTripBtn} onClick={() => handleDeleteTrip(selectedTrip)} disabled={deleting === selectedTrip.id}>
-                      {deleting === selectedTrip.id ? '…' : (lang === 'ja' ? '削除' : 'Delete')}
-                    </button>
-                  </>
+                {selectedTrip.hotel_name && (
+                  <div className={styles.logItem}>
+                    <span className={styles.logIcon}>🏨</span>
+                    <div>
+                      <div className={styles.logLabel}>{lang === 'ja' ? 'ホテル' : 'Hotel'}</div>
+                      <div className={styles.logValue}>{selectedTrip.hotel_name}</div>
+                      {selectedTrip.hotel_address && (
+                        <div className={styles.logSub}>{selectedTrip.hotel_address}</div>
+                      )}
+                    </div>
+                  </div>
                 )}
-                <button className={styles.printBtn} onClick={() => window.print()}>
-                  🖨 {lang === 'ja' ? '印刷' : 'Print'}
-                </button>
+                {selectedTrip.notes && (
+                  <div className={styles.logItem}>
+                    <span className={styles.logIcon}>📋</span>
+                    <div>
+                      <div className={styles.logLabel}>{lang === 'ja' ? 'メモ' : 'Notes'}</div>
+                      <div className={styles.logValue} style={{ whiteSpace: 'pre-wrap' }}>{selectedTrip.notes}</div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Participants */}
+              <div className={styles.participantsRow}>
+                <span className={styles.participantsLabel}>
+                  👥 {lang === 'ja' ? '参加メンバー' : 'Traveling'} ({participants.length})
+                </span>
+                {canEdit && (
+                  <button className={styles.manageBtn} onClick={() => setManaging(v => !v)}>
+                    {managing ? (lang === 'ja' ? '完了' : 'Done') : (lang === 'ja' ? '管理' : 'Manage')}
+                  </button>
+                )}
+              </div>
+
+              {managing && canEdit ? (
+                <div className={styles.participantGrid}>
+                  {allProfiles.map(p => {
+                    const isIn = participants.some(pt => pt.profile_id === p.id);
+                    const name = p.display_name || p.email.split('@')[0];
+                    return (
+                      <button key={p.id}
+                        className={`${styles.participantToggle} ${isIn ? styles.participantToggleOn : ''}`}
+                        onClick={() => toggleParticipant(p.id)}>
+                        {isIn ? '✓ ' : ''}{name}
+                        {p.role && <span className={styles.toggleRole}>{p.role}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : participants.length === 0 ? (
+                <div className={styles.hint} style={{ padding: '6px 0' }}>
+                  {lang === 'ja' ? 'まだ参加者が登録されていません。' : 'No participants listed yet.'}
+                </div>
+              ) : (
+                <div className={styles.avatarRow}>
+                  {participants.map(p => {
+                    const prof = allProfiles.find(ap => ap.id === p.profile_id);
+                    const name = prof?.display_name || prof?.email?.split('@')[0] || '?';
+                    return (
+                      <div key={p.profile_id} className={styles.avatarChip} title={name}>
+                        {name.slice(0, 2).toUpperCase()}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Participants + Packing side by side */}
-            {!loadingData && (
-              <div className={styles.infoPanels}>
-                <ParticipantsSection
-                  trip={selectedTrip} participants={participants} allProfiles={allProfiles}
-                  canEdit={canEdit} lang={lang} onUpdate={() => loadTripData(selectedTrip.id)}
-                />
-                <PackingSection
-                  trip={selectedTrip} packingItems={packingItems} myChecks={myChecks} setMyChecks={setMyChecks}
-                  canEdit={canEdit} userId={userId} lang={lang} onUpdate={() => loadTripData(selectedTrip.id)}
-                />
-              </div>
-            )}
-
-            {/* Daily rundown */}
-            <div className={styles.rundown}>
-              {loadingData ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <SkeletonCardBlock lines={3} />
-                  <SkeletonCardBlock lines={3} />
-                </div>
-              ) : tripDates.map((date, dayIdx) => {
+            {/* ── Day-by-day timetable ── */}
+            <div className={styles.timetable}>
+              {tripDates.length === 0 && (
+                <div className={styles.hint}>{lang === 'ja' ? '日程が設定されていません。' : 'No dates set for this trip.'}</div>
+              )}
+              {tripDates.map((date, dayIdx) => {
                 const dayItems = (itemsByDate[date] ?? []).slice().sort((a, b) => {
                   if (!a.item_time && !b.item_time) return 0;
                   if (!a.item_time) return 1;
@@ -734,13 +625,17 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                   <div key={date} className={styles.daySection}>
                     <div className={styles.dayHeader}>
                       <span className={styles.dayLabel}>Day {dayIdx + 1}</span>
-                      <span className={styles.dayDate}>{fmtFull(date, lang)}</span>
+                      <span className={styles.dayDate}>{fmtLong(date, lang)}</span>
+                      {canEdit && (
+                        <button className={styles.addItemBtn} onClick={() => { setEditingItem(null); setAddDate(date); setItemFormOpen(true); }}>
+                          + {lang === 'ja' ? '追加' : 'Add'}
+                        </button>
+                      )}
                     </div>
                     <div className={styles.dayItems}>
-                      {dayItems.length === 0 && !canEdit && (
-                        <div className={styles.emptyDay}>{lang === 'ja' ? 'まだ予定はありません。' : 'No items yet.'}</div>
-                      )}
-                      {dayItems.map(item => {
+                      {dayItems.length === 0 ? (
+                        <div className={styles.emptyDay}>{lang === 'ja' ? '予定なし' : 'Nothing scheduled'}</div>
+                      ) : dayItems.map(item => {
                         const t = typeInfo(item.item_type);
                         return (
                           <div key={item.id} className={styles.rundownItem}>
@@ -752,28 +647,38 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                             </div>
                             {canEdit && (
                               <div className={styles.itemActions}>
-                                <button className={styles.itemEditBtn} onClick={() => { setEditingItem(item); setItemDefaultDate(null); setItemDefaultType(null); setShowItemModal(true); }} title={lang === 'ja' ? '編集' : 'Edit'}>✏️</button>
-                                <button className={styles.itemDeleteBtn} onClick={() => handleDeleteItem(item)} title={lang === 'ja' ? '削除' : 'Delete'}>🗑️</button>
+                                <button className={styles.itemEditBtn}
+                                  onClick={() => { setEditingItem(item); setAddDate(date); setItemFormOpen(true); }}>✏️</button>
+                                <button className={styles.itemDeleteBtn} onClick={() => deleteItem(item)}>🗑️</button>
                               </div>
                             )}
                           </div>
                         );
                       })}
-                      {canEdit && (
-                        <QuickAdd tripId={selectedTrip.id} date={date} lang={lang} onAdded={() => loadTripData(selectedTrip.id)} />
-                      )}
+                      {canEdit && <QuickAdd tripId={selectedTrip.id} date={date} lang={lang} onAdded={() => loadTripData(selectedTrip.id)} />}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </>
+
+            {/* ── Packing list ── */}
+            <PackingSection
+              packItems={packItems} myChecks={myChecks}
+              canEdit={canEdit} lang={lang}
+              onToggle={toggleCheck}
+              onAdd={addPackItem}
+              onDelete={deletePackItem}
+            />
+
+          </div>
         )}
       </div>
 
       {/* ── Modals ── */}
-      {showTripModal && (
-        <TripModal trip={editingTrip} lang={lang} currentUserName={currentUserName}
+      {tripFormOpen && (
+        <TripForm
+          trip={editingTrip} lang={lang} currentUserName={currentUserName}
           onSave={async () => {
             await loadTrips();
             if (editingTrip) {
@@ -784,13 +689,75 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
               toast(lang === 'ja' ? '旅程を作成しました' : 'Trip created', 'success');
             }
           }}
-          onClose={() => setShowTripModal(false)} />
+          onClose={() => setTripFormOpen(false)}
+        />
       )}
-      {showItemModal && selectedTrip && (
-        <ItemModal item={editingItem} tripId={selectedTrip.id} tripDates={tripDates} lang={lang}
-          defaultDate={itemDefaultDate} defaultType={itemDefaultType}
+
+      {itemFormOpen && selectedTrip && (
+        <ItemForm
+          item={editingItem} tripId={selectedTrip.id} tripDates={tripDates}
+          lang={lang} defaultDate={addDate}
           onSave={() => { loadTripData(selectedTrip.id); toast(lang === 'ja' ? '項目を保存しました' : 'Item saved', 'success'); }}
-          onClose={() => setShowItemModal(false)} />
+          onClose={() => setItemFormOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Packing list sub-component ────────────────────────────────────────────────
+
+function PackingSection({ packItems, myChecks, canEdit, lang, onToggle, onAdd, onDelete }) {
+  const [newItem, setNewItem] = useState('');
+  const [open, setOpen] = useState(false);
+  const packed = packItems.filter(i => myChecks.has(i.id)).length;
+
+  if (packItems.length === 0 && !canEdit) return null;
+
+  return (
+    <div className={styles.packSection}>
+      <button className={styles.packToggle} onClick={() => setOpen(v => !v)}>
+        🧳 {lang === 'ja' ? '持ち物リスト' : 'Packing List'}
+        {packItems.length > 0 && (
+          <span className={`${styles.packProgress} ${packed === packItems.length ? styles.packProgressDone : ''}`}>
+            {packed}/{packItems.length}
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className={styles.packBody}>
+          {packItems.length === 0 ? (
+            <div className={styles.hint}>{lang === 'ja' ? 'まだ持ち物がありません。' : 'No items yet.'}</div>
+          ) : (
+            <div className={styles.packingList}>
+              {packItems.map(item => {
+                const checked = myChecks.has(item.id);
+                return (
+                  <div key={item.id} className={`${styles.packingItem} ${checked ? styles.packingItemDone : ''}`}>
+                    <button className={`${styles.packCheckbox} ${checked ? styles.packCheckboxDone : ''}`}
+                      onClick={() => onToggle(item.id)}>{checked ? '✓' : ''}</button>
+                    <span className={styles.packTitle}>{item.title}</span>
+                    {canEdit && (
+                      <button className={styles.packDeleteBtn} onClick={() => onDelete(item.id)}>×</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {canEdit && (
+            <div className={styles.packAddRow}>
+              <input className={styles.packInput} value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { onAdd(newItem); setNewItem(''); } }}
+                placeholder={lang === 'ja' ? 'パスポート、ユニフォーム… Enter' : 'Passport, jersey… Enter to add'} />
+              <button className={styles.packAddBtn} disabled={!newItem.trim()}
+                onClick={() => { onAdd(newItem); setNewItem(''); }}>+</button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
