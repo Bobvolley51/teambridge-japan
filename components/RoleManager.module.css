@@ -714,7 +714,7 @@
 
 .statsTiles {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0;
 }
 
@@ -808,9 +808,15 @@
   flex-shrink: 0;
 }
 
+.lastSeenBadge {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .statsTiles { grid-template-columns: repeat(2, 1fr); }
-  .statsTile:nth-child(2) { border-right: none; }
-  .statsTile:nth-child(1),
-  .statsTile:nth-child(2) { border-bottom: 1px solid #f3f4f6; }
+  .statsTile:nth-child(odd):last-child  { grid-column: span 2; border-right: none; }
+  .statsTile:nth-child(even)            { border-right: none; }
+  .statsTile:not(:nth-last-child(-n+2)) { border-bottom: 1px solid #f3f4f6; }
 }

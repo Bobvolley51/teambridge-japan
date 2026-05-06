@@ -70,7 +70,16 @@ function AppStats({ profiles, lang }) {
   for (const p of profiles) roleCounts[p.role] = (roleCounts[p.role] ?? 0) + 1;
   const maxCount = Math.max(...Object.values(roleCounts), 1);
 
+  const since7 = new Date(Date.now() - 7 * 86400000).toISOString();
+  const activeUsers = profiles.filter(p => p.last_seen_at && p.last_seen_at >= since7).length;
+
   const tiles = [
+    {
+      icon: '🟢',
+      value: stats ? `${activeUsers}/${profiles.length}` : '…',
+      label: lang === 'ja' ? 'アクティブ (7日)' : 'Active users (7d)',
+      highlight: stats && profiles.length > 0 && activeUsers === profiles.length,
+    },
     {
       icon: '💬',
       value: stats?.messages ?? '…',
@@ -79,7 +88,7 @@ function AppStats({ profiles, lang }) {
     {
       icon: '💪',
       value: stats ? `${stats.wellnessUsers}/${stats.playerCount}` : '…',
-      label: lang === 'ja' ? 'ウェルネス提出 (7日)' : 'Wellness submitted (7d)',
+      label: lang === 'ja' ? 'ウェルネス提出 (7日)' : 'Wellness (7d)',
       highlight: stats && stats.playerCount > 0 && stats.wellnessUsers === stats.playerCount,
     },
     {
@@ -459,6 +468,11 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                       )}
                       {profile.id === currentUserId && (
                         <span className={styles.youBadge}>{lang === 'ja' ? '自分' : 'You'}</span>
+                      )}
+                      {profile.last_seen_at && (
+                        <span className={styles.lastSeenBadge} title={new Date(profile.last_seen_at).toLocaleString()}>
+                          🕐 {timeAgo(profile.last_seen_at, lang)}
+                        </span>
                       )}
                     </span>
                   </div>
