@@ -20,6 +20,7 @@ import NotificationBell      from '@/components/NotificationBell';
 import PrivacyNotice, { PRIVACY_VERSION } from '@/components/PrivacyNotice';
 import { ToastProvider } from '@/lib/toast';
 import Tactics               from '@/components/Tactics';
+import Travel                from '@/components/Travel';
 import PlayerStats           from '@/components/PlayerStats';
 import GlobalSearch          from '@/components/GlobalSearch';
 import styles                from './page.module.css';
@@ -30,6 +31,7 @@ const NAV_BASE = [
   { id: 'chat',      icon: '💬', label: { en: 'Chat',         ja: 'チャット'      } },
   { id: 'tasks',     icon: '✅', label: { en: 'Tasks',        ja: 'タスク'        } },
   { id: 'tactics',   icon: '🎯', label: { en: 'Tactics',       ja: '戦術'          } },
+  { id: 'travel',    icon: '✈️', label: { en: 'Travel',        ja: '旅程'          } },
   { id: 'feed',      icon: '📢', label: { en: 'Announcements',ja: 'お知らせ'      } },
 ];
 
@@ -290,6 +292,7 @@ export default function Home() {
           {nav==='tasks'     && <Tasks             lang={lang} profile={profile} />}
           {nav==='tactics'   && <Tactics           lang={lang} profile={profile} />}
           {nav==='feed'      && <Announcements     lang={lang} currentUserName={user.email} />}
+          {nav==='travel'    && <Travel            lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}
           {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} />}
