@@ -86,7 +86,7 @@ export default function Home() {
     const userId = session.user.id;
     const ch = supabase.channel('unread-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
-        if (p.new.sender_id !== userId) {
+        if (p.new.sender_id !== userId && !p.new.channel?.startsWith('dm:')) {
           setUnreadChat(n => n + 1);
         }
       })

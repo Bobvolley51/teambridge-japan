@@ -227,9 +227,10 @@ export default function Dashboard({
   const wellnessToday     = wellnessAlerts.filter(w => w.date === todayDateStr);
   const wellnessYesterday = wellnessAlerts.filter(w => w.date === yesterdayDateStr);
 
-  // Group messages by channel, take 4 most recent per channel
+  // Group messages by channel, take 4 most recent per channel (exclude DMs)
   const channels = {};
   for (const msg of messages) {
+    if (msg.channel?.startsWith('dm:')) continue;
     if (!channels[msg.channel]) channels[msg.channel] = [];
     if (channels[msg.channel].length < 4) channels[msg.channel].push(msg);
   }
