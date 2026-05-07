@@ -83,8 +83,8 @@
 .teamRow:hover { background: #f3f4f6; }
 .teamRow:hover .teamRowActions { opacity: 1; }
 
-.teamRowActive { background: #eff6ff; }
-.teamRowActive .teamRowName { color: #1d4ed8; font-weight: 600; }
+.teamRowActive { background: #fdf2f4; }
+.teamRowActive .teamRowName { color: #6b001f; font-weight: 600; }
 
 .teamRowName {
   flex: 1;
@@ -151,7 +151,7 @@
   transition: color 0.1s, border-color 0.1s, background 0.1s;
   flex-shrink: 0;
 }
-.addTeamBtn:hover { color: #2563eb; border-color: #93c5fd; background: #eff6ff; }
+.addTeamBtn:hover { color: #7e0027; border-color: #e09aaa; background: #fdf2f4; }
 
 /* ── Content ── */
 
@@ -219,8 +219,8 @@
 .catTab:hover { color: #374151; }
 
 .catTabActive {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: #7e0027;
+  border-bottom-color: #7e0027;
   font-weight: 600;
 }
 
@@ -343,7 +343,7 @@
 
 .watchLink {
   font-size: 12px;
-  color: #2563eb;
+  color: #7e0027;
   font-weight: 600;
   text-decoration: none;
   margin-top: auto;
@@ -443,16 +443,16 @@
   padding: 7px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: #7e0027;
+  background: #fdf2f4;
+  border: 1px solid #f5c2ce;
   border-radius: 7px;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.1s;
   margin-top: 4px;
 }
-.addNoteBtn:hover { background: #dbeafe; }
+.addNoteBtn:hover { background: #fce8ed; }
 
 /* ── Modals (shared with Tasks) ── */
 
@@ -541,7 +541,7 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.modalInput:focus { border-color: #3b82f6; }
+.modalInput:focus { border-color: #9b0030; }
 
 .modalTextarea {
   width: 100%;
@@ -557,7 +557,7 @@
   resize: vertical;
   transition: border-color 0.15s;
 }
-.modalTextarea:focus { border-color: #3b82f6; }
+.modalTextarea:focus { border-color: #9b0030; }
 
 .modalRow { display: flex; gap: 10px; }
 .modalField { flex: 1; display: flex; flex-direction: column; }
@@ -600,7 +600,7 @@
 .saveBtn {
   font-size: 13px;
   padding: 7px 16px;
-  background: #2563eb;
+  background: #7e0027;
   border: none;
   border-radius: 7px;
   color: #fff;
@@ -609,5 +609,5 @@
   font-weight: 600;
   transition: background 0.15s;
 }
-.saveBtn:hover    { background: #1d4ed8; }
-.saveBtn:disabled { background: #93c5fd; cursor: not-allowed; }
+.saveBtn:hover    { background: #6b001f; }
+.saveBtn:disabled { background: #e09aaa; cursor: not-allowed; }

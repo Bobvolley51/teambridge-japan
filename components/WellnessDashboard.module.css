@@ -49,7 +49,7 @@
 }
 .tab + .tab { border-left: 1px solid #e5e7eb; }
 .tab:hover  { background: #f9fafb; }
-.tabActive  { background: #2563eb !important; color: #fff !important; }
+.tabActive  { background: #7e0027 !important; color: #fff !important; }
 
 /* ── Scrollable content area ───────────────────────────── */
 
@@ -81,7 +81,7 @@
   outline: none;
   cursor: pointer;
 }
-.datePicker:focus { border-color: #2563eb; }
+.datePicker:focus { border-color: #7e0027; }
 
 .navBtn {
   width: 30px;

@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  background: linear-gradient(135deg, #fdf2f4 0%, #f5f3ff 100%);
   padding: 24px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -43,13 +43,13 @@
   transition: background 0.1s, color 0.1s;
 }
 .langBtn:hover { background: #f3f4f6; }
-.langBtnActive { background: #2563eb; color: #fff; border-color: #2563eb; }
+.langBtnActive { background: #7e0027; color: #fff; border-color: #7e0027; }
 
 .logo {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1, #2563eb);
+  background: linear-gradient(135deg, #6366f1, #7e0027);
   color: #fff;
   font-size: 16px;
   font-weight: 700;
@@ -135,7 +135,7 @@
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -144,7 +144,7 @@
   margin-top: 2px;
 }
 
-.submitBtn:hover:not(:disabled) { background: #1d4ed8; }
+.submitBtn:hover:not(:disabled) { background: #6b001f; }
 .submitBtn:disabled              { opacity: 0.5; cursor: not-allowed; }
 
 .switchBtn {

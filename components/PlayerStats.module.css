@@ -47,16 +47,16 @@
   font-size: 12px;
   font-weight: 600;
   padding: 6px 14px;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background: #fdf2f4;
+  color: #7e0027;
+  border: 1px solid #f5c2ce;
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
   transition: background 0.1s;
 }
-.editBtn:hover { background: #dbeafe; }
+.editBtn:hover { background: #fce8ed; }
 
 /* ── Wellness Table ── */
 
@@ -303,11 +303,11 @@
   font-size: 13px;
   font-family: inherit;
 }
-.rpeEditInput:focus { outline: none; border-color: #2563eb; }
+.rpeEditInput:focus { outline: none; border-color: #7e0027; }
 
 .saveSmallBtn {
   padding: 5px 14px;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -317,7 +317,7 @@
   font-family: inherit;
   transition: background 0.1s;
 }
-.saveSmallBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveSmallBtn:hover:not(:disabled) { background: #6b001f; }
 .saveSmallBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .cancelSmallBtn {

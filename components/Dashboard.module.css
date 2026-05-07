@@ -10,7 +10,7 @@
 /* ── Welcome banner ─────────────────────────────────────────── */
 
 .welcome {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #5c001a 0%, #9b0030 100%);
   color: #fff;
   padding: 28px 32px 26px;
   display: flex;
@@ -261,7 +261,7 @@
 .countBadgeBlue {
   font-size: 10px;
   font-weight: 700;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border-radius: 10px;
   padding: 1px 6px;
@@ -468,7 +468,7 @@
 .footBtn {
   font-size: 12px;
   font-weight: 500;
-  color: #2563eb;
+  color: #7e0027;
   background: none;
   border: none;
   cursor: pointer;
@@ -477,4 +477,4 @@
   border-radius: 6px;
   transition: background 0.1s;
 }
-.footBtn:hover { background: #eff6ff; }
+.footBtn:hover { background: #fdf2f4; }

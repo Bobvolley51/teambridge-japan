@@ -47,7 +47,7 @@
 }
 .tab + .tab { border-left: 1px solid #e5e7eb; }
 .tab:hover  { background: #f9fafb; }
-.tabActive  { background: #2563eb !important; color: #fff !important; }
+.tabActive  { background: #7e0027 !important; color: #fff !important; }
 
 .refreshBtn {
   padding: 5px 10px;

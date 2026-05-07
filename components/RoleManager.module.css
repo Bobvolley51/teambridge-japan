@@ -111,8 +111,8 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -160,8 +160,8 @@
 .youBadge {
   font-size: 10px;
   font-weight: 600;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fdf2f4;
+  color: #7e0027;
   padding: 1px 7px;
   border-radius: 10px;
 }
@@ -210,7 +210,7 @@
   transition: background 0.1s, border-color 0.1s;
 }
 
-.editBtn:hover { background: #eff6ff; border-color: #bfdbfe; }
+.editBtn:hover { background: #fdf2f4; border-color: #f5c2ce; }
 
 .delBtn:hover:not(:disabled) { background: #fef2f2; border-color: #fecaca; }
 .delBtn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -378,7 +378,7 @@
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -387,7 +387,7 @@
   transition: background 0.15s;
   white-space: nowrap;
 }
-.approveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.approveBtn:hover:not(:disabled) { background: #6b001f; }
 .approveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .rejectBtn {
@@ -528,7 +528,7 @@
   padding: 7px 18px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 7px;
@@ -536,7 +536,7 @@
   font-family: inherit;
   transition: background 0.15s;
 }
-.saveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveBtn:hover:not(:disabled) { background: #6b001f; }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Delete modal body */

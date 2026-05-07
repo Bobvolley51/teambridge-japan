@@ -84,7 +84,7 @@
 }
 
 .filterSelect:focus {
-  border-color: #3b82f6;
+  border-color: #9b0030;
 }
 
 .sortBtn {
@@ -173,7 +173,7 @@
 }
 
 .card:hover {
-  border-color: #3b82f6;
+  border-color: #9b0030;
   box-shadow: 0 1px 4px rgba(59, 130, 246, 0.12);
 }
 
@@ -223,8 +223,8 @@
 .assignee {
   font-size: 10px;
   font-weight: 600;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   padding: 2px 8px;
   border-radius: 10px;
   max-width: 90px;
@@ -277,9 +277,9 @@
 }
 
 .addTaskBtn:hover {
-  color: #2563eb;
-  border-color: #93c5fd;
-  background: #eff6ff;
+  color: #7e0027;
+  border-color: #e09aaa;
+  background: #fdf2f4;
 }
 
 /* ── Modal overlay ── */
@@ -376,7 +376,7 @@
   transition: border-color 0.15s;
 }
 
-.modalInput:focus  { border-color: #3b82f6; }
+.modalInput:focus  { border-color: #9b0030; }
 
 .modalTextarea {
   width: 100%;
@@ -393,7 +393,7 @@
   transition: border-color 0.15s;
 }
 
-.modalTextarea:focus { border-color: #3b82f6; }
+.modalTextarea:focus { border-color: #9b0030; }
 
 .modalRow {
   display: flex;
@@ -420,7 +420,7 @@
   transition: border-color 0.15s;
 }
 
-.modalSelect:focus { border-color: #3b82f6; }
+.modalSelect:focus { border-color: #9b0030; }
 
 .modalFooter {
   display: flex;
@@ -468,7 +468,7 @@
 .saveBtn {
   font-size: 13px;
   padding: 7px 16px;
-  background: #2563eb;
+  background: #7e0027;
   border: none;
   border-radius: 7px;
   color: #ffffff;
@@ -478,5 +478,5 @@
   transition: background 0.15s;
 }
 
-.saveBtn:hover    { background: #1d4ed8; }
-.saveBtn:disabled { background: #93c5fd; cursor: not-allowed; }
+.saveBtn:hover    { background: #6b001f; }
+.saveBtn:disabled { background: #e09aaa; cursor: not-allowed; }

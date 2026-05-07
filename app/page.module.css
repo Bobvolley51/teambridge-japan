@@ -34,8 +34,8 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #2563eb;
-  border: 2px solid #bfdbfe;
+  background: #7e0027;
+  border: 2px solid #f5c2ce;
 }
 
 .headerRight {
@@ -77,9 +77,9 @@
 }
 
 .langActive {
-  background: #eff6ff;
-  color: #2563eb;
-  border-color: #bfdbfe;
+  background: #fdf2f4;
+  color: #7e0027;
+  border-color: #f5c2ce;
   font-weight: 600;
 }
 
@@ -87,8 +87,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -156,8 +156,8 @@
 }
 
 .navActive {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fdf2f4;
+  color: #7e0027;
   font-weight: 500;
 }
 
@@ -227,7 +227,7 @@
   position: relative;
 }
 .mobileNavItem:active { background: #f3f4f6; }
-.mobileNavActive { color: #2563eb; }
+.mobileNavActive { color: #7e0027; }
 
 .mobileNavIconWrap {
   position: relative;

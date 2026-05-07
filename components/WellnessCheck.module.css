@@ -30,7 +30,7 @@
   align-items: center;
   gap: 14px;
   padding: 20px 24px 16px;
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #7e0027 100%);
   color: #fff;
   flex-shrink: 0;
 }
@@ -95,8 +95,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fdf2f4;
+  color: #7e0027;
   font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
@@ -139,9 +139,9 @@
 }
 
 .scaleBtn:hover {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #2563eb;
+  border-color: #7e0027;
+  background: #fdf2f4;
+  color: #7e0027;
 }
 
 /* Actions */
@@ -171,7 +171,7 @@
   padding: 8px 28px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -179,7 +179,7 @@
   font-family: inherit;
   transition: background 0.15s;
 }
-.submitBtn:hover:not(:disabled) { background: #1d4ed8; }
+.submitBtn:hover:not(:disabled) { background: #6b001f; }
 .submitBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .privacyNote {

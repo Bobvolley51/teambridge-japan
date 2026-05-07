@@ -20,7 +20,7 @@
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 .langBtn:hover { background: #f3f4f6; color: #374151; }
-.langBtnActive { background: #2563eb; color: #fff; border-color: #2563eb; }
+.langBtnActive { background: #7e0027; color: #fff; border-color: #7e0027; }
 
 .overlay {
   position: fixed;
@@ -78,8 +78,8 @@
 /* ── Welcome ── */
 
 .welcome {
-  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
-  border: 1px solid #dbeafe;
+  background: linear-gradient(135deg, #fdf2f4, #f5f3ff);
+  border: 1px solid #fce8ed;
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -91,7 +91,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #1e40af;
+  color: #5c001a;
   line-height: 1.4;
 }
 
@@ -99,7 +99,7 @@
   margin: 0;
   font-size: 12px;
   font-weight: 500;
-  color: #3b82f6;
+  color: #9b0030;
   line-height: 1.4;
 }
 
@@ -176,9 +176,9 @@
 .roleChip {
   font-size: 10px;
   font-weight: 600;
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: #fdf2f4;
+  color: #6b001f;
+  border: 1px solid #f5c2ce;
   border-radius: 6px;
   padding: 3px 8px;
   line-height: 1.4;
@@ -213,7 +213,7 @@
 .acceptBtn {
   width: 100%;
   padding: 12px;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -224,7 +224,7 @@
   transition: background 0.1s;
   flex-shrink: 0;
 }
-.acceptBtn:hover:not(:disabled) { background: #1d4ed8; }
+.acceptBtn:hover:not(:disabled) { background: #6b001f; }
 .acceptBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (max-width: 480px) {

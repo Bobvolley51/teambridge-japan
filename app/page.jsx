@@ -255,7 +255,7 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.logo}>
           <div className={styles.logoDot} />
-          <span className={styles.logoText}>{lang === 'ja' ? 'チームブリッジ' : 'TeamBridge Japan'}</span>
+          <span className={styles.logoText}>Teambridge Tridents</span>
         </div>
         <div className={styles.headerRight}>
           <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">

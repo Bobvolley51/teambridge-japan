@@ -29,7 +29,7 @@
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #2563eb);
+  background: linear-gradient(135deg, #6366f1, #7e0027);
   color: #fff;
   display: flex;
   align-items: center;
@@ -78,7 +78,7 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #2563eb);
+  background: linear-gradient(135deg, #6366f1, #7e0027);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -100,7 +100,7 @@
 }
 
 .userBubble {
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
@@ -177,9 +177,9 @@
 }
 
 .chip:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background: #fdf2f4;
+  border-color: #f5c2ce;
+  color: #5c001a;
 }
 
 /* Input bar */
@@ -223,7 +223,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border: none;
   font-size: 18px;
@@ -236,5 +236,5 @@
   line-height: 1;
 }
 
-.sendBtn:hover:not(:disabled) { background: #1d4ed8; }
+.sendBtn:hover:not(:disabled) { background: #6b001f; }
 .sendBtn:disabled              { opacity: 0.4; cursor: not-allowed; }

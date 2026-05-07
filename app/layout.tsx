@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "TeamBridge Japan",
+  title: "Teambridge Tridents",
   description: "Team management for volleyball",
   manifest: "/manifest.json",
   appleWebApp: {

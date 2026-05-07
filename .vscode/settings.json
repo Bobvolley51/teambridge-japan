@@ -1,0 +1,20 @@
+{
+  "terminal.integrated.shellArgs.windows": ["-NoProfile", "-ExecutionPolicy", "Bypass"],
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "[powershell]": {
+    "editor.defaultFormatter": "ms-vscode.powershell",
+    "editor.formatOnSave": false
+  },
+  "powershell.codeFormatting.preset": "Allman",
+  "powershell.scriptAnalysis.enable": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true
+  }
+}

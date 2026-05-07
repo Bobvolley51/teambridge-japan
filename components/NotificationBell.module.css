@@ -86,7 +86,7 @@
 
 .markAllBtn {
   font-size: 12px;
-  color: #2563eb;
+  color: #7e0027;
   background: none;
   border: none;
   cursor: pointer;
@@ -95,7 +95,7 @@
   border-radius: 5px;
   transition: background 0.1s;
 }
-.markAllBtn:hover { background: #eff6ff; }
+.markAllBtn:hover { background: #fdf2f4; }
 
 /* ── List ── */
 
@@ -127,8 +127,8 @@
 }
 .item:hover { background: #f9fafb; }
 
-.itemUnread             { background: #eff6ff; }
-.itemUnread:hover       { background: #dbeafe; }
+.itemUnread             { background: #fdf2f4; }
+.itemUnread:hover       { background: #fce8ed; }
 
 .icon {
   font-size: 16px;
@@ -170,7 +170,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2563eb;
+  background: #7e0027;
   flex-shrink: 0;
   margin-top: 6px;
 }

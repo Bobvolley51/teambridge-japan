@@ -26,7 +26,7 @@
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -36,7 +36,7 @@
 }
 
 .newBtn:hover {
-  background: #1d4ed8;
+  background: #6b001f;
 }
 
 .error {
@@ -104,7 +104,7 @@
 .formInput:focus,
 .formTextarea:focus,
 .formSelect:focus {
-  border-color: #3b82f6;
+  border-color: #9b0030;
 }
 
 .formTextarea {
@@ -151,7 +151,7 @@
   padding: 6px 16px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -161,7 +161,7 @@
 }
 
 .postBtn:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #6b001f;
 }
 
 .postBtn:disabled {
@@ -228,7 +228,7 @@
 .cardDate {
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
+  color: #7e0027;
   margin: 0 0 6px;
 }
 

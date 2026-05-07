@@ -30,7 +30,7 @@
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: #2563eb;
+  background: #7e0027;
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
@@ -38,7 +38,7 @@
   font-family: inherit;
   transition: background 0.15s;
 }
-.btnNewTrip:hover { background: #1d4ed8; }
+.btnNewTrip:hover { background: #6b001f; }
 
 /* ── States ───────────────────────────────────── */
 
@@ -95,7 +95,7 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .card:hover         { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.cardExpanded       { border-left-color: #2563eb; box-shadow: 0 4px 16px rgba(37,99,235,0.08); }
+.cardExpanded       { border-left-color: #7e0027; box-shadow: 0 4px 16px rgba(37,99,235,0.08); }
 .cardOngoing        { border-left-color: #16a34a; }
 .cardPast           { opacity: 0.65; }
 
@@ -159,7 +159,7 @@
 .badgeOngoing  { background: #dcfce7; color: #15803d; }
 .badgeToday    { background: #fee2e2; color: #b91c1c; }
 .badgeSoon     { background: #fef3c7; color: #b45309; }
-.badgeUpcoming { background: #eff6ff; color: #2563eb; }
+.badgeUpcoming { background: #fdf2f4; color: #7e0027; }
 
 /* ── Card body ────────────────────────────────── */
 
@@ -283,8 +283,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -345,9 +345,9 @@
 .btnAddItem {
   font-size: 11px;
   font-weight: 600;
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: #7e0027;
+  background: #fdf2f4;
+  border: 1px solid #f5c2ce;
   border-radius: 5px;
   padding: 3px 9px;
   cursor: pointer;
@@ -355,7 +355,7 @@
   flex-shrink: 0;
   transition: background 0.1s;
 }
-.btnAddItem:hover { background: #dbeafe; }
+.btnAddItem:hover { background: #fce8ed; }
 
 .dayItems {
   display: flex;
@@ -495,7 +495,7 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.input:focus { border-color: #3b82f6; }
+.input:focus { border-color: #9b0030; }
 
 .textarea {
   width: 100%;
@@ -511,7 +511,7 @@
   resize: vertical;
   transition: border-color 0.15s;
 }
-.textarea:focus { border-color: #3b82f6; }
+.textarea:focus { border-color: #9b0030; }
 
 .row { display: flex; gap: 10px; }
 .col { flex: 1; display: flex; flex-direction: column; }
@@ -542,7 +542,7 @@
 .btnSave {
   font-size: 13px;
   padding: 7px 16px;
-  background: #2563eb;
+  background: #7e0027;
   border: none;
   border-radius: 7px;
   color: #fff;
@@ -551,8 +551,8 @@
   font-weight: 600;
   transition: background 0.15s;
 }
-.btnSave:hover    { background: #1d4ed8; }
-.btnSave:disabled { background: #93c5fd; cursor: not-allowed; }
+.btnSave:hover    { background: #6b001f; }
+.btnSave:disabled { background: #e09aaa; cursor: not-allowed; }
 
 /* ── Type grid (item form) ────────────────────── */
 
@@ -577,10 +577,10 @@
   font-size: 16px;
   transition: all 0.1s;
 }
-.typeBtn:hover      { border-color: #93c5fd; background: #eff6ff; }
-.typeBtnActive      { border-color: #2563eb; background: #eff6ff; }
+.typeBtn:hover      { border-color: #e09aaa; background: #fdf2f4; }
+.typeBtnActive      { border-color: #7e0027; background: #fdf2f4; }
 .typeBtnLabel       { font-size: 9px; color: #6b7280; white-space: nowrap; }
-.typeBtnActive .typeBtnLabel { color: #2563eb; font-weight: 600; }
+.typeBtnActive .typeBtnLabel { color: #7e0027; font-weight: 600; }
 
 /* ── Participants modal ────────────────────────── */
 
@@ -618,7 +618,7 @@
 .participantCheck input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #2563eb;
+  accent-color: #7e0027;
   cursor: pointer;
   flex-shrink: 0;
 }

@@ -10,7 +10,7 @@
   height: 30px;
   border-radius: 50%;
   border: 2px solid #e5e7eb;
-  background: #dbeafe;
+  background: #fce8ed;
   cursor: pointer;
   padding: 0;
   overflow: hidden;
@@ -20,7 +20,7 @@
   transition: border-color 0.15s;
 }
 
-.avatarBtn:hover { border-color: #93c5fd; }
+.avatarBtn:hover { border-color: #e09aaa; }
 
 .avatarImg {
   width: 100%;
@@ -31,7 +31,7 @@
 .avatarInitials {
   font-size: 10px;
   font-weight: 700;
-  color: #1e40af;
+  color: #5c001a;
 }
 
 /* Dropdown */
@@ -71,8 +71,8 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -101,8 +101,8 @@
   margin-top: 4px;
   font-size: 10px;
   font-weight: 600;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fdf2f4;
+  color: #7e0027;
   padding: 1px 8px;
   border-radius: 10px;
 }
@@ -188,8 +188,8 @@
 .avatarPreviewInitials {
   width: 100%;
   height: 100%;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   font-size: 14px;
   font-weight: 700;
   display: flex;
@@ -273,7 +273,7 @@
   padding: 5px 14px;
   font-size: 12px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -282,5 +282,5 @@
   transition: background 0.15s;
 }
 
-.saveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveBtn:hover:not(:disabled) { background: #6b001f; }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }

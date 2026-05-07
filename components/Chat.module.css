@@ -68,8 +68,8 @@
 .channelItem:hover { background: #f3f4f6; color: #374151; }
 
 .channelActive {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fdf2f4;
+  color: #7e0027;
   font-weight: 500;
 }
 
@@ -177,8 +177,8 @@
 }
 
 .avatarMe {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
 }
 
 .avatarImg {
@@ -229,7 +229,7 @@
 }
 
 .messageMe .content {
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border-top-left-radius: 12px;
   border-top-right-radius: 3px;
@@ -296,7 +296,7 @@
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -306,7 +306,7 @@
   white-space: nowrap;
 }
 
-.sendButton:hover:not(:disabled) { background: #1d4ed8; }
+.sendButton:hover:not(:disabled) { background: #6b001f; }
 .sendButton:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Channel Management Modal ───────────────────────────────── */
@@ -398,7 +398,7 @@
   padding: 9px 16px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -408,7 +408,7 @@
   transition: background 0.15s;
   margin-bottom: 6px;
 }
-.createChannelBtn:hover { background: #1d4ed8; }
+.createChannelBtn:hover { background: #6b001f; }
 
 .channelRow {
   display: flex;
@@ -509,7 +509,7 @@
   padding: 9px 20px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -520,7 +520,7 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
-.saveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveBtn:hover:not(:disabled) { background: #6b001f; }
 .saveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .addMemberRow {
@@ -558,8 +558,8 @@
 
 .mention {
   display: inline;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #fdf2f4;
+  color: #6b001f;
   font-weight: 600;
   border-radius: 4px;
   padding: 0 3px;
@@ -607,8 +607,8 @@
 .mentionItem:last-child { border-bottom: none; }
 .mentionItem:hover { background: #f9fafb; }
 
-.mentionItemActive { background: #eff6ff; }
-.mentionItemActive:hover { background: #dbeafe; }
+.mentionItemActive { background: #fdf2f4; }
+.mentionItemActive:hover { background: #fce8ed; }
 
 .mentionName {
   font-size: 13px;

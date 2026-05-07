@@ -91,13 +91,13 @@
 }
 .viewTab + .viewTab { border-left: 1px solid #e5e7eb; }
 .viewTab:hover { background: #f3f4f6; }
-.viewTabActive { background: #2563eb !important; color: #fff !important; }
+.viewTabActive { background: #7e0027 !important; color: #fff !important; }
 
 .addBtn {
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -107,7 +107,7 @@
   transition: background 0.15s;
   flex-shrink: 0;
 }
-.addBtn:hover { background: #1d4ed8; }
+.addBtn:hover { background: #6b001f; }
 
 /* ── Month View ─────────────────────────────────────────────── */
 
@@ -162,7 +162,7 @@
 .cellEmpty:hover { background: #f9fafb; border-color: transparent; }
 
 .cellToday .dayNum {
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border-radius: 50%;
 }
@@ -186,8 +186,8 @@
 
 .pill {
   font-size: 11px;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   border-radius: 3px;
   padding: 1px 5px;
   white-space: nowrap;
@@ -263,7 +263,7 @@
 }
 
 .wdToday {
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
 }
 
@@ -286,8 +286,8 @@
 
 .allDayPill {
   font-size: 11px;
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fce8ed;
+  color: #5c001a;
   border-radius: 3px;
   padding: 2px 6px;
   cursor: pointer;
@@ -353,7 +353,7 @@
   position: absolute;
   left: 2px;
   right: 2px;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border-radius: 4px;
   padding: 2px 5px;
@@ -441,7 +441,7 @@
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 5px;
@@ -450,7 +450,7 @@
   font-family: inherit;
   transition: background 0.15s;
 }
-.copyBtn:hover { background: #1d4ed8; }
+.copyBtn:hover { background: #6b001f; }
 
 .upHead {
   padding: 10px 14px 6px;
@@ -499,7 +499,7 @@
 .upDay {
   font-size: 16px;
   font-weight: 700;
-  color: #2563eb;
+  color: #7e0027;
   line-height: 1;
 }
 
@@ -701,7 +701,7 @@
   padding: 7px 18px;
   font-size: 13px;
   font-weight: 600;
-  background: #2563eb;
+  background: #7e0027;
   color: #fff;
   border: none;
   border-radius: 7px;
@@ -709,7 +709,7 @@
   font-family: inherit;
   transition: background 0.15s;
 }
-.saveBtn:hover:not(:disabled) { background: #1d4ed8; }
+.saveBtn:hover:not(:disabled) { background: #6b001f; }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Detail view */
@@ -755,14 +755,14 @@
   font-size: 13px;
   font-weight: 600;
   background: none;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  color: #7e0027;
+  border: 1px solid #f5c2ce;
   border-radius: 7px;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
 }
-.editDetailBtn:hover { background: #eff6ff; }
+.editDetailBtn:hover { background: #fdf2f4; }
 
 /* ── Participants ────────────────────────────────────────────── */
 
@@ -787,8 +787,8 @@
   transition: background 0.1s;
 }
 .participantRow:last-child { border-bottom: none; }
-.participantRow:hover { background: #eff6ff; }
-.participantRow input[type="checkbox"] { cursor: pointer; accent-color: #2563eb; }
+.participantRow:hover { background: #fdf2f4; }
+.participantRow input[type="checkbox"] { cursor: pointer; accent-color: #7e0027; }
 
 .participantName { flex: 1; font-size: 13px; color: #111827; }
 
@@ -897,11 +897,11 @@
 }
 .dayChip:hover { background: #e5e7eb; border-color: #9ca3af; }
 .dayChipActive {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #7e0027;
+  border-color: #7e0027;
   color: #fff;
 }
-.dayChipActive:hover { background: #1d4ed8; border-color: #1d4ed8; }
+.dayChipActive:hover { background: #6b001f; border-color: #6b001f; }
 
 /* ── Modal scrollable ───────────────────────────────────────── */
 
