@@ -9,6 +9,8 @@ const TYPE_ICONS = {
   announcement:    '📢',
   calendar_invite: '📅',
   task_deadline:   '✅',
+  dm:              '💬',
+  wellness_other:  '🩺',
 };
 
 function typeIcon(type) { return TYPE_ICONS[type] ?? '🔔'; }

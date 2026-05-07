@@ -447,9 +447,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
 
-  // Load existing DM conversations for current user
+  // Load existing DM conversations — from localStorage first, then sync from DB
   useEffect(() => {
     if (!currentUser?.id) return;
+    const myId = currentUser.id;
+    const storageKey = `dm_convs_${myId}`;
+
+    // Restore from localStorage immediately so sidebar shows on remount
+    try {
+      const stored = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
+      if (stored.length > 0) setDmConversations(stored);
+    } catch {}
+
     async function loadDMs() {
       const { data } = await supabase
         .from('messages')
@@ -457,22 +466,25 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         .like('channel', 'dm:%')
         .limit(500);
       if (!data) return;
-      const myId = currentUser.id;
       const seen = new Set();
       const convs = [];
       for (const row of data) {
         const ch = row.channel;
         if (seen.has(ch)) continue;
-        // channel = "dm:uid1_uid2"
-        const parts = ch.slice(3).split('_');
-        if (parts.length !== 2) continue;
-        const [a, b] = parts;
+        const inner = ch.slice(3); // remove "dm:"
+        const sep = inner.indexOf('_');
+        if (sep === -1) continue;
+        const a = inner.slice(0, sep);
+        const b = inner.slice(sep + 1);
         const otherId = a === myId ? b : b === myId ? a : null;
         if (!otherId) continue;
         seen.add(ch);
         convs.push({ channelId: ch, otherId });
       }
-      setDmConversations(convs);
+      if (convs.length > 0) {
+        setDmConversations(convs);
+        localStorage.setItem(storageKey, JSON.stringify(convs));
+      }
     }
     loadDMs();
   }, [currentUser?.id]);
@@ -591,6 +603,22 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       sender_id:     currentUser.id,
     });
 
+    // Send notification to recipient for DMs
+    if (!insertError && isDM(activeChannel)) {
+      const inner = activeChannel.slice(3);
+      const sep = inner.indexOf('_');
+      const a = inner.slice(0, sep);
+      const b = inner.slice(sep + 1);
+      const recipientId = a === currentUser.id ? b : a;
+      supabase.from('notifications').insert({
+        user_id:    recipientId,
+        type:       'dm',
+        title:      currentUser.name,
+        body:       text,
+        nav_target: 'chat',
+      }).then();
+    }
+
     if (insertError) {
       setError('Send failed: ' + insertError.message);
       setMessagesByChannel(prev => ({
@@ -614,12 +642,12 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
 
   const handleSelectDMUser = (p) => {
     const chId = dmChannelId(currentUser.id, p.id);
-    // Add to sidebar if not already there
-    setDmConversations(prev =>
-      prev.some(d => d.channelId === chId)
-        ? prev
-        : [...prev, { channelId: chId, otherId: p.id }]
-    );
+    setDmConversations(prev => {
+      if (prev.some(d => d.channelId === chId)) return prev;
+      const next = [...prev, { channelId: chId, otherId: p.id }];
+      localStorage.setItem(`dm_convs_${currentUser.id}`, JSON.stringify(next));
+      return next;
+    });
     setActiveChannel(chId);
     setShowNewDM(false);
     setShowChanList(false);
