@@ -157,9 +157,10 @@ function AppStats({ profiles, lang }) {
             <span title={lang === 'ja' ? 'チャット' : 'Chat'}>💬</span>
           </div>
           {profiles.map(p => {
-            const name = p.display_name || p.email.split('@')[0];
-            const u    = stats?.perUser?.[p.id] ?? { wellness: 0, rpe: 0, messages: 0 };
-            const dot  = lastSeenDot(p.last_seen_at);
+            const name     = p.display_name || p.email.split('@')[0];
+            const u        = stats?.perUser?.[p.id] ?? { wellness: 0, rpe: 0, messages: 0 };
+            const dot      = lastSeenDot(p.last_seen_at);
+            const isPlayer = p.role === 'Player';
             const lastSeen = p.last_seen_at
               ? timeAgo(p.last_seen_at, lang)
               : (lang === 'ja' ? 'なし' : 'Never');
@@ -171,11 +172,11 @@ function AppStats({ profiles, lang }) {
                   <span className={`${styles.roleBadge} ${ROLE_COLORS[p.role] ?? ''}`}>{p.role}</span>
                 </div>
                 <span className={styles.userStatLastSeen}>{lastSeen}</span>
-                <span className={`${styles.userStatVal} ${u.wellness > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
-                  {stats ? u.wellness : '…'}
+                <span className={`${styles.userStatVal} ${isPlayer && u.wellness > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {isPlayer ? (stats ? u.wellness : '…') : '—'}
                 </span>
-                <span className={`${styles.userStatVal} ${u.rpe > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
-                  {stats ? u.rpe : '…'}
+                <span className={`${styles.userStatVal} ${isPlayer && u.rpe > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {isPlayer ? (stats ? u.rpe : '…') : '—'}
                 </span>
                 <span className={`${styles.userStatVal} ${u.messages > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
                   {stats ? u.messages : '…'}
