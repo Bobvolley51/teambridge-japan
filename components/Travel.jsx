@@ -473,14 +473,23 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   async function loadDetail(tripId) {
     const [itemsRes, partRes] = await Promise.all([
       supabase.from('travel_items').select('*').eq('trip_id', tripId).order('item_date').order('item_time'),
-      supabase.from('travel_participants').select('profile_id, profiles(id, display_name, role)').eq('trip_id', tripId),
+      supabase.from('travel_participants').select('profile_id').eq('trip_id', tripId),
     ]);
+
+    const profileIds = (partRes.data ?? []).map(p => p.profile_id);
+    let participants = [];
+    if (profileIds.length > 0) {
+      const { data: profileData } = await supabase
+        .from('profiles').select('id, display_name, role').in('id', profileIds);
+      participants = (profileData ?? []).map(prof => ({
+        profile_id: prof.id,
+        profiles: prof,
+      }));
+    }
+
     setDetails(prev => ({
       ...prev,
-      [tripId]: {
-        items:        itemsRes.data ?? [],
-        participants: partRes.data  ?? [],
-      },
+      [tripId]: { items: itemsRes.data ?? [], participants },
     }));
   }
 
