@@ -31,7 +31,8 @@ function getDates(start, end) {
   const dates = [];
   let cur = start;
   const last = end ?? start;
-  while (cur <= last) { dates.push(cur); cur = addDays(cur, 1); }
+  let guard = 0;
+  while (cur <= last && guard < 60) { dates.push(cur); cur = addDays(cur, 1); guard++; }
   return dates;
 }
 
@@ -59,9 +60,9 @@ function tripStatus(trip) {
 
 function StatusBadge({ trip, lang }) {
   const s = tripStatus(trip);
-  const days = Math.ceil((new Date(trip.start_date + 'T00:00:00') - new Date()) / 86400000);
-  if (s === 'past')    return <span className={`${styles.badge} ${styles.badgePast}`}>{lang === 'ja' ? '終了' : 'Past'}</span>;
+  if (s === 'past') return <span className={`${styles.badge} ${styles.badgePast}`}>{lang === 'ja' ? '終了' : 'Past'}</span>;
   if (s === 'ongoing') return <span className={`${styles.badge} ${styles.badgeOngoing}`}>{lang === 'ja' ? '進行中' : 'Ongoing'}</span>;
+  const days = Math.ceil((new Date(trip.start_date + 'T00:00:00') - new Date()) / 86400000);
   const label = days <= 0 ? (lang === 'ja' ? '今日' : 'Today')
               : days === 1 ? (lang === 'ja' ? '明日' : 'Tomorrow')
               : lang === 'ja' ? `${days}日後` : `In ${days}d`;
@@ -94,14 +95,10 @@ function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
     }
     setSaving(true);
     const payload = {
-      title:         f.title.trim(),
-      start_date:    f.start_date,
-      end_date:      f.end_date      || null,
-      location:      f.location.trim()      || null,
-      flight_number: f.flight_number.trim() || null,
-      hotel_name:    f.hotel_name.trim()    || null,
-      hotel_address: f.hotel_address.trim() || null,
-      notes:         f.notes.trim()         || null,
+      title: f.title.trim(), start_date: f.start_date,
+      end_date: f.end_date || null, location: f.location.trim() || null,
+      flight_number: f.flight_number.trim() || null, hotel_name: f.hotel_name.trim() || null,
+      hotel_address: f.hotel_address.trim() || null, notes: f.notes.trim() || null,
     };
     const { error } = trip
       ? await supabase.from('travel_trips').update(payload).eq('id', trip.id)
@@ -120,8 +117,7 @@ function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
         </div>
         <form className={styles.form} onSubmit={submit}>
           <label className={styles.label}>{lang === 'ja' ? 'タイトル *' : 'Title *'}</label>
-          <input className={styles.input} value={f.title} onChange={e => set('title', e.target.value)} required autoFocus
-            placeholder={lang === 'ja' ? '例: アウェー戦 vs 東京' : 'e.g. Away Game vs Tokyo'} />
+          <input className={styles.input} value={f.title} onChange={e => set('title', e.target.value)} required autoFocus placeholder="e.g. Away Game vs Tokyo" />
           <div className={styles.row}>
             <div className={styles.col}>
               <label className={styles.label}>{lang === 'ja' ? '開始日 *' : 'Start *'}</label>
@@ -141,8 +137,7 @@ function TripForm({ trip, lang, currentUserName, onSave, onClose }) {
           <label className={styles.label}>{lang === 'ja' ? 'ホテル住所' : 'Hotel address'}</label>
           <input className={styles.input} value={f.hotel_address} onChange={e => set('hotel_address', e.target.value)} placeholder="e.g. 1-1 Shinjuku, Tokyo" />
           <label className={styles.label}>{lang === 'ja' ? 'メモ' : 'Notes'}</label>
-          <textarea className={styles.textarea} value={f.notes} onChange={e => set('notes', e.target.value)}
-            rows={3} placeholder={lang === 'ja' ? '集合場所、持ち物など...' : 'Meeting point, luggage rules…'} />
+          <textarea className={styles.textarea} value={f.notes} onChange={e => set('notes', e.target.value)} rows={3} placeholder="Meeting point, luggage rules…" />
           {err && <div className={styles.formErr}>{err}</div>}
           <div className={styles.modalFoot}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
@@ -167,7 +162,6 @@ function ItemForm({ item, tripId, tripDates, defaultDate, lang, onSave, onClose 
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
     setSaving(true);
     const payload = { item_type: type, item_date: date, item_time: time || null, title: title.trim(), description: desc.trim() || null };
     const { error } = item
@@ -210,11 +204,9 @@ function ItemForm({ item, tripId, tripDates, defaultDate, lang, onSave, onClose 
             </div>
           </div>
           <label className={styles.label}>{lang === 'ja' ? 'タイトル *' : 'Title *'}</label>
-          <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} required autoFocus
-            placeholder={lang === 'ja' ? '例: 出発' : 'e.g. Bus departure'} />
+          <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} required autoFocus placeholder="e.g. Bus departure" />
           <label className={styles.label}>{lang === 'ja' ? '詳細' : 'Details'}</label>
-          <textarea className={styles.textarea} value={desc} onChange={e => setDesc(e.target.value)}
-            rows={2} placeholder={lang === 'ja' ? '住所、番号など...' : 'Address, terminal, notes…'} />
+          <textarea className={styles.textarea} value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Address, terminal, notes…" />
           {err && <div className={styles.formErr}>{err}</div>}
           <div className={styles.modalFoot}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
@@ -273,164 +265,26 @@ function ParticipantsModal({ tripId, currentIds, lang, onSave, onClose }) {
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
         <div className={styles.participantsList}>
-          {grouped.length === 0 ? (
-            <div className={styles.hint}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
-          ) : grouped.map(({ role, members }) => (
-            <div key={role} className={styles.roleGroup}>
-              <div className={styles.roleGroupLabel}>{role}</div>
-              {members.map(p => (
-                <label key={p.id} className={styles.participantCheck}>
-                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
-                  <span className={styles.participantCheckName}>{p.display_name || p.id.slice(0, 8)}</span>
-                </label>
-              ))}
-            </div>
-          ))}
+          {grouped.length === 0
+            ? <div className={styles.hint}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
+            : grouped.map(({ role, members }) => (
+              <div key={role} className={styles.roleGroup}>
+                <div className={styles.roleGroupLabel}>{role}</div>
+                {members.map(p => (
+                  <label key={p.id} className={styles.participantCheck}>
+                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
+                    <span className={styles.participantCheckName}>{p.display_name || p.id.slice(0, 8)}</span>
+                  </label>
+                ))}
+              </div>
+            ))
+          }
         </div>
         <div className={styles.modalFoot} style={{ padding: '12px 20px 16px' }}>
           <span className={styles.selectedCount}>{selected.size} {lang === 'ja' ? '人選択中' : 'selected'}</span>
           <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
-          <button type="button" className={styles.btnSave} disabled={saving} onClick={save}>
-            {saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}
-          </button>
+          <button type="button" className={styles.btnSave} disabled={saving} onClick={save}>{saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}</button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Trip detail (expanded body) ───────────────────────────────────────────────
-
-function TripDetail({ trip, detail, lang, canEdit, onEditTrip, onDeleteTrip, onManageTravelers, onAddItem, onEditItem, onDeleteItem }) {
-  const tripDates = getDates(trip.start_date, trip.end_date);
-  const { items = [], participants = [] } = detail;
-
-  const itemsByDate = {};
-  for (const item of items) {
-    if (!itemsByDate[item.item_date]) itemsByDate[item.item_date] = [];
-    itemsByDate[item.item_date].push(item);
-  }
-
-  return (
-    <div className={styles.cardBody}>
-      {canEdit && (
-        <div className={styles.actionBar}>
-          <button className={styles.btnAction} onClick={onEditTrip}>✏️ {lang === 'ja' ? '編集' : 'Edit trip'}</button>
-          <button className={styles.btnAction} onClick={onManageTravelers}>👥 {lang === 'ja' ? '参加者' : 'Travelers'}</button>
-          <button className={styles.btnActionDanger} onClick={onDeleteTrip}>{lang === 'ja' ? '削除' : 'Delete'}</button>
-          <button className={styles.btnPrint} onClick={() => window.print()}>🖨</button>
-        </div>
-      )}
-
-      {(trip.flight_number || trip.hotel_name || trip.notes) && (
-        <div className={styles.logistics}>
-          {trip.flight_number && (
-            <div className={styles.logTile}>
-              <span className={styles.logIcon}>✈️</span>
-              <div>
-                <div className={styles.logLabel}>{lang === 'ja' ? 'フライト' : 'Flight'}</div>
-                <div className={styles.logValue}>{trip.flight_number}</div>
-              </div>
-            </div>
-          )}
-          {trip.hotel_name && (
-            <div className={styles.logTile}>
-              <span className={styles.logIcon}>🏨</span>
-              <div>
-                <div className={styles.logLabel}>{lang === 'ja' ? 'ホテル' : 'Hotel'}</div>
-                <div className={styles.logValue}>{trip.hotel_name}</div>
-                {trip.hotel_address && <div className={styles.logSub}>{trip.hotel_address}</div>}
-              </div>
-            </div>
-          )}
-          {trip.notes && (
-            <div className={styles.logTile}>
-              <span className={styles.logIcon}>📋</span>
-              <div>
-                <div className={styles.logLabel}>{lang === 'ja' ? 'メモ' : 'Notes'}</div>
-                <div className={styles.logValue} style={{ whiteSpace: 'pre-wrap' }}>{trip.notes}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className={styles.travelersSection}>
-        <div className={styles.sectionLabel}>{lang === 'ja' ? '参加者' : 'Travelers'}</div>
-        {participants.length === 0 ? (
-          <div className={styles.hint}>
-            {lang === 'ja' ? '参加者なし' : 'No travelers added yet'}
-            {canEdit ? (lang === 'ja' ? ' — 参加者ボタンから追加' : ' — use the Travelers button above') : ''}
-          </div>
-        ) : (
-          <div className={styles.travelerChips}>
-            {participants.map(p => {
-              const name = p.profiles?.display_name ?? '?';
-              const role = p.profiles?.role ?? '';
-              return (
-                <div key={p.profile_id} className={styles.travelerChip}>
-                  <span className={styles.travelerInitial}>{name.slice(0, 2).toUpperCase()}</span>
-                  <div className={styles.travelerInfo}>
-                    <span className={styles.travelerName}>{name}</span>
-                    <span className={styles.travelerRole}>{role}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className={styles.schedule}>
-        <div className={styles.sectionLabel} style={{ marginBottom: 12 }}>{lang === 'ja' ? 'スケジュール' : 'Schedule'}</div>
-        {tripDates.length === 0 && (
-          <div className={styles.hint}>{lang === 'ja' ? '日程が設定されていません。' : 'No dates set.'}</div>
-        )}
-        {tripDates.map((date, dayIdx) => {
-          const dayItems = (itemsByDate[date] ?? []).slice().sort((a, b) => {
-            if (!a.item_time && !b.item_time) return 0;
-            if (!a.item_time) return 1;
-            if (!b.item_time) return -1;
-            return a.item_time.localeCompare(b.item_time);
-          });
-          return (
-            <div key={date} className={styles.day}>
-              <div className={styles.dayHeader}>
-                <span className={styles.dayBadge}>Day {dayIdx + 1}</span>
-                <span className={styles.dayDate}>{fmtLong(date, lang)}</span>
-                {canEdit && (
-                  <button className={styles.btnAddItem} onClick={() => onAddItem(date)}>
-                    + {lang === 'ja' ? '追加' : 'Add'}
-                  </button>
-                )}
-              </div>
-              <div className={styles.dayItems}>
-                {dayItems.length === 0 && (
-                  <div className={styles.emptyDay}>{lang === 'ja' ? '予定なし' : 'Nothing scheduled'}</div>
-                )}
-                {dayItems.map(item => {
-                  const t = typeInfo(item.item_type);
-                  return (
-                    <div key={item.id} className={styles.scheduleItem}>
-                      <span className={styles.itemIcon}>{t.icon}</span>
-                      <span className={styles.itemTime}>{item.item_time ? item.item_time.slice(0, 5) : '—'}</span>
-                      <div className={styles.itemContent}>
-                        <div className={styles.itemTitle}>{item.title}</div>
-                        {item.description && <div className={styles.itemDesc}>{item.description}</div>}
-                      </div>
-                      {canEdit && (
-                        <div className={styles.itemActions}>
-                          <button className={styles.btnItemEdit} onClick={() => onEditItem(item, date)}>✏️</button>
-                          <button className={styles.btnItemDelete} onClick={() => onDeleteItem(item.id)}>🗑️</button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -443,139 +297,259 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
   const canEdit = EDIT_ROLES.includes(profile?.role);
 
   const [trips,      setTrips]      = useState([]);
+  const [details,    setDetails]    = useState({});   // { [tripId]: { items, participants } }
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
   const [expandedId, setExpandedId] = useState(null);
-  const [loadingId,  setLoadingId]  = useState(null);
-  const [details,    setDetails]    = useState({});  // { [tripId]: { items, participants } }
 
   const [tripForm,         setTripForm]         = useState(null);
   const [itemForm,         setItemForm]         = useState(null);
   const [participantsForm, setParticipantsForm] = useState(null);
 
-  useEffect(() => { loadTrips(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  async function loadTrips() {
+  // Load everything at once — no async on click, zero freeze risk
+  async function loadAll() {
     setLoading(true);
     setError('');
     try {
-      const { data, error: err } = await supabase
-        .from('travel_trips').select('*').order('start_date', { ascending: false });
-      if (err) throw err;
-      setTrips(data ?? []);
+      const [tripsRes, itemsRes, partRes] = await Promise.all([
+        supabase.from('travel_trips').select('*').order('start_date', { ascending: false }),
+        supabase.from('travel_items').select('*').order('item_date').order('item_time'),
+        supabase.from('travel_participants').select('profile_id, trip_id'),
+      ]);
+
+      const tripsData = tripsRes.data ?? [];
+      const itemsData = itemsRes.data ?? [];
+      const partsData = partRes.data  ?? [];
+
+      // Look up profiles for participants
+      const profileIds = [...new Set(partsData.map(p => p.profile_id))];
+      let profileMap = {};
+      if (profileIds.length > 0) {
+        const { data: profileData } = await supabase
+          .from('profiles').select('id, display_name, role').in('id', profileIds);
+        for (const prof of profileData ?? []) profileMap[prof.id] = prof;
+      }
+
+      // Build per-trip detail map
+      const detailMap = {};
+      for (const trip of tripsData) {
+        detailMap[trip.id] = {
+          items: itemsData.filter(i => i.trip_id === trip.id),
+          participants: partsData
+            .filter(p => p.trip_id === trip.id)
+            .map(p => ({ profile_id: p.profile_id, profiles: profileMap[p.profile_id] ?? null })),
+        };
+      }
+
+      setTrips(tripsData);
+      setDetails(detailMap);
     } catch (e) {
-      setError(e.message ?? 'Could not load trips');
+      setError(e.message ?? 'Could not load travel data');
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadDetail(tripId) {
-    const [itemsRes, partRes] = await Promise.all([
-      supabase.from('travel_items').select('*').eq('trip_id', tripId).order('item_date').order('item_time'),
-      supabase.from('travel_participants').select('profile_id').eq('trip_id', tripId),
-    ]);
-
-    const profileIds = (partRes.data ?? []).map(p => p.profile_id);
-    let participants = [];
-    if (profileIds.length > 0) {
-      const { data: profileData } = await supabase
-        .from('profiles').select('id, display_name, role').in('id', profileIds);
-      participants = (profileData ?? []).map(prof => ({
-        profile_id: prof.id,
-        profiles: prof,
-      }));
-    }
-
-    setDetails(prev => ({
-      ...prev,
-      [tripId]: { items: itemsRes.data ?? [], participants },
-    }));
-  }
-
-  async function handleCardClick(tripId) {
-    if (expandedId === tripId) { setExpandedId(null); return; }
-    if (details[tripId]) { setExpandedId(tripId); return; }
-    setLoadingId(tripId);
-    await loadDetail(tripId);
-    setLoadingId(null);
-    setExpandedId(tripId);
+  // Click just toggles — no async
+  function handleCardClick(tripId) {
+    setExpandedId(prev => prev === tripId ? null : tripId);
   }
 
   async function handleDeleteTrip(trip) {
     if (!window.confirm(lang === 'ja' ? `「${trip.title}」を削除しますか？` : `Delete "${trip.title}"?`)) return;
     await supabase.from('travel_trips').delete().eq('id', trip.id);
-    if (expandedId === trip.id) setExpandedId(null);
-    setDetails(prev => { const next = { ...prev }; delete next[trip.id]; return next; });
-    setTrips(prev => prev.filter(t => t.id !== trip.id));
     toast(lang === 'ja' ? '旅程を削除しました' : 'Trip deleted', 'info');
+    if (expandedId === trip.id) setExpandedId(null);
+    loadAll();
   }
 
-  async function handleDeleteItem(tripId, itemId) {
+  async function handleDeleteItem(itemId) {
     if (!window.confirm(lang === 'ja' ? '削除しますか？' : 'Delete this item?')) return;
     await supabase.from('travel_items').delete().eq('id', itemId);
-    setDetails(prev => ({
-      ...prev,
-      [tripId]: {
-        ...prev[tripId],
-        items: prev[tripId].items.filter(i => i.id !== itemId),
-      },
-    }));
     toast(lang === 'ja' ? '削除しました' : 'Deleted', 'info');
+    loadAll();
   }
 
   const upcoming = trips.filter(t => tripStatus(t) !== 'past');
   const past     = trips.filter(t => tripStatus(t) === 'past');
 
-  function renderGroup(group, label) {
-    if (group.length === 0) return null;
-    return (
-      <div className={styles.tripGroup}>
-        <div className={styles.groupLabel}>{label}</div>
-        {group.map(trip => {
-          const isExpanded = expandedId === trip.id;
-          const isLoading  = loadingId  === trip.id;
-          const s          = tripStatus(trip);
-          const detail     = details[trip.id];
-          const partCount  = detail?.participants?.length ?? 0;
+  function renderExpanded(trip) {
+    const detail     = details[trip.id] ?? { items: [], participants: [] };
+    const tripDates  = getDates(trip.start_date, trip.end_date);
+    const { items, participants } = detail;
 
-          return (
-            <div key={trip.id} className={`${styles.card} ${isExpanded ? styles.cardExpanded : ''} ${s === 'ongoing' ? styles.cardOngoing : s === 'past' ? styles.cardPast : ''}`}>
-              <div className={styles.cardHeader} onClick={() => handleCardClick(trip.id)}>
-                <div className={styles.cardHeaderLeft}>
-                  <div className={styles.cardTitle}>{trip.title}</div>
-                  <div className={styles.cardMeta}>
-                    <span>📅 {fmtShort(trip.start_date, lang)}{trip.end_date && trip.end_date !== trip.start_date ? ` – ${fmtShort(trip.end_date, lang)}` : ''}</span>
-                    {trip.location && <span>📍 {trip.location}</span>}
-                    {partCount > 0 && <span>👥 {partCount}</span>}
-                  </div>
-                </div>
-                <div className={styles.cardHeaderRight}>
-                  <StatusBadge trip={trip} lang={lang} />
-                  {isLoading
-                    ? <span className={styles.spinner}>⏳</span>
-                    : <span className={`${styles.chevron} ${isExpanded ? styles.chevronOpen : ''}`}>›</span>
-                  }
+    const itemsByDate = {};
+    for (const item of items) {
+      if (!itemsByDate[item.item_date]) itemsByDate[item.item_date] = [];
+      itemsByDate[item.item_date].push(item);
+    }
+
+    return (
+      <div className={styles.cardBody}>
+
+        {canEdit && (
+          <div className={styles.actionBar}>
+            <button className={styles.btnAction} onClick={() => setTripForm(trip)}>
+              ✏️ {lang === 'ja' ? '編集' : 'Edit trip'}
+            </button>
+            <button className={styles.btnAction} onClick={() => setParticipantsForm(trip.id)}>
+              👥 {lang === 'ja' ? '参加者' : 'Travelers'}
+            </button>
+            <button className={styles.btnActionDanger} onClick={() => handleDeleteTrip(trip)}>
+              {lang === 'ja' ? '削除' : 'Delete'}
+            </button>
+            <button className={styles.btnPrint} onClick={() => window.print()}>🖨</button>
+          </div>
+        )}
+
+        {(trip.flight_number || trip.hotel_name || trip.notes) && (
+          <div className={styles.logistics}>
+            {trip.flight_number && (
+              <div className={styles.logTile}>
+                <span className={styles.logIcon}>✈️</span>
+                <div>
+                  <div className={styles.logLabel}>{lang === 'ja' ? 'フライト' : 'Flight'}</div>
+                  <div className={styles.logValue}>{trip.flight_number}</div>
                 </div>
               </div>
+            )}
+            {trip.hotel_name && (
+              <div className={styles.logTile}>
+                <span className={styles.logIcon}>🏨</span>
+                <div>
+                  <div className={styles.logLabel}>{lang === 'ja' ? 'ホテル' : 'Hotel'}</div>
+                  <div className={styles.logValue}>{trip.hotel_name}</div>
+                  {trip.hotel_address && <div className={styles.logSub}>{trip.hotel_address}</div>}
+                </div>
+              </div>
+            )}
+            {trip.notes && (
+              <div className={styles.logTile}>
+                <span className={styles.logIcon}>📋</span>
+                <div>
+                  <div className={styles.logLabel}>{lang === 'ja' ? 'メモ' : 'Notes'}</div>
+                  <div className={styles.logValue} style={{ whiteSpace: 'pre-wrap' }}>{trip.notes}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-              {isExpanded && detail && (
-                <TripDetail
-                  trip={trip}
-                  detail={detail}
-                  lang={lang}
-                  canEdit={canEdit}
-                  onEditTrip={() => setTripForm(trip)}
-                  onDeleteTrip={() => handleDeleteTrip(trip)}
-                  onManageTravelers={() => setParticipantsForm(trip.id)}
-                  onAddItem={(date) => setItemForm({ item: null, date, tripId: trip.id, tripDates: getDates(trip.start_date, trip.end_date) })}
-                  onEditItem={(item, date) => setItemForm({ item, date, tripId: trip.id, tripDates: getDates(trip.start_date, trip.end_date) })}
-                  onDeleteItem={(itemId) => handleDeleteItem(trip.id, itemId)}
-                />
-              )}
+        <div className={styles.travelersSection}>
+          <div className={styles.sectionLabel}>{lang === 'ja' ? '参加者' : 'Travelers'}</div>
+          {participants.length === 0 ? (
+            <div className={styles.hint}>
+              {canEdit
+                ? (lang === 'ja' ? '参加者ボタンから追加できます' : 'Add travelers using the Travelers button above')
+                : (lang === 'ja' ? '参加者なし' : 'No travelers listed')}
             </div>
-          );
-        })}
+          ) : (
+            <div className={styles.travelerChips}>
+              {participants.map(p => {
+                const name = p.profiles?.display_name ?? '?';
+                const role = p.profiles?.role ?? '';
+                return (
+                  <div key={p.profile_id} className={styles.travelerChip}>
+                    <span className={styles.travelerInitial}>{name.slice(0, 2).toUpperCase()}</span>
+                    <div className={styles.travelerInfo}>
+                      <span className={styles.travelerName}>{name}</span>
+                      <span className={styles.travelerRole}>{role}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.schedule}>
+          <div className={styles.sectionLabel} style={{ marginBottom: 12 }}>
+            {lang === 'ja' ? 'スケジュール' : 'Schedule'}
+          </div>
+          {tripDates.length === 0 && (
+            <div className={styles.hint}>{lang === 'ja' ? '日程が設定されていません。' : 'No dates set.'}</div>
+          )}
+          {tripDates.map((date, dayIdx) => {
+            const dayItems = (itemsByDate[date] ?? []).slice().sort((a, b) => {
+              if (!a.item_time && !b.item_time) return 0;
+              if (!a.item_time) return 1;
+              if (!b.item_time) return -1;
+              return a.item_time.localeCompare(b.item_time);
+            });
+            return (
+              <div key={date} className={styles.day}>
+                <div className={styles.dayHeader}>
+                  <span className={styles.dayBadge}>Day {dayIdx + 1}</span>
+                  <span className={styles.dayDate}>{fmtLong(date, lang)}</span>
+                  {canEdit && (
+                    <button className={styles.btnAddItem}
+                      onClick={() => setItemForm({ item: null, date, tripId: trip.id, tripDates })}>
+                      + {lang === 'ja' ? '追加' : 'Add'}
+                    </button>
+                  )}
+                </div>
+                <div className={styles.dayItems}>
+                  {dayItems.length === 0 && (
+                    <div className={styles.emptyDay}>{lang === 'ja' ? '予定なし' : 'Nothing scheduled'}</div>
+                  )}
+                  {dayItems.map(item => {
+                    const t = typeInfo(item.item_type);
+                    return (
+                      <div key={item.id} className={styles.scheduleItem}>
+                        <span className={styles.itemIcon}>{t.icon}</span>
+                        <span className={styles.itemTime}>{item.item_time ? item.item_time.slice(0, 5) : '—'}</span>
+                        <div className={styles.itemContent}>
+                          <div className={styles.itemTitle}>{item.title}</div>
+                          {item.description && <div className={styles.itemDesc}>{item.description}</div>}
+                        </div>
+                        {canEdit && (
+                          <div className={styles.itemActions}>
+                            <button className={styles.btnItemEdit}
+                              onClick={() => setItemForm({ item, date, tripId: trip.id, tripDates })}>✏️</button>
+                            <button className={styles.btnItemDelete}
+                              onClick={() => handleDeleteItem(item.id)}>🗑️</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    );
+  }
+
+  function renderCard(trip) {
+    const isExpanded = expandedId === trip.id;
+    const s          = tripStatus(trip);
+    const partCount  = (details[trip.id]?.participants ?? []).length;
+
+    return (
+      <div key={trip.id}
+        className={`${styles.card} ${isExpanded ? styles.cardExpanded : ''} ${s === 'ongoing' ? styles.cardOngoing : s === 'past' ? styles.cardPast : ''}`}>
+
+        <div className={styles.cardHeader} onClick={() => handleCardClick(trip.id)}>
+          <div className={styles.cardHeaderLeft}>
+            <div className={styles.cardTitle}>{trip.title}</div>
+            <div className={styles.cardMeta}>
+              <span>📅 {fmtShort(trip.start_date, lang)}{trip.end_date && trip.end_date !== trip.start_date ? ` – ${fmtShort(trip.end_date, lang)}` : ''}</span>
+              {trip.location && <span>📍 {trip.location}</span>}
+              {partCount > 0 && <span>👥 {partCount}</span>}
+            </div>
+          </div>
+          <div className={styles.cardHeaderRight}>
+            <StatusBadge trip={trip} lang={lang} />
+            <span className={`${styles.chevron} ${isExpanded ? styles.chevronOpen : ''}`}>›</span>
+          </div>
+        </div>
+
+        {isExpanded && renderExpanded(trip)}
       </div>
     );
   }
@@ -603,38 +577,36 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
         </div>
       ) : (
         <div className={styles.tripGroups}>
-          {renderGroup(upcoming, lang === 'ja' ? '予定・進行中' : 'Upcoming & Ongoing')}
-          {renderGroup(past,     lang === 'ja' ? '過去の旅程'  : 'Past Trips')}
+          {upcoming.length > 0 && (
+            <div className={styles.tripGroup}>
+              <div className={styles.groupLabel}>{lang === 'ja' ? '予定・進行中' : 'Upcoming & Ongoing'}</div>
+              {upcoming.map(renderCard)}
+            </div>
+          )}
+          {past.length > 0 && (
+            <div className={styles.tripGroup}>
+              <div className={styles.groupLabel}>{lang === 'ja' ? '過去の旅程' : 'Past Trips'}</div>
+              {past.map(renderCard)}
+            </div>
+          )}
         </div>
       )}
 
       {tripForm !== null && (
         <TripForm
           trip={tripForm?.id ? tripForm : null}
-          lang={lang}
-          currentUserName={currentUserName}
-          onSave={async () => {
-            await loadTrips();
-            if (tripForm?.id) {
-              await loadDetail(tripForm.id);
-            }
-            toast(lang === 'ja' ? '保存しました' : 'Saved', 'success');
-          }}
+          lang={lang} currentUserName={currentUserName}
+          onSave={() => { loadAll(); toast(lang === 'ja' ? '保存しました' : 'Saved', 'success'); }}
           onClose={() => setTripForm(null)}
         />
       )}
 
       {itemForm !== null && (
         <ItemForm
-          item={itemForm.item}
-          tripId={itemForm.tripId}
-          tripDates={itemForm.tripDates}
-          defaultDate={itemForm.date}
+          item={itemForm.item} tripId={itemForm.tripId}
+          tripDates={itemForm.tripDates} defaultDate={itemForm.date}
           lang={lang}
-          onSave={async () => {
-            await loadDetail(itemForm.tripId);
-            toast(lang === 'ja' ? '保存しました' : 'Item saved', 'success');
-          }}
+          onSave={() => { loadAll(); toast(lang === 'ja' ? '保存しました' : 'Item saved', 'success'); }}
           onClose={() => setItemForm(null)}
         />
       )}
@@ -644,10 +616,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
           tripId={participantsForm}
           currentIds={(details[participantsForm]?.participants ?? []).map(p => p.profile_id)}
           lang={lang}
-          onSave={async () => {
-            await loadDetail(participantsForm);
-            toast(lang === 'ja' ? '参加者を更新しました' : 'Travelers updated', 'success');
-          }}
+          onSave={() => { loadAll(); toast(lang === 'ja' ? '参加者を更新しました' : 'Travelers updated', 'success'); }}
           onClose={() => setParticipantsForm(null)}
         />
       )}
