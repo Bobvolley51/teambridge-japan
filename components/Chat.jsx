@@ -7,7 +7,7 @@ import styles from './Chat.module.css';
 
 const MAX_HISTORY = 50;
 
-// ── Translation ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function translateMessage(text, targetLang) {
   const res = await fetch('/api/translate', {
@@ -22,6 +22,14 @@ async function translateMessage(text, targetLang) {
 
 function slugify(str) {
   return str.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+function dmChannelId(uid1, uid2) {
+  return 'dm:' + [uid1, uid2].sort().join('_');
+}
+
+function isDM(channelId) {
+  return typeof channelId === 'string' && channelId.startsWith('dm:');
 }
 
 // ── Mention renderer ─────────────────────────────────────────────────────────
@@ -78,11 +86,7 @@ function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
           <span className={styles.time}>{time}</span>
         </div>
         <p className={styles.content}>{renderContent(msg.content)}</p>
-        <button
-          className={styles.translateBtn}
-          onClick={handleTranslate}
-          disabled={translating}
-        >
+        <button className={styles.translateBtn} onClick={handleTranslate} disabled={translating}>
           {translating
             ? (uiLang === 'ja' ? '翻訳中...' : 'Translating…')
             : translation
@@ -103,15 +107,15 @@ function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
 // ── Channel Manage Modal ──────────────────────────────────────────────────────
 
 function ChannelManageModal({ onClose, currentUserId, uiLang }) {
-  const [view,           setView]           = useState('list');   // list | create | edit | members
+  const [view,           setView]           = useState('list');
   const [channels,       setChannels]       = useState([]);
   const [profiles,       setProfiles]       = useState([]);
   const [members,        setMembers]        = useState([]);
-  const [target,         setTarget]         = useState(null);     // channel being edited/managed
+  const [target,         setTarget]         = useState(null);
   const [formName,       setFormName]       = useState('');
   const [formDesc,       setFormDesc]       = useState('');
-  const [saving,         setSaving]         = useState(false);
   const [addProfileId,   setAddProfileId]   = useState('');
+  const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState('');
 
   const t = (en, ja) => uiLang === 'ja' ? ja : en;
@@ -153,7 +157,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     setView('list');
   }
 
-  async function handleEdit() {
+  async function handleSaveDesc() {
     setError('');
     setSaving(true);
     const { error: err } = await supabase.from('channels')
@@ -162,7 +166,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     setSaving(false);
     if (err) { setError(err.message); return; }
     await loadAll();
-    setView('list');
+    setView('members');
   }
 
   async function handleDelete(ch) {
@@ -185,153 +189,177 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     await loadMembers(target.id);
   }
 
-  const memberProfileIds = new Set(members.map(m => m.profile_id));
-  const nonMembers = profiles.filter(p => !memberProfileIds.has(p.id));
-
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.manageModal} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
-        <div className={styles.manageHead}>
-          {view !== 'list' && (
-            <button className={styles.manageBack} onClick={() => { setView('list'); setError(''); }}>
-              ← {t('Back', '戻る')}
-            </button>
-          )}
-          <span className={styles.manageTitle}>
-            {view === 'list'    && t('Manage Channels', 'チャンネル管理')}
-            {view === 'create'  && t('New Channel', '新しいチャンネル')}
-            {view === 'edit'    && t(`Edit #${target?.name}`, `#${target?.name} を編集`)}
-            {view === 'members' && t(`Members — #${target?.name}`, `#${target?.name} のメンバー`)}
-          </span>
-          <button className={styles.manageClose} onClick={onClose}>✕</button>
+    <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={styles.modalBox}>
+        <div className={styles.modalHeader}>
+          <span>{view === 'list' ? t('Manage Channels', 'チャンネル管理')
+                : view === 'create' ? t('New Channel', '新しいチャンネル')
+                : view === 'edit'   ? t('Edit Channel', 'チャンネルを編集')
+                : t('Members', 'メンバー')}</span>
+          <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
-        {error && <div className={styles.manageError}>{error}</div>}
+        {error && <div className={styles.modalError}>{error}</div>}
 
-        {/* List view */}
         {view === 'list' && (
-          <div className={styles.manageBody}>
-            <button className={styles.createChannelBtn} onClick={() => { setFormName(''); setFormDesc(''); setView('create'); }}>
+          <div className={styles.modalBody}>
+            <button className={styles.createBtn} onClick={() => setView('create')}>
               + {t('New Channel', '新しいチャンネル')}
             </button>
             {channels.map(ch => (
               <div key={ch.id} className={styles.channelRow}>
-                <div className={styles.channelRowInfo}>
-                  <span className={styles.channelRowName}># {ch.name}</span>
-                  {ch.description && <span className={styles.channelRowDesc}>{ch.description}</span>}
-                </div>
+                <span className={styles.channelRowName}># {ch.name}</span>
                 <div className={styles.channelRowActions}>
                   <button className={styles.rowBtn} onClick={() => {
-                    setTarget(ch); setFormDesc(ch.description ?? ''); setView('edit');
+                    setTarget(ch); setFormDesc(ch.description ?? '');
+                    setView('edit'); loadMembers(ch.id);
                   }}>{t('Edit', '編集')}</button>
-                  <button className={styles.rowBtn} onClick={async () => {
-                    setTarget(ch); await loadMembers(ch.id); setView('members');
-                  }}>{t('Members', 'メンバー')}</button>
-                  {ch.id !== 'general' && (
-                    <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(ch)}>
-                      {t('Delete', '削除')}
-                    </button>
-                  )}
+                  <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
+                    onClick={() => handleDelete(ch)}>
+                    {t('Delete', '削除')}
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Create view */}
         {view === 'create' && (
-          <div className={styles.manageBody}>
-            <label className={styles.formLabel}>{t('Channel name', 'チャンネル名')}</label>
-            <input
-              className={styles.formInput}
-              value={formName}
-              onChange={e => setFormName(e.target.value)}
-              placeholder={t('e.g. training-notes', '例：練習メモ')}
-              autoFocus
-            />
-            {formName && <div className={styles.slugPreview}>ID: {slugify(formName)}</div>}
-            <label className={styles.formLabel}>{t('Description (optional)', '説明（任意）')}</label>
-            <input
-              className={styles.formInput}
-              value={formDesc}
-              onChange={e => setFormDesc(e.target.value)}
-              placeholder={t('What is this channel for?', 'このチャンネルの目的は？')}
-            />
-            <button className={styles.saveBtn} onClick={handleCreate} disabled={saving}>
-              {saving ? t('Creating…', '作成中…') : t('Create Channel', 'チャンネルを作成')}
-            </button>
-          </div>
-        )}
-
-        {/* Edit view */}
-        {view === 'edit' && (
-          <div className={styles.manageBody}>
-            <label className={styles.formLabel}>{t('Description', '説明')}</label>
-            <input
-              className={styles.formInput}
-              value={formDesc}
-              onChange={e => setFormDesc(e.target.value)}
-              placeholder={t('What is this channel for?', 'このチャンネルの目的は？')}
-              autoFocus
-            />
-            <button className={styles.saveBtn} onClick={handleEdit} disabled={saving}>
-              {saving ? t('Saving…', '保存中…') : t('Save', '保存')}
-            </button>
-          </div>
-        )}
-
-        {/* Members view */}
-        {view === 'members' && (
-          <div className={styles.manageBody}>
-            {/* Add member */}
-            <div className={styles.addMemberRow}>
-              <select
-                className={styles.formSelect}
-                value={addProfileId}
-                onChange={e => setAddProfileId(e.target.value)}
-              >
-                <option value="">{t('— Add a member —', '— メンバーを追加 —')}</option>
-                {nonMembers.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.display_name || p.email} ({p.role})
-                  </option>
-                ))}
-              </select>
-              <button className={styles.saveBtn} onClick={handleAddMember} disabled={!addProfileId}>
-                {t('Add', '追加')}
+          <div className={styles.modalBody}>
+            <label className={styles.modalLabel}>{t('Channel name', 'チャンネル名')}</label>
+            <input className={styles.modalInput} value={formName}
+              onChange={e => setFormName(e.target.value)} placeholder="e.g. team-news" autoFocus />
+            <label className={styles.modalLabel}>{t('Description (optional)', '説明（任意）')}</label>
+            <input className={styles.modalInput} value={formDesc}
+              onChange={e => setFormDesc(e.target.value)} placeholder={t('What is this channel for?', 'このチャンネルの目的は？')} />
+            <div className={styles.modalActions}>
+              <button className={styles.backBtn} onClick={() => setView('list')}>← {t('Back', '戻る')}</button>
+              <button className={styles.saveBtn} onClick={handleCreate} disabled={saving}>
+                {saving ? '…' : t('Create', '作成')}
               </button>
             </div>
+          </div>
+        )}
 
-            {/* Current members */}
-            {members.length === 0 ? (
-              <div className={styles.emptyMembers}>{t('No members yet — channel is open to all.', 'まだメンバーがいません。全員が参加できます。')}</div>
-            ) : (
-              members.map(m => {
-                const p = m.profiles;
-                return (
-                  <div key={m.profile_id} className={styles.memberRow}>
-                    <span className={styles.memberName}>{p?.display_name || p?.email}</span>
-                    <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                      onClick={() => handleRemoveMember(m.profile_id)}>
-                      {t('Remove', '削除')}
-                    </button>
-                  </div>
-                );
-              })
+        {(view === 'edit' || view === 'members') && (
+          <div className={styles.modalBody}>
+            <div className={styles.modalTabs}>
+              <button className={`${styles.modalTab} ${view === 'edit' ? styles.modalTabActive : ''}`}
+                onClick={() => setView('edit')}>{t('Details', '詳細')}</button>
+              <button className={`${styles.modalTab} ${view === 'members' ? styles.modalTabActive : ''}`}
+                onClick={() => { setView('members'); loadMembers(target.id); }}>{t('Members', 'メンバー')}</button>
+            </div>
+
+            {view === 'edit' && (
+              <>
+                <label className={styles.modalLabel}>{t('Description', '説明')}</label>
+                <input className={styles.modalInput} value={formDesc}
+                  onChange={e => setFormDesc(e.target.value)}
+                  placeholder={t('What is this channel for?', 'このチャンネルの目的は？')} autoFocus />
+                <div className={styles.modalActions}>
+                  <button className={styles.backBtn} onClick={() => setView('list')}>← {t('Back', '戻る')}</button>
+                  <button className={styles.saveBtn} onClick={handleSaveDesc} disabled={saving}>
+                    {saving ? '…' : t('Save', '保存')}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {view === 'members' && (
+              <>
+                <div className={styles.addMemberRow}>
+                  <select className={styles.modalSelect} value={addProfileId}
+                    onChange={e => setAddProfileId(e.target.value)}>
+                    <option value="">{t('— select user —', '— ユーザーを選択 —')}</option>
+                    {profiles
+                      .filter(p => !members.some(m => m.profile_id === p.id))
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.display_name || p.email} ({p.role})
+                        </option>
+                      ))}
+                  </select>
+                  <button className={styles.saveBtn} onClick={handleAddMember} disabled={!addProfileId}>
+                    {t('Add', '追加')}
+                  </button>
+                </div>
+                {members.length === 0 ? (
+                  <div className={styles.emptyMembers}>{t('No members yet — channel is open to all.', 'まだメンバーがいません。全員が参加できます。')}</div>
+                ) : (
+                  members.map(m => {
+                    const p = m.profiles;
+                    return (
+                      <div key={m.profile_id} className={styles.memberRow}>
+                        <span className={styles.memberName}>{p?.display_name || p?.email}</span>
+                        <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
+                          onClick={() => handleRemoveMember(m.profile_id)}>
+                          {t('Remove', '削除')}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </>
             )}
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
-// ── Channel Sidebar ───────────────────────────────────────────────────────────
+// ── New DM Modal ──────────────────────────────────────────────────────────────
 
-function ChannelSidebar({ channels, activeChannel, onSelect, canManage, onManage, uiLang, mobileOpen }) {
+function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
+  const [query, setQuery] = useState('');
+  const filtered = profiles
+    .filter(p => p.id !== currentUserId)
+    .filter(p => {
+      const name = (p.display_name || p.email || '').toLowerCase();
+      return name.includes(query.toLowerCase());
+    });
+
+  return (
+    <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={styles.modalBox}>
+        <div className={styles.modalHeader}>
+          <span>{uiLang === 'ja' ? 'ダイレクトメッセージ' : 'New Direct Message'}</span>
+          <button className={styles.modalClose} onClick={onClose}>✕</button>
+        </div>
+        <div className={styles.modalBody}>
+          <input
+            className={styles.modalInput}
+            placeholder={uiLang === 'ja' ? '名前で検索…' : 'Search by name…'}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            autoFocus
+          />
+          <div className={styles.dmUserList}>
+            {filtered.map(p => (
+              <button key={p.id} className={styles.dmUserItem} onClick={() => onSelect(p)}>
+                <div className={styles.dmUserAvatar}>
+                  {(p.display_name || p.email || '?').slice(0, 2).toUpperCase()}
+                </div>
+                <div className={styles.dmUserInfo}>
+                  <span className={styles.dmUserName}>{p.display_name || p.email}</span>
+                  <span className={styles.dmUserRole}>{p.role}</span>
+                </div>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className={styles.emptyText}>{uiLang === 'ja' ? '一致するユーザーなし' : 'No users found'}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen }) {
   return (
     <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarMobileOpen : ''}`}>
       <div className={styles.sidebarHead}>
@@ -343,16 +371,34 @@ function ChannelSidebar({ channels, activeChannel, onSelect, canManage, onManage
         )}
       </div>
       {channels.map(ch => (
-        <button
-          key={ch.id}
+        <button key={ch.id}
           className={`${styles.channelItem} ${activeChannel === ch.id ? styles.channelActive : ''}`}
           onClick={() => onSelect(ch.id)}
-          title={ch.description ?? ''}
-        >
+          title={ch.description ?? ''}>
           <span className={styles.hash}>#</span>
           {ch.name}
         </button>
       ))}
+
+      <div className={styles.sidebarDivider} />
+
+      <div className={styles.sidebarHead}>
+        <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'ダイレクト' : 'Direct Messages'}</span>
+        <button className={styles.manageBtn} onClick={onNewDM} title={uiLang === 'ja' ? '新規DM' : 'New DM'}>
+          +
+        </button>
+      </div>
+      {dmConversations.map(dm => (
+        <button key={dm.channelId}
+          className={`${styles.channelItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
+          onClick={() => onSelect(dm.channelId)}>
+          <span className={styles.dmDot}>●</span>
+          {dm.name}
+        </button>
+      ))}
+      {dmConversations.length === 0 && (
+        <p className={styles.dmEmpty}>{uiLang === 'ja' ? 'まだDMなし' : 'No DMs yet'}</p>
+      )}
     </aside>
   );
 }
@@ -361,6 +407,7 @@ function ChannelSidebar({ channels, activeChannel, onSelect, canManage, onManage
 
 export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [channels,          setChannels]          = useState([]);
+  const [dmConversations,   setDmConversations]   = useState([]);
   const [activeChannel,     setActiveChannel]     = useState(null);
   const [messagesByChannel, setMessagesByChannel] = useState({});
   const [inputValue,        setInputValue]        = useState('');
@@ -368,10 +415,11 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [loading,           setLoading]           = useState(false);
   const [error,             setError]             = useState(null);
   const [showManage,        setShowManage]        = useState(false);
+  const [showNewDM,         setShowNewDM]         = useState(false);
   const [showChanList,      setShowChanList]      = useState(false);
 
   const [profiles,     setProfiles]     = useState([]);
-  const [mentionQuery, setMentionQuery] = useState(null); // { query, start } | null
+  const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionIdx,   setMentionIdx]   = useState(0);
 
   const endRef          = useRef(null);
@@ -381,13 +429,11 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
 
-  // Load channels from DB on mount
+  // Load channels on mount
   useEffect(() => {
     async function loadChannels() {
       const { data } = await supabase
-        .from('channels')
-        .select('id, name, description')
-        .order('created_at');
+        .from('channels').select('id, name, description').order('created_at');
       const list = data ?? [];
       setChannels(list);
       if (list.length > 0 && !activeChannel) setActiveChannel(list[0].id);
@@ -395,22 +441,62 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     loadChannels();
   }, []);
 
-  // Scroll to bottom whenever messages change
+  // Load profiles for @-mentions and DM picker
+  useEffect(() => {
+    supabase.from('profiles').select('id, display_name, email, role').order('display_name')
+      .then(({ data }) => setProfiles(data ?? []));
+  }, []);
+
+  // Load existing DM conversations for current user
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    async function loadDMs() {
+      const { data } = await supabase
+        .from('messages')
+        .select('channel')
+        .like('channel', 'dm:%')
+        .limit(500);
+      if (!data) return;
+      const myId = currentUser.id;
+      const seen = new Set();
+      const convs = [];
+      for (const row of data) {
+        const ch = row.channel;
+        if (seen.has(ch)) continue;
+        // channel = "dm:uid1_uid2"
+        const parts = ch.slice(3).split('_');
+        if (parts.length !== 2) continue;
+        const [a, b] = parts;
+        const otherId = a === myId ? b : b === myId ? a : null;
+        if (!otherId) continue;
+        seen.add(ch);
+        convs.push({ channelId: ch, otherId });
+      }
+      setDmConversations(convs);
+    }
+    loadDMs();
+  }, [currentUser?.id]);
+
+  // Resolve DM conversation names from profiles
+  const dmConversationsWithNames = dmConversations.map(dm => {
+    const other = profiles.find(p => p.id === dm.otherId);
+    return { ...dm, name: other?.display_name || other?.email || dm.otherId.slice(0, 8) };
+  });
+
+  // Scroll to bottom when messages change
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  // Load history when channel changes
+  // Load history when active channel changes
   useEffect(() => {
     if (!activeChannel) return;
     let cancelled = false;
-
     async function loadHistory() {
       setLoading(true);
       setError(null);
       const { data, error: dbError } = await supabase
-        .from('messages')
-        .select('*')
+        .from('messages').select('*')
         .eq('channel', activeChannel)
         .order('created_at', { ascending: true })
         .limit(MAX_HISTORY);
@@ -422,7 +508,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       }
       setLoading(false);
     }
-
     loadHistory();
     return () => { cancelled = true; };
   }, [activeChannel, uiLang]);
@@ -431,7 +516,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   useEffect(() => {
     if (!activeChannel) return;
     subscriptionRef.current?.unsubscribe();
-
     const channel = supabase
       .channel(`chat:${activeChannel}`)
       .on('postgres_changes', {
@@ -442,7 +526,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         setMessagesByChannel(prev => {
           const existing = prev[activeChannel] ?? [];
           if (existing.some(m => m.id === newMsg.id)) return prev;
-          // Replace matching optimistic message from this sender to avoid duplicates
           const optIdx = existing.findIndex(
             m => m._optimistic && m.user_name === newMsg.user_name && m.content === newMsg.content
           );
@@ -455,26 +538,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         });
       })
       .subscribe();
-
     subscriptionRef.current = channel;
     return () => { channel.unsubscribe(); };
   }, [activeChannel]);
 
-  // Load profiles for @-mention autocomplete
-  useEffect(() => {
-    supabase.from('profiles').select('id, display_name, email').order('display_name')
-      .then(({ data }) => setProfiles(data ?? []));
-  }, []);
-
-  // Profiles matching current @query
   const mentionMatches = mentionQuery
     ? profiles
         .filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase()))
         .slice(0, 6)
     : [];
 
-  const insertMention = useCallback((profile) => {
-    const name = profile.display_name || profile.email;
+  const insertMention = useCallback((p) => {
+    const name = p.display_name || p.email;
     const cursor = inputRef.current?.selectionStart ?? inputValue.length;
     const before = inputValue.slice(0, mentionQuery?.start ?? cursor);
     const after  = inputValue.slice(cursor);
@@ -488,11 +563,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     }, 0);
   }, [inputValue, mentionQuery]);
 
-  // Send a message
   const sendMessage = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || sending || !activeChannel) return;
-
     setSending(true);
     setInputValue('');
 
@@ -505,7 +578,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       created_at:    new Date().toISOString(),
       _optimistic:   true,
     };
-
     setMessagesByChannel(prev => ({
       ...prev,
       [activeChannel]: [...(prev[activeChannel] ?? []), optimisticMsg],
@@ -516,6 +588,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       user_name:     currentUser.name,
       user_initials: currentUser.initials,
       content:       text,
+      sender_id:     currentUser.id,
     });
 
     if (insertError) {
@@ -526,7 +599,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       }));
       setInputValue(text);
     }
-
     setSending(false);
   }, [inputValue, sending, activeChannel, currentUser]);
 
@@ -540,19 +612,43 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }, [mentionQuery, mentionMatches, mentionIdx, insertMention, sendMessage]);
 
-  const activeChannelObj = channels.find(c => c.id === activeChannel);
+  const handleSelectDMUser = (p) => {
+    const chId = dmChannelId(currentUser.id, p.id);
+    // Add to sidebar if not already there
+    setDmConversations(prev =>
+      prev.some(d => d.channelId === chId)
+        ? prev
+        : [...prev, { channelId: chId, otherId: p.id }]
+    );
+    setActiveChannel(chId);
+    setShowNewDM(false);
+    setShowChanList(false);
+  };
+
+  const activeChannelObj  = channels.find(c => c.id === activeChannel);
+  const activeDM          = dmConversationsWithNames.find(d => d.channelId === activeChannel);
+  const isActiveDM        = isDM(activeChannel);
+
+  const headerTitle = isActiveDM
+    ? activeDM?.name ?? activeChannel
+    : activeChannelObj ? `# ${activeChannelObj.name}` : `# ${activeChannel}`;
+
+  const inputPlaceholder = isActiveDM
+    ? (uiLang === 'ja' ? `${activeDM?.name ?? ''} にメッセージを送信...` : `Message ${activeDM?.name ?? ''}…`)
+    : (uiLang === 'ja' ? `#${activeChannel ?? ''} にメッセージを送信...` : `Message #${activeChannel ?? ''}… (@ to mention)`);
 
   return (
     <div className={styles.wrapper}>
-      {/* Mobile overlay — tap to close channel list */}
       {showChanList && (
         <div className={styles.mobileOverlay} onClick={() => setShowChanList(false)} />
       )}
 
-      <ChannelSidebar
+      <Sidebar
         channels={channels}
+        dmConversations={dmConversationsWithNames}
         activeChannel={activeChannel}
         onSelect={ch => { setActiveChannel(ch); setError(null); setShowChanList(false); }}
+        onNewDM={() => setShowNewDM(true)}
         canManage={canManage}
         onManage={() => setShowManage(true)}
         uiLang={uiLang}
@@ -560,15 +656,17 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       />
 
       <div className={styles.chatArea}>
-        {/* Channel header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <button className={styles.mobileChanBtn} onClick={() => setShowChanList(v => !v)}>
-              ≡
-            </button>
-            <span className={styles.headerChannel}># {activeChannel}</span>
-            {activeChannelObj?.description && (
+            <button className={styles.mobileChanBtn} onClick={() => setShowChanList(v => !v)}>≡</button>
+            <span className={styles.headerChannel}>{headerTitle}</span>
+            {!isActiveDM && activeChannelObj?.description && (
               <span className={styles.headerDesc}>{activeChannelObj.description}</span>
+            )}
+            {isActiveDM && (
+              <span className={styles.headerDesc}>
+                {uiLang === 'ja' ? 'ダイレクトメッセージ' : 'Direct Message'}
+              </span>
             )}
           </div>
           <span className={styles.headerCount}>
@@ -583,16 +681,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           </div>
         )}
 
-        {/* Message list */}
         <div className={styles.messageList}>
-          {loading && (
-            <div style={{ padding: '16px 8px' }}>
-              <SkeletonList rows={5} />
-            </div>
-          )}
+          {loading && <div style={{ padding: '16px 8px' }}><SkeletonList rows={5} /></div>}
           {!loading && messages.length === 0 && (
             <p className={styles.emptyText}>
-              {uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : 'No messages yet. Be the first to say something!'}
+              {isActiveDM
+                ? (uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : `Start a conversation with ${activeDM?.name ?? ''}`)
+                : (uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : 'No messages yet. Be the first to say something!')}
             </p>
           )}
           {messages.map(msg => (
@@ -607,16 +702,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           <div ref={endRef} />
         </div>
 
-        {/* Input bar */}
         <div className={styles.inputWrap}>
           {mentionQuery && mentionMatches.length > 0 && (
             <div className={styles.mentionDropdown}>
               {mentionMatches.map((p, i) => (
-                <button
-                  key={p.id}
+                <button key={p.id}
                   className={`${styles.mentionItem} ${i === mentionIdx ? styles.mentionItemActive : ''}`}
-                  onMouseDown={e => { e.preventDefault(); insertMention(p); }}
-                >
+                  onMouseDown={e => { e.preventDefault(); insertMention(p); }}>
                   <span className={styles.mentionName}>{p.display_name || p.email}</span>
                   {p.display_name && <span className={styles.mentionEmail}>{p.email}</span>}
                 </button>
@@ -624,39 +716,36 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             </div>
           )}
           <div className={styles.inputBar}>
-          <input
-            ref={inputRef}
-            type="text"
-            className={styles.input}
-            value={inputValue}
-            onChange={e => {
-              const val = e.target.value;
-              setInputValue(val);
-              const cursor = e.target.selectionStart ?? val.length;
-              const before = val.slice(0, cursor);
-              const m = before.match(/@([^\s@]*)$/);
-              if (m) {
-                setMentionQuery({ query: m[1], start: cursor - m[0].length });
-                setMentionIdx(0);
-              } else {
-                setMentionQuery(null);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              uiLang === 'ja'
-                ? `#${activeChannel ?? ''} にメッセージを送信...`
-                : `Message #${activeChannel ?? ''}… (@ to mention)`
-            }
-            disabled={sending || !activeChannel}
-          />
-          <button
-            className={styles.sendButton}
-            onClick={sendMessage}
-            disabled={sending || !inputValue.trim() || !activeChannel}
-          >
-            {uiLang === 'ja' ? '送信' : 'Send'}
-          </button>
+            <input
+              ref={inputRef}
+              type="text"
+              className={styles.input}
+              value={inputValue}
+              onChange={e => {
+                const val = e.target.value;
+                setInputValue(val);
+                if (!isActiveDM) {
+                  const cursor = e.target.selectionStart ?? val.length;
+                  const before = val.slice(0, cursor);
+                  const m = before.match(/@([^\s@]*)$/);
+                  if (m) {
+                    setMentionQuery({ query: m[1], start: cursor - m[0].length });
+                    setMentionIdx(0);
+                  } else {
+                    setMentionQuery(null);
+                  }
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={inputPlaceholder}
+              disabled={sending || !activeChannel}
+            />
+            <button
+              className={styles.sendButton}
+              onClick={sendMessage}
+              disabled={sending || !inputValue.trim() || !activeChannel}>
+              {uiLang === 'ja' ? '送信' : 'Send'}
+            </button>
           </div>
         </div>
       </div>
@@ -665,7 +754,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         <ChannelManageModal
           onClose={() => {
             setShowManage(false);
-            // Reload channels in case any were added/removed
             supabase.from('channels').select('id, name, description').order('created_at')
               .then(({ data }) => {
                 setChannels(data ?? []);
@@ -675,6 +763,16 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               });
           }}
           currentUserId={currentUser?.id}
+          uiLang={uiLang}
+        />
+      )}
+
+      {showNewDM && (
+        <NewDMModal
+          profiles={profiles}
+          currentUserId={currentUser?.id}
+          onSelect={handleSelectDMUser}
+          onClose={() => setShowNewDM(false)}
           uiLang={uiLang}
         />
       )}
