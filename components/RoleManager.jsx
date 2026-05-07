@@ -156,7 +156,14 @@ function AppStats({ profiles, lang }) {
             <span title="RPE">📊</span>
             <span title={lang === 'ja' ? 'チャット' : 'Chat'}>💬</span>
           </div>
-          {profiles.map(p => {
+          {[...profiles].sort((a, b) => {
+            const roleOrder = ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
+            if (roleOrder !== 0) return roleOrder;
+            if (!a.last_seen_at && !b.last_seen_at) return 0;
+            if (!a.last_seen_at) return 1;
+            if (!b.last_seen_at) return -1;
+            return new Date(b.last_seen_at) - new Date(a.last_seen_at);
+          }).map(p => {
             const name     = p.display_name || p.email.split('@')[0];
             const u        = stats?.perUser?.[p.id] ?? { wellness: 0, rpe: 0, messages: 0 };
             const dot      = lastSeenDot(p.last_seen_at);
