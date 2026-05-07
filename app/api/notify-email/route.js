@@ -48,14 +48,14 @@ export async function POST(req) {
         ${eventLocation ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600">Where</td><td>${eventLocation}</td></tr>` : ''}
         ${addedBy ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600">Added by</td><td>${addedBy}</td></tr>` : ''}
       </table>
-      <p style="color:#6b7280;font-size:12px">Open the TeamBridge Japan app for details.</p>
+      <p style="color:#6b7280;font-size:12px">Open the Teambridge Tridents app for details.</p>
     </div>
   `;
 
   const results = await Promise.allSettled(
     emails.map(to =>
       transporter.sendMail({
-        from: `TeamBridge Japan <${process.env.GMAIL_USER}>`,
+        from: `Teambridge Tridents <${process.env.GMAIL_USER}>`,
         to,
         subject: `[TeamBridge] ${eventTitle} — ${fmtDate}`,
         html,

@@ -63,8 +63,8 @@ export default function PrivacyNotice({ userId, lang, onLangChange, onAccept }) 
 
         <div className={styles.body}>
           <div className={styles.welcome}>
-            <p className={styles.welcomeText}>Welcome to TeamBridge Japan — we're glad to have you on the team! 🎉</p>
-            <p className={styles.welcomeTextJa}>TeamBridge Japan へようこそ！チームの一員として歓迎します！🎉</p>
+            <p className={styles.welcomeText}>Welcome to Teambridge Tridents — we're glad to have you on the team! 🎉</p>
+            <p className={styles.welcomeTextJa}>Teambridge Tridents へようこそ！チームの一員として歓迎します！🎉</p>
           </div>
 
           <BiRow
@@ -119,10 +119,10 @@ export default function PrivacyNotice({ userId, lang, onLangChange, onAccept }) 
             </div>
             <div className={styles.disclaimer}>
               <p className={styles.disclaimerText}>
-                TeamBridge Japan and its administrators are not responsible or liable for any damages, losses, or injuries arising from the use of this application. This app is a team communication tool and does not provide medical advice or diagnosis. Health data recorded here is for reference purposes only.
+                Teambridge Tridents and its administrators are not responsible or liable for any damages, losses, or injuries arising from the use of this application. This app is a team communication tool and does not provide medical advice or diagnosis. Health data recorded here is for reference purposes only.
               </p>
               <p className={`${styles.disclaimerText} ${styles.disclaimerJa}`}>
-                TeamBridge Japan およびその管理者・運営者は、本アプリの使用によって生じたいかなる損害・損失・怪我についても一切の責任を負いません。本アプリはチームコミュニケーションの補助ツールであり、医療上のアドバイスや診断を提供するものではありません。
+                Teambridge Tridents およびその管理者・運営者は、本アプリの使用によって生じたいかなる損害・損失・怪我についても一切の責任を負いません。本アプリはチームコミュニケーションの補助ツールであり、医療上のアドバイスや診断を提供するものではありません。
               </p>
             </div>
           </div>
