@@ -21,8 +21,8 @@ const ITEM_TYPES = [
 function typeInfo(key) { return ITEM_TYPES.find(t => t.key === key) ?? ITEM_TYPES[7]; }
 
 function addDays(d, n) {
-  const dt = new Date(d + 'T00:00:00');
-  dt.setDate(dt.getDate() + n);
+  const dt = new Date(d);          // date-only string → parsed as UTC
+  dt.setUTCDate(dt.getUTCDate() + n);
   return dt.toISOString().slice(0, 10);
 }
 
@@ -31,22 +31,21 @@ function getDates(start, end) {
   const dates = [];
   let cur = start;
   const last = end ?? start;
-  let guard = 0;
-  while (cur <= last && guard < 60) { dates.push(cur); cur = addDays(cur, 1); guard++; }
+  while (cur <= last && dates.length < 60) { dates.push(cur); cur = addDays(cur, 1); }
   return dates;
 }
 
 function fmtLong(d, lang) {
-  return new Date(d + 'T00:00:00').toLocaleDateString(
+  return new Date(d).toLocaleDateString(
     lang === 'ja' ? 'ja-JP' : 'en-GB',
-    { weekday: 'long', month: 'long', day: 'numeric' }
+    { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }
   );
 }
 
 function fmtShort(d, lang) {
-  return new Date(d + 'T00:00:00').toLocaleDateString(
+  return new Date(d).toLocaleDateString(
     lang === 'ja' ? 'ja-JP' : 'en-GB',
-    { month: 'short', day: 'numeric' }
+    { month: 'short', day: 'numeric', timeZone: 'UTC' }
   );
 }
 
