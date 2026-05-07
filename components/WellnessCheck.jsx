@@ -11,14 +11,14 @@ const QUESTIONS = [
 ];
 
 const ILLNESS_SYMPTOMS = [
-  { key: 'illness_headache',    en: 'Headache',    ja: '頭痛' },
-  { key: 'illness_fever',       en: 'Fever',       ja: '発熱' },
-  { key: 'illness_sorethroat',  en: 'Sore throat', ja: '喉の痛み' },
-  { key: 'illness_cough',       en: 'Cough',       ja: '咳' },
-  { key: 'illness_runnynose',   en: 'Runny nose',  ja: '鼻水' },
-  { key: 'illness_nausea',      en: 'Nausea',      ja: '吐き気' },
-  { key: 'illness_malaise',     en: 'Fatigue / Malaise', ja: '倦怠感' },
-  { key: 'illness_other',       en: 'Other',       ja: 'その他' },
+  { key: 'illness_headache',   en: 'Headache',         ja: '頭痛' },
+  { key: 'illness_fever',      en: 'Fever',            ja: '発熱' },
+  { key: 'illness_sorethroat', en: 'Sore throat',      ja: '喉の痛み' },
+  { key: 'illness_cough',      en: 'Cough',            ja: '咳' },
+  { key: 'illness_runnynose',  en: 'Runny nose',       ja: '鼻水' },
+  { key: 'illness_nausea',     en: 'Nausea',           ja: '吐き気' },
+  { key: 'illness_malaise',    en: 'Fatigue / Malaise',ja: '倦怠感' },
+  { key: 'illness_other',      en: 'Other',            ja: 'その他' },
 ];
 
 const BODY_PARTS = [
@@ -33,9 +33,9 @@ const BODY_PARTS = [
   { key: 'quad_r',      en: 'Right Quad',      ja: '右大腿四頭筋' },
   { key: 'hamstring_l', en: 'Left Hamstring',  ja: '左ハムストリングス' },
   { key: 'hamstring_r', en: 'Right Hamstring', ja: '右ハムストリングス' },
+  { key: 'other',       en: 'Other',           ja: 'その他' },
 ];
 
-// 1-10 scale where 10=best (fatigue, sleep, appetite)
 function btnStyle(score, selected) {
   if (!selected) return {};
   if (score <= 3) return { background: '#ef4444', color: '#fff', borderColor: '#ef4444' };
@@ -43,7 +43,6 @@ function btnStyle(score, selected) {
   return { background: '#10b981', color: '#fff', borderColor: '#10b981' };
 }
 
-// 1-10 scale where 1=best (pain — inverted colors)
 function painBtnStyle(score, selected) {
   if (!selected) return {};
   if (score <= 3) return { background: '#10b981', color: '#fff', borderColor: '#10b981' };
@@ -54,72 +53,55 @@ function painBtnStyle(score, selected) {
 export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [step,            setStep]            = useState(1);
   const [scores,          setScores]          = useState({});
-  const [illness,         setIllness]         = useState(null); // 'yes' | 'no'
-  const [painScore,       setPainScore]       = useState(null); // 1=best, 10=worst
+  const [illness,         setIllness]         = useState(null);
+  const [painScore,       setPainScore]       = useState(null);
   const [illnessSymptoms, setIllnessSymptoms] = useState([]);
   const [painParts,       setPainParts]       = useState([]);
+  const [otherMessage,    setOtherMessage]    = useState('');
   const [saving,          setSaving]          = useState(false);
 
   const allAnswered   = QUESTIONS.every(q => scores[q.key] != null) && illness !== null && painScore !== null;
   const answeredCount = Object.keys(scores).length + (illness !== null ? 1 : 0) + (painScore !== null ? 1 : 0);
-  const totalQ        = QUESTIONS.length + 2; // +illness +pain
+  const totalQ        = QUESTIONS.length + 2;
 
-  const needsPage2    = illness === 'yes' || painScore >= 4;
+  const needsPage2 = illness === 'yes' || painScore >= 4;
+  const needsPage3 = painParts.includes('other');
+
+  const totalSteps = needsPage2 ? (needsPage3 ? 3 : 2) : 1;
 
   const toggleIllnessSymptom = (key) =>
     setIllnessSymptoms(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
 
-  const togglePart = (key) =>
+  const togglePart = (key) => {
     setPainParts(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
-
-  const handleNext = () => {
-    if (needsPage2) {
-      setStep(2);
-    } else {
-      handleSubmit();
-    }
   };
+
+  const handleNext = () => needsPage2 ? setStep(2) : handleSubmit();
+  const handleNextPage2 = () => needsPage3 ? setStep(3) : handleSubmit();
 
   const handleSubmit = async () => {
     setSaving(true);
     const today = new Date().toISOString().slice(0, 10);
 
-    // Save 1-10 questions (10=best)
     const wellnessRows = QUESTIONS.map(q => ({
-      user_id:       userId,
-      user_name:     userName,
-      question_key:  q.key,
-      score:         scores[q.key],
-      response_date: today,
+      user_id: userId, user_name: userName,
+      question_key: q.key, score: scores[q.key], response_date: today,
     }));
-
-    // illness: save as 'temperature' key — no=10 (good), yes=1 (bad)
     wellnessRows.push({
-      user_id:       userId,
-      user_name:     userName,
-      question_key:  'temperature',
-      score:         illness === 'no' ? 10 : 1,
-      response_date: today,
+      user_id: userId, user_name: userName,
+      question_key: 'temperature', score: illness === 'no' ? 10 : 1, response_date: today,
     });
-
-    // pain: displayed as 1=best, 10=worst — invert to 11-score for DB (so 10=best convention holds)
     wellnessRows.push({
-      user_id:       userId,
-      user_name:     userName,
-      question_key:  'pain',
-      score:         11 - painScore,
-      response_date: today,
+      user_id: userId, user_name: userName,
+      question_key: 'pain', score: 11 - painScore, response_date: today,
     });
 
     await supabase.from('wellness_responses').upsert(wellnessRows, {
       onConflict: 'user_id,question_key,response_date',
     });
 
-    // Clear and re-insert body pain + illness symptoms
     await supabase.from('wellness_body_pain')
-      .delete()
-      .eq('user_id', userId)
-      .eq('response_date', today);
+      .delete().eq('user_id', userId).eq('response_date', today);
 
     const painRows = [
       ...painParts.map(part => ({ user_id: userId, user_name: userName, response_date: today, body_part: part })),
@@ -129,9 +111,31 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       await supabase.from('wellness_body_pain').insert(painRows);
     }
 
+    // Send notification to Athletic Trainers and Therapists if "Other" pain was reported
+    if (needsPage3 && otherMessage.trim()) {
+      const { data: recipients } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['Athletic', 'Therapist']);
+
+      if (recipients?.length) {
+        await supabase.from('notifications').insert(
+          recipients.map(r => ({
+            user_id:    r.id,
+            type:       'wellness_other',
+            title:      `${userName} reported an unlisted pain`,
+            body:       otherMessage.trim(),
+            nav_target: 'wellness',
+          }))
+        );
+      }
+    }
+
     setSaving(false);
     onComplete();
   };
+
+  const stepLabel = (s) => `${s}/${totalSteps}`;
 
   return (
     <div className={styles.overlay}>
@@ -144,7 +148,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
               <span className={styles.headerEmoji}>💪</span>
               <div>
                 <div className={styles.title}>
-                  {lang === 'ja' ? '今日のチェックイン (1/2)' : 'Daily Check-in (1/2)'}
+                  {lang === 'ja' ? `今日のチェックイン (${stepLabel(1)})` : `Daily Check-in (${stepLabel(1)})`}
                 </div>
                 <div className={styles.sub}>
                   {lang === 'ja'
@@ -159,7 +163,6 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
             </div>
 
             <div className={styles.body}>
-              {/* Standard 1-10 questions */}
               {QUESTIONS.map((q, qi) => (
                 <div key={q.key} className={styles.qBlock}>
                   <div className={styles.qText}>
@@ -182,7 +185,6 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                 </div>
               ))}
 
-              {/* Illness yes/no */}
               <div className={styles.qBlock}>
                 <div className={styles.qText}>
                   <span className={styles.qNum}>{QUESTIONS.length + 1}</span>
@@ -202,7 +204,6 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                 </div>
               </div>
 
-              {/* Pain 1-10 (1=best, 10=worst) */}
               <div className={styles.qBlock}>
                 <div className={styles.qText}>
                   <span className={styles.qNum}>{QUESTIONS.length + 2}</span>
@@ -239,14 +240,14 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
           </>
         )}
 
-        {/* ── Step 2: follow-up ── */}
+        {/* ── Step 2: illness + body parts ── */}
         {step === 2 && (
           <>
             <div className={styles.header}>
-              <span className={styles.headerEmoji}>{illness === 'yes' ? '🤒' : '🦵'}</span>
+              <span className={styles.headerEmoji}>{illness === 'yes' && painScore < 4 ? '🤒' : '🦵'}</span>
               <div>
                 <div className={styles.title}>
-                  {lang === 'ja' ? '詳細 (2/2)' : 'Details (2/2)'}
+                  {lang === 'ja' ? `詳細 (${stepLabel(2)})` : `Details (${stepLabel(2)})`}
                 </div>
                 <div className={styles.sub}>
                   {lang === 'ja' ? '該当する項目を選んでください' : 'Select all that apply'}
@@ -255,11 +256,10 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
             </div>
 
             <div className={styles.progress}>
-              <div className={styles.progressBar} style={{ width: '100%' }} />
+              <div className={styles.progressBar} style={{ width: `${(2 / totalSteps) * 100}%` }} />
             </div>
 
             <div className={styles.body}>
-              {/* Illness symptoms */}
               {illness === 'yes' && (
                 <div className={styles.followUpSection}>
                   <div className={styles.followUpTitle}>
@@ -280,7 +280,6 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                 </div>
               )}
 
-              {/* Body pain parts */}
               {painScore >= 4 && (
                 <div className={styles.followUpSection}>
                   <div className={styles.followUpTitle}>
@@ -289,9 +288,10 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                   <div className={styles.partsGrid}>
                     {BODY_PARTS.map(part => {
                       const selected = painParts.includes(part.key);
+                      const isOther  = part.key === 'other';
                       return (
                         <button key={part.key}
-                          className={`${styles.partBtn} ${selected ? styles.partBtnSelected : ''}`}
+                          className={`${styles.partBtn} ${selected ? styles.partBtnSelected : ''} ${isOther ? styles.partBtnOther : ''}`}
                           onClick={() => togglePart(part.key)}>
                           {selected ? '✓ ' : ''}{lang === 'ja' ? part.ja : part.en}
                         </button>
@@ -306,7 +306,66 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
               <button className={styles.backBtn} onClick={() => setStep(1)}>
                 ← {lang === 'ja' ? '戻る' : 'Back'}
               </button>
-              <button className={styles.submitBtn} disabled={saving} onClick={handleSubmit}>
+              <button className={styles.submitBtn} disabled={saving} onClick={handleNextPage2}>
+                {needsPage3
+                  ? (lang === 'ja' ? '次へ →' : 'Next →')
+                  : (saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit'))}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 3: Other pain message ── */}
+        {step === 3 && (
+          <>
+            <div className={styles.header}>
+              <span className={styles.headerEmoji}>📩</span>
+              <div>
+                <div className={styles.title}>
+                  {lang === 'ja' ? `メッセージ (${stepLabel(3)})` : `Message (${stepLabel(3)})`}
+                </div>
+                <div className={styles.sub}>
+                  {lang === 'ja'
+                    ? 'トレーナー・フィジオに直接メッセージを送ります'
+                    : 'This message goes directly to the Trainer & Therapist'}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.progress}>
+              <div className={styles.progressBar} style={{ width: '100%' }} />
+            </div>
+
+            <div className={styles.body}>
+              <div className={styles.otherMessageBlock}>
+                <label className={styles.otherMessageLabel}>
+                  {lang === 'ja'
+                    ? 'どのような痛みや症状ですか？'
+                    : 'Describe your pain or concern:'}
+                </label>
+                <textarea
+                  className={styles.otherMessageArea}
+                  rows={5}
+                  value={otherMessage}
+                  onChange={e => setOtherMessage(e.target.value)}
+                  placeholder={lang === 'ja'
+                    ? '例：練習中に右肩の外側が痛む...'
+                    : 'e.g. Sharp pain on the outside of my right shoulder during serving…'}
+                  autoFocus
+                />
+                <p className={styles.otherMessageHint}>
+                  🔒 {lang === 'ja'
+                    ? 'アスレチックトレーナーとフィジオにのみ送信されます'
+                    : 'Sent only to Athletic Trainer & Therapist'}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.actions}>
+              <button className={styles.backBtn} onClick={() => setStep(2)}>
+                ← {lang === 'ja' ? '戻る' : 'Back'}
+              </button>
+              <button className={styles.submitBtn} disabled={saving || !otherMessage.trim()} onClick={handleSubmit}>
                 {saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit')}
               </button>
             </div>

@@ -286,3 +286,49 @@
   color: #374151;
   margin-bottom: 10px;
 }
+
+/* "Other" body part button — full width, distinct style */
+.partBtnOther {
+  grid-column: 1 / -1;
+  border-style: dashed;
+  color: #6b7280;
+}
+.partBtnOther.partBtnSelected {
+  background: #fff7ed;
+  border-color: #f97316;
+  color: #ea580c;
+  border-style: solid;
+}
+
+/* Page 3 — free-text message */
+.otherMessageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.otherMessageLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.otherMessageArea {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.otherMessageArea:focus { border-color: #7e0027; }
+
+.otherMessageHint {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
