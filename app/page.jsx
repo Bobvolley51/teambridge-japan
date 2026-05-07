@@ -121,10 +121,10 @@ export default function Home() {
   };
 
   const checkPendingRPE = async (userId) => {
-    const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const now    = new Date().toISOString();
 
-    // Find events this player participated in that ended in the last 24h
+    // Trigger from start_time so players can log RPE as soon as practice begins
     const { data: participation } = await supabase
       .from('event_participants')
       .select('event_id')
@@ -138,8 +138,8 @@ export default function Home() {
       .select('id, title, start_time, end_time, category')
       .in('id', eventIds)
       .in('category', ['Training', 'Game'])
-      .gte('end_time', cutoff)
-      .lte('end_time', now);
+      .gte('start_time', cutoff)
+      .lte('start_time', now);
 
     if (!events || events.length === 0) return;
 
