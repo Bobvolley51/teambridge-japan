@@ -38,14 +38,14 @@ function getDates(start, end) {
 function fmtLong(d, lang) {
   return new Date(d).toLocaleDateString(
     lang === 'ja' ? 'ja-JP' : 'en-GB',
-    { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }
+    { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' }
   );
 }
 
 function fmtShort(d, lang) {
   return new Date(d).toLocaleDateString(
     lang === 'ja' ? 'ja-JP' : 'en-GB',
-    { month: 'short', day: 'numeric', timeZone: 'UTC' }
+    { month: 'short', day: 'numeric', timeZone: 'Asia/Tokyo' }
   );
 }
 
