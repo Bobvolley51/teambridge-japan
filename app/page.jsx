@@ -166,7 +166,7 @@ export default function Home() {
   // Load profile + show wellness check once per day on first login
   const loadProfile = async (userId, checkWellness = true) => {
     // fire-and-forget — stamp the user's last active time
-    supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', userId);
+    supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', userId).then();
 
     const { data: prof } = await supabase
       .from('profiles')
