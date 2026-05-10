@@ -586,6 +586,12 @@
   margin-top: 12px;
   flex-wrap: wrap;
   gap: 8px;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 10px 0 4px;
+  border-top: 1px solid #e5e7eb;
+  z-index: 10;
 }
 
 .addRowBtn {
