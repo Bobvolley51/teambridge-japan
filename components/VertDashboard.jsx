@@ -426,7 +426,7 @@ export default function VertDashboard({ lang, profile }) {
                       <td className={styles.tdSticky}>{row.name}</td>
                       <td className={styles.tdCenter}>{row.count}</td>
                       {STAT_COLS.map(c => (
-                        <td key={c.key} className={`${styles.tdCenter} ${cellColor(c.key, row[c.key])}`}>
+                        <td key={c.key} className={`${styles.tdCenter} ${row[c.key] != null ? cellColor(c.key, row[c.key]) : styles.null}`}>
                           {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}
                         </td>
                       ))}
@@ -453,7 +453,7 @@ export default function VertDashboard({ lang, profile }) {
                       {!isPlayer && <td className={styles.tdCenter}>{row.name}</td>}
                       <td className={styles.tdCenter}>{row.session_name}</td>
                       {STAT_COLS.map(c => (
-                        <td key={c.key} className={`${styles.tdCenter} ${cellColor(c.key, row[c.key])}`}>
+                        <td key={c.key} className={`${styles.tdCenter} ${row[c.key] != null ? cellColor(c.key, row[c.key]) : styles.null}`}>
                           {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}
                         </td>
                       ))}
