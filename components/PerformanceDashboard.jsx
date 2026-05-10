@@ -31,20 +31,21 @@ function daysAgo(n) {
 }
 
 export default function PerformanceDashboard({ lang, profile }) {
-  const [tab,        setTab]        = useState('acwr');
-  const [records,    setRecords]    = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [showLegend, setShowLegend] = useState(false);
+  const [tab,         setTab]         = useState('acwr');
+  const [records,     setRecords]     = useState([]);
+  const [vertRecords, setVertRecords] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showLegend,  setShowLegend]  = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     const since = daysAgo(28).toISOString().slice(0, 10);
-    const { data } = await supabase
-      .from('session_rpe')
-      .select('*')
-      .gte('event_date', since)
-      .order('event_date', { ascending: false });
-    setRecords(data ?? []);
+    const [rpeRes, vertRes] = await Promise.all([
+      supabase.from('session_rpe').select('*').gte('event_date', since).order('event_date', { ascending: false }),
+      supabase.from('vert_sessions').select('*').gte('session_date', since).order('session_date', { ascending: false }),
+    ]);
+    setRecords(rpeRes.data ?? []);
+    setVertRecords(vertRes.data ?? []);
     setLoading(false);
   }, []);
 
@@ -88,9 +89,9 @@ export default function PerformanceDashboard({ lang, profile }) {
         </div>
         <div className={styles.tabs}>
           {[
-            { id: 'acwr',    en: 'ACWR Overview',   ja: 'ACWR 概要' },
-            { id: 'history', en: 'Session History',  ja: 'セッション履歴' },
-            { id: 'vert',    en: 'VERT Jumps',       ja: 'VERT ジャンプ' },
+            { id: 'acwr',     en: 'ACWR Overview', ja: 'ACWR 概要'    },
+            { id: 'sessions', en: 'Sessions',      ja: 'セッション'   },
+            { id: 'vert',     en: 'VERT Jumps',    ja: 'VERT ジャンプ'},
           ].map(t => (
             <button key={t.id}
               className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
@@ -141,7 +142,7 @@ export default function PerformanceDashboard({ lang, profile }) {
         );
       })()}
 
-      <div className={styles.content}>
+      {tab !== 'vert' && <div className={styles.content}>
         {loading ? (
           <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
 
@@ -270,9 +271,39 @@ export default function PerformanceDashboard({ lang, profile }) {
             </>
           )
 
-        ) : tab === 'vert' ? null : (
-          /* Session History */
-          records.length === 0 ? (
+        ) : tab === 'vert' ? null : (() => {
+          // Combined sessions view: merge RPE + VERT by user_id + date
+          const vertByKey = {};
+          for (const v of vertRecords) {
+            const k = `${v.user_id}|${v.session_date}`;
+            if (!vertByKey[k]) vertByKey[k] = v;
+          }
+
+          // Build one row per player per date from RPE records, joining VERT
+          const seen = new Set();
+          const combined = [];
+          for (const r of records) {
+            const k = `${r.user_id}|${r.event_date}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            const v = vertByKey[k] || null;
+            combined.push({ rpe: r, vert: v });
+          }
+          // Also add VERT-only rows (no RPE logged)
+          for (const v of vertRecords) {
+            const k = `${v.user_id}|${v.session_date}`;
+            if (!seen.has(k)) {
+              seen.add(k);
+              combined.push({ rpe: null, vert: v });
+            }
+          }
+          combined.sort((a, b) => {
+            const da = (a.rpe?.event_date || a.vert?.session_date) ?? '';
+            const db = (b.rpe?.event_date || b.vert?.session_date) ?? '';
+            return db.localeCompare(da);
+          });
+
+          return combined.length === 0 ? (
             <div className={styles.empty}>
               {lang === 'ja' ? 'まだセッションデータがありません' : 'No session data yet'}
             </div>
@@ -283,36 +314,50 @@ export default function PerformanceDashboard({ lang, profile }) {
                   <tr>
                     <th className={styles.thName}>{lang === 'ja' ? '日付' : 'Date'}</th>
                     <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                    <th className={styles.thName}>{lang === 'ja' ? 'イベント' : 'Event'}</th>
+                    <th className={styles.thName}>{lang === 'ja' ? 'セッション' : 'Session'}</th>
                     <th className={styles.th}>RPE</th>
-                    <th className={styles.th}>{lang === 'ja' ? '時間 (分)' : 'Duration (min)'}</th>
-                    <th className={styles.th}>{lang === 'ja' ? '負荷 (AU)' : 'Load (AU)'}</th>
+                    <th className={styles.th}>{lang === 'ja' ? '時間' : 'Min'}</th>
+                    <th className={styles.th}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                    <th className={styles.thDiv}></th>
+                    <th className={styles.th}>{lang === 'ja' ? 'ジャンプ' : 'Jumps'}</th>
+                    <th className={styles.th}>{lang === 'ja' ? '最高跳躍' : 'Hi Jump'}</th>
+                    <th className={styles.th}>{lang === 'ja' ? '着地%' : 'Elevated%'}</th>
+                    <th className={styles.th}>{lang === 'ja' ? '強度' : 'Intensity'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map(r => (
-                    <tr key={r.id} className={styles.tr}>
-                      <td className={styles.tdName}>{r.event_date}</td>
-                      <td className={styles.tdName}>{r.user_name}</td>
-                      <td className={styles.tdName}>{r.event_title}</td>
-                      <td className={styles.td}>
-                        <span className={styles.rpeBadge}
-                          style={{ background: rpeColor(r.rpe), color: '#fff' }}>
-                          {r.rpe}
-                        </span>
-                      </td>
-                      <td className={styles.td}>{r.duration_min}</td>
-                      <td className={styles.td}>
-                        <span className={styles.loadNum}>{r.load_au}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {combined.map(({ rpe: r, vert: v }, i) => {
+                    const date    = r?.event_date   || v?.session_date;
+                    const name    = r?.user_name    || v?.vert_name || '—';
+                    const session = r?.event_title  || v?.session_name || '—';
+                    const hasVert = !!v;
+                    const elevPct = v?.elevated_pct;
+                    const elevClass = elevPct == null ? '' : elevPct >= 20 ? styles.cellRed : elevPct >= 10 ? styles.cellAmber : styles.cellGreen;
+                    return (
+                      <tr key={i} className={`${styles.tr} ${!hasVert ? styles.trNoVert : ''}`}>
+                        <td className={styles.tdName}>{date}</td>
+                        <td className={styles.tdName}>{name}</td>
+                        <td className={styles.tdName}>{session}</td>
+                        <td className={styles.td}>
+                          {r ? <span className={styles.rpeBadge} style={{ background: rpeColor(r.rpe), color: '#fff' }}>{r.rpe}</span>
+                             : <span className={styles.noData}>—</span>}
+                        </td>
+                        <td className={styles.td}>{r?.duration_min ?? <span className={styles.noData}>—</span>}</td>
+                        <td className={styles.td}>{r ? <span className={styles.loadNum}>{r.load_au}</span> : <span className={styles.noData}>—</span>}</td>
+                        <td className={styles.tdDiv}></td>
+                        <td className={styles.td}>{v?.jumps             ?? <span className={styles.noData}>—</span>}</td>
+                        <td className={styles.td}>{v?.avg_hi_jump_cm != null ? `${v.avg_hi_jump_cm} cm` : <span className={styles.noData}>—</span>}</td>
+                        <td className={`${styles.td} ${elevClass}`}>{elevPct != null ? `${elevPct}%` : <span className={styles.noData}>—</span>}</td>
+                        <td className={styles.td}>{v?.intensity         ?? <span className={styles.noData}>—</span>}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          )
-        )}
-      </div>
+          );
+        })()}
+      </div>}
 
       {tab === 'vert' && (
         <VertDashboard lang={lang} profile={profile} />

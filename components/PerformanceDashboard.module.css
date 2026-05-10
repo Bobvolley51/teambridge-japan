@@ -353,6 +353,19 @@
   color: #374151;
 }
 
+/* Combined sessions table */
+.thDiv, .tdDiv {
+  width: 8px;
+  padding: 0 !important;
+  background: #f3f4f6;
+}
+
+.trNoVert td { opacity: 0.7; }
+
+.cellGreen { color: #059669 !important; font-weight: 600; }
+.cellAmber { color: #d97706 !important; font-weight: 600; }
+.cellRed   { color: #dc2626 !important; font-weight: 600; }
+
 @media (max-width: 768px) {
   .topBar { padding: 10px 12px 8px; }
   .content { padding: 12px 12px 16px; }
