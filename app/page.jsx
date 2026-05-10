@@ -52,9 +52,7 @@ const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Staff/Orga']
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
   const [profile,       setProfile]       = useState(null);
-  const [nav,           setNav]           = useState(() =>
-    (typeof window !== 'undefined' && localStorage.getItem('tb_nav')) || 'dashboard'
-  );
+  const [nav,           setNav]           = useState('dashboard');
   const [lang,          setLang]          = useState(() =>
     (typeof window !== 'undefined' && localStorage.getItem('tb_lang')) || 'en'
   );
