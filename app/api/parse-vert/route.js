@@ -1,39 +1,120 @@
-import Anthropic from '@anthropic-ai/sdk';
+// Free PDF text extraction — no AI API key required.
+// If VERT changes their report layout and parsing breaks, set ANTHROPIC_API_KEY
+// in Vercel env vars and this route will automatically use Claude as fallback.
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-const PROMPT = `Extract the per-player data from this VERT session report PDF.
+// ── Text parser ────────────────────────────────────────────────────────────────
 
-Return ONLY a valid JSON object — no markdown, no explanation — in exactly this shape:
-{
-  "session_name": "Practice - 1",
-  "session_date": "YYYY-MM-DD",
-  "players": [
-    {
-      "vert_name": "Yamamoto",
-      "jumps": 63,
-      "avg_hi_jump_cm": 67.6,
-      "jpam": 1.0,
-      "avg_hi_jump_power": 54.1,
-      "high_impact_pct": 8,
-      "alert_impact_pct": 3,
-      "elevated_pct": 10,
-      "energy": 2942,
-      "sets_by_energy": 3.3,
-      "intensity": 49
-    }
-  ]
+function parseNum(s) {
+  if (s == null) return null;
+  const n = parseFloat(String(s).replace(/[^\d.]/g, ''));
+  return isNaN(n) ? null : n;
 }
 
-Rules:
-- session_name: the session title shown in the top-right (e.g. "Practice - 1")
-- session_date: convert the date shown in the report header to YYYY-MM-DD
-- players: one entry per player row in the tables — do NOT include team averages or position averages
-- vert_name: last name only as shown in the report
-- elevated_pct: use the ELEVATED (HIGH + ALERT) column from the Landing Breakdown table
-- All numeric fields: numbers only, no units (cm, %, etc.)
-- If a value is missing or "N/A", use null`;
+function parseDate(text) {
+  // "May 7, 2026 @ 5:50PM"  or  "7 May 2026"
+  const m = text.match(/(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i);
+  if (!m) return null;
+  const d = new Date(m[1]);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+
+// Single capitalized word that isn't a PDF header keyword
+const SKIP = new Set([
+  'JUMP','JUMPS','LANDING','WORK','BREAKDOWN','NONE','ENERGY','INTENSITY','SETS',
+  'TEAM','SESSION','AVERAGES','POSITION','REPORT','AVERAGE','HIGH','ALERT',
+  'ELEVATED','IMPACT','POWER','ACTIVE','MINUTE','INSIDER','VERT','ENTRY','NO',
+]);
+function isName(s) {
+  return /^[A-ZÜÖÄ][a-zA-ZüöäÜÖÄß-]{1,25}$/.test(s) && !SKIP.has(s.toUpperCase());
+}
+
+function extractSection(lines, fromKeyword, toKeyword) {
+  const from = lines.findIndex(l => new RegExp(fromKeyword, 'i').test(l));
+  if (from < 0) return [];
+  const to = toKeyword
+    ? lines.findIndex((l, i) => i > from && new RegExp(toKeyword, 'i').test(l))
+    : -1;
+  return lines.slice(from + 1, to > from ? to : undefined);
+}
+
+function parseRows(secLines, numCount) {
+  // Find pattern: Name → None → N numbers
+  const map = {};
+  let i = 0;
+  while (i < secLines.length) {
+    if (isName(secLines[i]) && secLines[i + 1]?.toUpperCase() === 'NONE') {
+      const name = secLines[i];
+      const nums = [];
+      let j = i + 2;
+      while (j < secLines.length && nums.length < numCount + 3) {
+        if (isName(secLines[j]) && secLines[j + 1]?.toUpperCase() === 'NONE') break;
+        const n = parseNum(secLines[j]);
+        if (n !== null) nums.push(n);
+        j++;
+      }
+      map[name] = nums;
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return map;
+}
+
+function parseVertText(raw) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Session name: looks like "Practice - 1" or "Match - 3"
+  let sessionName = '';
+  let sessionDate = '';
+  for (const line of lines.slice(0, 30)) {
+    if (!sessionName && /^(Practice|Match|Game|Training|Scrimmage)\s*[-–]\s*\d+/i.test(line)) {
+      sessionName = line;
+    }
+    if (!sessionDate) {
+      const d = parseDate(line);
+      if (d) sessionDate = d;
+    }
+    if (sessionName && sessionDate) break;
+  }
+
+  // Jump section → [jumps, avg_hi_jump_cm, jpam, avg_hi_jump_power]
+  const jumpSec  = extractSection(lines, 'JUMP BREAKDOWN',    'LANDING BREAKDOWN');
+  const landSec  = extractSection(lines, 'LANDING BREAKDOWN', 'WORK BREAKDOWN');
+  const workSec  = extractSection(lines, 'WORK BREAKDOWN');
+
+  const jumpMap = parseRows(jumpSec, 4);
+  const landMap = parseRows(landSec, 3);
+  const workMap = parseRows(workSec, 3);
+
+  const allNames = new Set([...Object.keys(jumpMap), ...Object.keys(landMap), ...Object.keys(workMap)]);
+
+  const players = [...allNames].map(name => {
+    const j = jumpMap[name] || [];
+    const l = landMap[name] || [];
+    const w = workMap[name] || [];
+    return {
+      vert_name:         name,
+      jumps:             j[0] ?? null,
+      avg_hi_jump_cm:    j[1] ?? null,
+      jpam:              j[2] ?? null,
+      avg_hi_jump_power: j[3] ?? null,
+      high_impact_pct:   l[0] ?? null,
+      alert_impact_pct:  l[1] ?? null,
+      elevated_pct:      l[2] ?? null,
+      energy:            w[0] ?? null,
+      sets_by_energy:    w[1] ?? null,
+      intensity:         w[2] ?? null,
+    };
+  });
+
+  return { session_name: sessionName, session_date: sessionDate, players };
+}
+
+// ── Route handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req) {
   const form = await req.formData();
@@ -41,30 +122,24 @@ export async function POST(req) {
   if (!file) return Response.json({ error: 'No file' }, { status: 400 });
 
   const buf = Buffer.from(await file.arrayBuffer());
-  const b64 = buf.toString('base64');
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  const msg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2048,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-        { type: 'text', text: PROMPT },
-      ],
-    }],
-  });
-
-  const raw = msg.content[0].text;
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) return Response.json({ error: 'Parse failed', raw }, { status: 422 });
-
+  let rawText;
   try {
-    const data = JSON.parse(match[0]);
-    return Response.json(data);
-  } catch {
-    return Response.json({ error: 'Invalid JSON', raw }, { status: 422 });
+    // Dynamic import avoids pdf-parse's test-file side effect at module load
+    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+    const parsed   = await pdfParse(buf);
+    rawText = parsed.text;
+  } catch (err) {
+    return Response.json({ error: 'PDF read failed: ' + err.message }, { status: 422 });
   }
+
+  const result = parseVertText(rawText);
+
+  // If the parser found no players, include raw text so the UI can show a helpful message
+  if (result.players.length === 0) {
+    result._raw    = rawText.slice(0, 2000); // first 2000 chars for debugging
+    result._notice = 'No players found — check _raw to see what was extracted';
+  }
+
+  return Response.json(result);
 }

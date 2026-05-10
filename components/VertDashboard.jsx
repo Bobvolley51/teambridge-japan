@@ -122,7 +122,15 @@ export default function VertDashboard({ lang, profile }) {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        setParseError(data.error || 'Parse failed');
+        setParseError((data.error || 'Parse failed') + (data._raw ? ` — raw preview: "${data._raw.slice(0, 200)}"` : ''));
+        setUploadState('idle');
+        return;
+      }
+
+      if (!data.players?.length) {
+        setParseError(isJa
+          ? 'データが見つかりませんでした。VERT Session Report PDF（Coach Reportではなく）をアップロードしてください。'
+          : 'No player data found. Make sure you upload the VERT Session Report PDF (not the Coach Report).');
         setUploadState('idle');
         return;
       }
