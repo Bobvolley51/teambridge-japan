@@ -149,7 +149,7 @@ export default function PerformanceDashboard({ lang, profile }) {
         ) : tab === 'acwr' ? (
           acwrRows.length === 0 ? (
             <div className={styles.empty}>
-              {lang === 'ja' ? 'まだセッションデータがありません' : 'No session data yet — players submit RPE after Training / Game events'}
+              {lang === 'ja' ? 'まだセッションデータがありません' : 'No session data yet — players submit RPE after Ball Practice / Game events'}
             </div>
           ) : (
             <>

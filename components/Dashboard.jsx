@@ -46,8 +46,8 @@ const QUESTION_LABELS = {
 };
 
 const CAT_COLOR = {
-  Training: '#2563eb', Game: '#dc2626', Meeting: '#059669',
-  Travel: '#7c3aed',   Other: '#6b7280',
+  'Ball-Practice': '#2563eb', Weightlifting: '#d97706', Game: '#dc2626',
+  Meeting: '#059669', Travel: '#7c3aed', Other: '#6b7280',
 };
 
 const PRI = {

@@ -8,17 +8,18 @@ import styles from './Calendar.module.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Training', 'Game', 'Meeting', 'Travel', 'Medical', 'Other'];
+const CATEGORIES = ['Ball-Practice', 'Weightlifting', 'Game', 'Meeting', 'Travel', 'Medical', 'Other'];
 
 const CAT_LABEL = {
-  en: { Training: 'Training', Game: 'Game', Meeting: 'Meeting', Travel: 'Travel', Medical: 'Medical/Physio', Other: 'Other' },
-  ja: { Training: 'トレーニング', Game: '試合', Meeting: 'ミーティング', Travel: '旅行', Medical: 'メディカル/フィジオ', Other: 'その他' },
+  en: { 'Ball-Practice': 'Ball Practice', Weightlifting: 'Weightlifting / Athletic', Game: 'Game', Meeting: 'Meeting', Travel: 'Travel', Medical: 'Medical/Physio', Other: 'Other' },
+  ja: { 'Ball-Practice': 'ボール練習', Weightlifting: 'ウェイト・アスレチック', Game: '試合', Meeting: 'ミーティング', Travel: '旅行', Medical: 'メディカル/フィジオ', Other: 'その他' },
 };
 
-const DEFAULT_DURATION = { Training: 120, Game: 240, Meeting: 30, Travel: 300, Medical: 60, Other: 300 };
+const DEFAULT_DURATION = { 'Ball-Practice': 120, Weightlifting: 75, Game: 240, Meeting: 30, Travel: 300, Medical: 60, Other: 300 };
 
 const CAT = {
-  Training: { bg: '#dbeafe', text: '#1e40af', solid: '#2563eb' },
+  'Ball-Practice': { bg: '#dbeafe', text: '#1e40af', solid: '#2563eb' },
+  Weightlifting:   { bg: '#fef3c7', text: '#92400e', solid: '#d97706' },
   Game:     { bg: '#fee2e2', text: '#991b1b', solid: '#dc2626' },
   Meeting:  { bg: '#d1fae5', text: '#065f46', solid: '#059669' },
   Travel:   { bg: '#ede9fe', text: '#4c1d95', solid: '#7c3aed' },
@@ -192,7 +193,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   const base         = initialDate ?? new Date();
   const defaultStartDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), base.getHours() || 10, 0);
   const defaultStart = toLocalDT(defaultStartDate);
-  const initDuration = DEFAULT_DURATION[event?.category ?? 'Training'] ?? 60;
+  const initDuration = DEFAULT_DURATION[event?.category ?? 'Ball-Practice'] ?? 60;
   const defaultEnd   = toLocalDT(new Date(defaultStartDate.getTime() + initDuration * 60000));
 
   // Parse recurrence stored value back into type + days
@@ -206,7 +207,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   const [title,          setTitle]          = useState(event?.title ?? '');
   const [desc,           setDesc]           = useState(event?.description ?? '');
   const [location,       setLocation]       = useState(event?.location ?? '');
-  const [category,       setCategory]       = useState(event?.category ?? 'Training');
+  const [category,       setCategory]       = useState(event?.category ?? 'Ball-Practice');
   const [start,          setStart]          = useState(isEditing ? toLocalDT(new Date(editStartStr)) : defaultStart);
   const [end,            setEnd]            = useState(isEditing ? toLocalDT(new Date(editEndStr))   : defaultEnd);
   const [allDay,         setAllDay]         = useState(event?.all_day ?? false);
@@ -278,6 +279,10 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
     }
     if (endDate <= startDate) {
       setError(lang === 'ja' ? '終了は開始より後にしてください。' : 'End must be after start.');
+      return;
+    }
+    if (!isEditing && startDate < new Date(Date.now() + 60 * 60 * 1000)) {
+      setError(lang === 'ja' ? '開始時間は現在から1時間以上先にしてください。' : 'Start time must be at least 1 hour from now.');
       return;
     }
     setSaving(true);

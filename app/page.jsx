@@ -151,7 +151,7 @@ export default function Home() {
       .from('events')
       .select('id, title, start_time, end_time, category')
       .in('id', eventIds)
-      .in('category', ['Training', 'Game'])
+      .in('category', ['Ball-Practice', 'Game'])
       .gte('start_time', cutoff)
       .lte('start_time', now);
 
