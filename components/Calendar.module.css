@@ -348,6 +348,27 @@
 }
 .hourCell:hover { background: #f9fafb; }
 
+/* Current time indicator */
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #dc2626;
+  z-index: 10;
+  pointer-events: none;
+}
+.nowLine::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #dc2626;
+}
+
 /* Absolutely positioned timed event */
 .tEvent {
   position: absolute;

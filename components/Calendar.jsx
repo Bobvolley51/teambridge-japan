@@ -708,11 +708,23 @@ function MonthView({ year, month, events, lang, today, onDayClick, onEventClick 
 
 // ── Week View ─────────────────────────────────────────────────────────────────
 
+function nowLineTop() {
+  const n = new Date();
+  const mins = (n.getHours() - HOUR_START) * 60 + n.getMinutes();
+  return Math.max(0, mins / 60 * SLOT_H);
+}
+
 function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick }) {
   const gridRef = useRef(null);
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart); d.setDate(d.getDate() + i); return d;
   });
+  const [nowTop, setNowTop] = useState(nowLineTop);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTop(nowLineTop()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (gridRef.current) gridRef.current.scrollTop = 7 * SLOT_H;
@@ -760,6 +772,9 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
                 <div key={h} className={styles.hourCell}
                   onClick={() => onSlotClick(new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, 0))} />
               ))}
+              {isToday(day) && (
+                <div className={styles.nowLine} style={{ top: nowTop }} />
+              )}
               {dayEvs(day).map(ev => (
                 <div key={ev._key ?? ev.id} className={styles.tEvent}
                   style={{ ...eventStyle(ev), background: catColor(ev.category).solid }}
@@ -780,14 +795,22 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
 
 function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
   const gridRef = useRef(null);
+  const [nowTop, setNowTop] = useState(nowLineTop);
+  const isT = isToday(date);
 
   useEffect(() => {
-    if (gridRef.current) gridRef.current.scrollTop = 7 * SLOT_H;
+    const id = setInterval(() => setNowTop(nowLineTop()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      gridRef.current.scrollTop = isT ? Math.max(0, nowLineTop() - SLOT_H) : 7 * SLOT_H;
+    }
   }, [date]);
 
   const dayEvs    = events.filter(ev => !ev.all_day && sameDay(new Date(ev.start_time), date));
   const allDayEvs = events.filter(ev =>  ev.all_day && sameDay(new Date(ev.start_time), date));
-  const isT = isToday(date);
 
   return (
     <div className={styles.weekView}>
@@ -825,6 +848,7 @@ function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
               <div key={h} className={styles.hourCell}
                 onClick={() => onSlotClick(new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, 0))} />
             ))}
+            {isT && <div className={styles.nowLine} style={{ top: nowTop }} />}
             {dayEvs.map(ev => (
               <div key={ev._key ?? ev.id} className={styles.tEvent}
                 style={{ ...eventStyle(ev), background: catColor(ev.category).solid }}
