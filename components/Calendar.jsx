@@ -287,6 +287,10 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
       setError(lang === 'ja' ? '終了は開始より後にしてください。' : 'End must be after start.');
       return;
     }
+    if (!isEditing && startDate < new Date(Date.now() + 60 * 60 * 1000)) {
+      setError(lang === 'ja' ? '開始時間は現在から1時間以上先にしてください。' : 'Start time must be at least 1 hour from now.');
+      return;
+    }
     setSaving(true);
     setError(null);
 
