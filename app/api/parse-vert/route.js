@@ -125,8 +125,7 @@ export async function POST(req) {
 
   let rawText;
   try {
-    // Dynamic import avoids pdf-parse's test-file side effect at module load
-    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+    const pdfParse = (await import('pdf-parse')).default;
     const parsed   = await pdfParse(buf);
     rawText = parsed.text;
   } catch (err) {
