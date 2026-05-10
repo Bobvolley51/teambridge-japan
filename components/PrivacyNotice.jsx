@@ -79,7 +79,7 @@ export default function PrivacyNotice({ userId, lang, onLangChange, onAccept }) 
             </div>
             <ul className={styles.list}>
               <li><BiRow en="Profile: name, role, avatar photo" ja="プロフィール（名前、役割、写真）" /></li>
-              <li><BiRow en="Health data: daily wellness scores, body pain, session RPE & training load" ja="健康データ（ウェルネス評価、体の痛み、RPE・トレーニング負荷）" /></li>
+              <li><BiRow en="Data: daily wellness scores, body pain, session RPE & training load" ja="データ（ウェルネス評価、体の痛み、RPE・トレーニング負荷）" /></li>
               <li><BiRow en="Activity: calendar events, tasks, chat messages, travel plans" ja="活動データ（カレンダー、タスク、チャット、旅程）" /></li>
             </ul>
           </div>
@@ -87,7 +87,7 @@ export default function PrivacyNotice({ userId, lang, onLangChange, onAccept }) 
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
               <span>Who can see your health data</span>
-              <span className={styles.sectionTitleJa}>健康データの閲覧権限</span>
+              <span className={styles.sectionTitleJa}>データの閲覧権限</span>
             </div>
             <div className={styles.roles}>
               <span className={styles.roleChip}>Head Coach / ヘッドコーチ</span>
@@ -119,7 +119,7 @@ export default function PrivacyNotice({ userId, lang, onLangChange, onAccept }) 
             </div>
             <div className={styles.disclaimer}>
               <p className={styles.disclaimerText}>
-                Teambridge Tridents and its administrators are not responsible or liable for any damages, losses, or injuries arising from the use of this application. This app is a team communication tool and does not provide medical advice or diagnosis. Health data recorded here is for reference purposes only.
+                Teambridge Tridents and its administrators are not responsible or liable for any damages, losses, or injuries arising from the use of this application. This app is a team communication tool and does not provide medical advice or diagnosis. Data recorded here is for reference purposes only.
               </p>
               <p className={`${styles.disclaimerText} ${styles.disclaimerJa}`}>
                 Teambridge Tridents およびその管理者・運営者は、本アプリの使用によって生じたいかなる損害・損失・怪我についても一切の責任を負いません。本アプリはチームコミュニケーションの補助ツールであり、医療上のアドバイスや診断を提供するものではありません。
