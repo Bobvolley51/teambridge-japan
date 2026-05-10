@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local dev notes — may contain project URLs or keys
+IMPLEMENTATION-GUIDE.md
+SESSION-SUMMARY.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

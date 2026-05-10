@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS event_participants (
   id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   event_id    UUID        REFERENCES events(id) ON DELETE CASCADE,
-  user_id     UUID        REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_id  UUID        REFERENCES profiles(id) ON DELETE CASCADE,
   status      TEXT        DEFAULT 'invited' -- invited, accepted, declined, maybe
 );
 
