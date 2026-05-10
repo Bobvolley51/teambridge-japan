@@ -313,9 +313,8 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
             participantIds.map(pid => ({ event_id: data.id, profile_id: pid }))
           );
           if (pErr) throw new Error(pErr.message);
-          const others    = participantIds.filter(pid => pid !== currentUserId);
           const body      = new Date(payload.start_time).toLocaleString(lang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-          const notifs    = others.map(pid => ({
+          const notifs    = participantIds.map(pid => ({
             user_id: pid, type: 'calendar_invite',
             title: lang === 'ja' ? `予定追加: ${payload.title}` : `Added to event: ${payload.title}`,
             body, nav_target: 'calendar', ref_id: data.id,
@@ -325,7 +324,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
             notifs.length ? supabase.from('notifications').insert(notifs) : Promise.resolve(),
             hoursUntil >= 0 && hoursUntil <= 36
               ? fetch('/api/notify-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ participantIds: others, eventTitle: payload.title, eventStart: payload.start_time, eventLocation: payload.location, addedBy: currentUserName }) }).catch(() => {})
+                  body: JSON.stringify({ participantIds, eventTitle: payload.title, eventStart: payload.start_time, eventLocation: payload.location, addedBy: currentUserName }) }).catch(() => {})
               : Promise.resolve(),
           ]);
         }
