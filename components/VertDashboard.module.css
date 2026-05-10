@@ -256,9 +256,9 @@
 .trEven { background: #f9fafb; }
 
 /* Threshold colors */
-.green  { color: #059669; font-weight: 600; }
-.amber  { color: #d97706; font-weight: 600; }
-.red    { color: #dc2626; font-weight: 600; }
+.green  { color: #059669 !important; font-weight: 600; }
+.amber  { color: #d97706 !important; font-weight: 600; }
+.red    { color: #dc2626 !important; font-weight: 600; }
 
 /* Legend */
 .legend {

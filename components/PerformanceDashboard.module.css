@@ -124,6 +124,15 @@
 /* Legend */
 .legendRow {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.legendChips {
+  display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
@@ -134,6 +143,103 @@
   border: 1px solid;
   border-radius: 6px;
   padding: 3px 10px;
+}
+
+.legendToggle {
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.legendToggle:hover { border-color: #9ca3af; color: #374151; }
+
+.legendPanel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.legendPanelTitle {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.legendPanelDesc {
+  color: #6b7280;
+  font-size: 12px;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.legendTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.legendTable th {
+  text-align: left;
+  padding: 5px 10px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  background: #f3f4f6;
+}
+
+.legendTable td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.legendRange {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.legendAction {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.legendRpeDots {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legendRpeTitle {
+  font-weight: 600;
+  color: #374151;
+  font-size: 12px;
+}
+
+.legendRpeItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.rpeDotSample {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 /* Table */

@@ -31,9 +31,10 @@ function daysAgo(n) {
 }
 
 export default function PerformanceDashboard({ lang, profile }) {
-  const [tab,     setTab]     = useState('acwr');
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tab,        setTab]        = useState('acwr');
+  const [records,    setRecords]    = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -152,13 +153,69 @@ export default function PerformanceDashboard({ lang, profile }) {
           ) : (
             <>
               <div className={styles.legendRow}>
-                {ZONES.map((z, i) => (
-                  <span key={z.id} className={styles.legendChip}
-                    style={{ color: z.color, background: z.bg, borderColor: z.color }}>
-                    {z[lang]} {ZONE_RANGE[i]}
-                  </span>
-                ))}
+                <div className={styles.legendChips}>
+                  {ZONES.map((z, i) => (
+                    <span key={z.id} className={styles.legendChip}
+                      style={{ color: z.color, background: z.bg, borderColor: z.color }}>
+                      {z[lang]} {ZONE_RANGE[i]}
+                    </span>
+                  ))}
+                </div>
+                <button className={styles.legendToggle} onClick={() => setShowLegend(v => !v)}>
+                  {showLegend ? (lang === 'ja' ? '閉じる ▲' : 'Hide legend ▲') : (lang === 'ja' ? '凡例を表示 ▼' : 'Show legend ▼')}
+                </button>
               </div>
+
+              {showLegend && (
+                <div className={styles.legendPanel}>
+                  <div className={styles.legendPanelTitle}>
+                    {lang === 'ja' ? 'ACWR（急性慢性負荷比）とは？' : 'What is ACWR (Acute:Chronic Workload Ratio)?'}
+                  </div>
+                  <p className={styles.legendPanelDesc}>
+                    {lang === 'ja'
+                      ? 'ACWR = 直近7日間の負荷 ÷ 直近28日間の平均週負荷。選手の「今週の疲労」と「体の慣れ」のバランスを示します。負荷AU = RPE × 練習時間（分）。'
+                      : 'ACWR = last 7 days load ÷ average weekly load over 28 days. It measures how this week\'s strain compares to what the body is conditioned for. Load (AU) = RPE × session duration (min).'}
+                  </p>
+                  <table className={styles.legendTable}>
+                    <thead>
+                      <tr>
+                        <th>{lang === 'ja' ? 'ゾーン' : 'Zone'}</th>
+                        <th>ACWR</th>
+                        <th>{lang === 'ja' ? '意味' : 'Meaning'}</th>
+                        <th>{lang === 'ja' ? '対応' : 'Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { zone: ZONES[0], meaning: lang === 'ja' ? '負荷不足 — パフォーマンス低下リスク' : 'Under-trained — risk of deconditioning', action: lang === 'ja' ? '負荷を増やす' : 'Increase load gradually' },
+                        { zone: ZONES[1], meaning: lang === 'ja' ? '最適ゾーン — 負傷リスク最小' : 'Sweet spot — lowest injury risk',        action: lang === 'ja' ? '維持する'   : 'Maintain current load' },
+                        { zone: ZONES[2], meaning: lang === 'ja' ? '注意 — 負傷リスク上昇'         : 'Caution — elevated injury risk',         action: lang === 'ja' ? '負荷を調整' : 'Monitor & reduce if needed' },
+                        { zone: ZONES[3], meaning: lang === 'ja' ? '危険 — 負傷リスク大幅上昇'     : 'Danger — significantly elevated injury risk', action: lang === 'ja' ? '負荷を下げる' : 'Reduce load immediately' },
+                      ].map(({ zone, meaning, action }) => (
+                        <tr key={zone.id}>
+                          <td>
+                            <span className={styles.legendChip} style={{ color: zone.color, background: zone.bg, borderColor: zone.color }}>
+                              {zone[lang]}
+                            </span>
+                          </td>
+                          <td className={styles.legendRange}>{ZONE_RANGE[ZONES.indexOf(zone)]}</td>
+                          <td>{meaning}</td>
+                          <td className={styles.legendAction}>{action}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className={styles.legendRpeDots}>
+                    <span className={styles.legendRpeTitle}>{lang === 'ja' ? '直近RPEドット:' : 'Recent RPE dots:'}</span>
+                    {[['#10b981', lang === 'ja' ? '低 (1–3)' : 'Low (1–3)'], ['#f59e0b', lang === 'ja' ? '中 (4–6)' : 'Moderate (4–6)'], ['#ef4444', lang === 'ja' ? '高 (7–10)' : 'High (7–10)']].map(([color, label]) => (
+                      <span key={color} className={styles.legendRpeItem}>
+                        <span className={styles.rpeDotSample} style={{ background: color }} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
