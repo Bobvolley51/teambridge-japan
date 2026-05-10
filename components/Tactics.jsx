@@ -190,14 +190,6 @@ const COMMAND_COLORS = {
   'Step Right':       { bg: '#fee2e2', color: '#dc2626' }, // = Zone 1
 };
 
-const POSITION_COLORS = {
-  'Setter':    { bg: '#f3e8ff', color: '#7e22ce' },
-  'Middle':    { bg: '#dbeafe', color: '#1d4ed8' },
-  'Outside':   { bg: '#dcfce7', color: '#15803d' },
-  'Opposite':  { bg: '#fee2e2', color: '#dc2626' },
-  'Libero':    { bg: '#fefce8', color: '#a16207' },
-  'Universal': { bg: '#f3f4f6', color: '#374151' },
-};
 
 const ZONE_COLORS = {
   '1': { bg: '#fee2e2', color: '#dc2626' },
@@ -325,19 +317,11 @@ function RosterTable({ players, lang, onEdit, onDelete }) {
         <tbody>
           {players.map(p => (
             <tr key={p.id} className={styles.serverTr} onClick={() => onEdit(p)}>
-              {cols.map(c => {
-                const val = p[c.key];
-                let content = val || '—';
-                if (c.key === 'position' && val) {
-                  const col = POSITION_COLORS[val];
-                  if (col) content = <span className={styles.tacChip} style={{ background: col.bg, color: col.color }}>{val}</span>;
-                }
-                return (
-                  <td key={c.key} className={`${styles.serverTd} ${c.key === 'body' ? styles.serverTdWrap : ''}`}>
-                    {content}
-                  </td>
-                );
-              })}
+              {cols.map(c => (
+                <td key={c.key} className={`${styles.serverTd} ${c.key === 'body' ? styles.serverTdWrap : ''}`}>
+                  {p[c.key] || '—'}
+                </td>
+              ))}
               <td className={styles.serverTd} onClick={e => e.stopPropagation()}>
                 <button className={styles.noteDeleteBtn} onClick={() => onDelete(p.id)}>×</button>
               </td>
@@ -489,7 +473,6 @@ function ServerTable({ servers, lang, onEdit, onDelete, onDuplicate }) {
   function renderCell(key, value) {
     if (!value) return '—';
     if (key === 'command')        return chip(COMMAND_COLORS, value);
-    if (key === 'position')       return chip(POSITION_COLORS, value);
     if (key === 'starting_zone' || key === 'best_serve_zone') return chip(ZONE_COLORS, value);
     if (key === 'typ') {
       const v = value.toLowerCase();
