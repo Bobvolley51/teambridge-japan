@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './PerformanceDashboard.module.css';
+import VertDashboard from './VertDashboard';
 
 const ZONES = [
   { id: 'low',      min: 0,   max: 0.8,  en: 'Low',       ja: '低負荷',    color: '#3b82f6', bg: '#eff6ff' },
@@ -29,7 +30,7 @@ function daysAgo(n) {
   return d;
 }
 
-export default function PerformanceDashboard({ lang }) {
+export default function PerformanceDashboard({ lang, profile }) {
   const [tab,     setTab]     = useState('acwr');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +89,7 @@ export default function PerformanceDashboard({ lang }) {
           {[
             { id: 'acwr',    en: 'ACWR Overview',   ja: 'ACWR 概要' },
             { id: 'history', en: 'Session History',  ja: 'セッション履歴' },
+            { id: 'vert',    en: 'VERT Jumps',       ja: 'VERT ジャンプ' },
           ].map(t => (
             <button key={t.id}
               className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
@@ -254,6 +256,10 @@ export default function PerformanceDashboard({ lang }) {
           )
         )}
       </div>
+
+      {tab === 'vert' && (
+        <VertDashboard lang={lang} profile={profile} />
+      )}
 
     </div>
   );
