@@ -63,11 +63,15 @@ function fmt(val, field) {
 }
 
 export default function VertDashboard({ lang, profile }) {
-  const [view,       setView]       = useState('stats');
-  const [players,    setPlayers]    = useState([]);
-  const [sessions,   setSessions]   = useState([]);
-  const [timeRange,  setTimeRange]  = useState('7d');
-  const [showLegend, setShowLegend] = useState(false);
+  const [view,        setView]        = useState('stats');
+  const [players,     setPlayers]     = useState([]);
+  const [sessions,    setSessions]    = useState([]);
+  const [timeRange,   setTimeRange]   = useState('7d');
+  const [showLegend,  setShowLegend]  = useState(false);
+  const [statsMode,   setStatsMode]   = useState('avg');   // 'avg' | 'sessions'
+  const [sortCol,     setSortCol]     = useState('name');
+  const [sortDir,     setSortDir]     = useState('asc');
+  const [playerFilter,setPlayerFilter]= useState('');
 
   // Upload flow state
   // sessions: [{ sessionName, sessionDate, rows, fileName }]
@@ -257,6 +261,7 @@ export default function VertDashboard({ lang, profile }) {
   }
 
   // Stats computation
+  const isPlayer  = profile?.role === 'Player';
   const now = new Date();
   const cutoff = {
     '7d':  new Date(+now - 7  * 86400000).toISOString().slice(0, 10),
@@ -264,26 +269,77 @@ export default function VertDashboard({ lang, profile }) {
     'all': '2000-01-01',
   };
   let filtered = sessions;
+  if (isPlayer) filtered = filtered.filter(s => s.user_id === profile?.id);
   if (timeRange === 'last') {
-    const ld = sessions[0]?.session_date;
-    filtered = ld ? sessions.filter(s => s.session_date === ld) : [];
+    const ld = filtered[0]?.session_date;
+    filtered = ld ? filtered.filter(s => s.session_date === ld) : [];
   } else {
-    filtered = sessions.filter(s => s.session_date >= cutoff[timeRange]);
+    filtered = filtered.filter(s => s.session_date >= cutoff[timeRange]);
   }
+
+  // Per-session rows (for 'sessions' mode)
+  const sessionRows = filtered.map(s => {
+    const player = players.find(pl => pl.id === s.user_id);
+    return { ...s, name: player?.display_name || s.vert_name || '—' };
+  });
+
+  // Averaged rows (for 'avg' mode)
   const byPlayer = {};
   for (const s of filtered) {
     const key = s.user_id || s.vert_name;
     if (!byPlayer[key]) byPlayer[key] = { rows: [], vert_name: s.vert_name, user_id: s.user_id };
     byPlayer[key].rows.push(s);
   }
-  const statsRows = Object.values(byPlayer).map(p => {
+  const avgRows = Object.values(byPlayer).map(p => {
     const player = players.find(pl => pl.id === p.user_id);
     return {
-      name:  player?.display_name || p.vert_name,
+      name:  player?.display_name || p.vert_name || '—',
       count: p.rows.length,
       ...Object.fromEntries(NUMERIC_FIELDS.map(f => [f, avgField(p.rows, f)])),
     };
-  }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  });
+
+  function applySort(rows) {
+    return [...rows].sort((a, b) => {
+      const av = a[sortCol], bv = b[sortCol];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      const cmp = typeof av === 'string'
+        ? (av || '').localeCompare(bv || '')
+        : av - bv;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  function toggleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  }
+
+  const filterText = playerFilter.trim().toLowerCase();
+  const statsRows  = applySort(
+    avgRows.filter(r => !filterText || (r.name || '').toLowerCase().includes(filterText))
+  );
+  const sessRows   = applySort(
+    sessionRows.filter(r => !filterText || (r.name || '').toLowerCase().includes(filterText))
+  );
+
+  // Alert: players with concerning landing impact
+  const landingAlerts = avgRows.filter(r =>
+    (r.elevated_pct != null && r.elevated_pct >= 20) ||
+    (r.alert_impact_pct != null && r.alert_impact_pct >= 10)
+  );
+
+  function SortTh({ col, label, className }) {
+    const active = sortCol === col;
+    return (
+      <th className={`${className || styles.thNum} ${styles.thSortable} ${active ? styles.thSortActive : ''}`}
+          onClick={() => toggleSort(col)}>
+        {label}{active ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+      </th>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -307,26 +363,61 @@ export default function VertDashboard({ lang, profile }) {
       {/* ── STATISTICS ─────────────────────────────────────── */}
       {view === 'stats' && (
         <div>
-          <div className={styles.rangeBar}>
-            {[['last', isJa ? '最新' : 'Last Session'], ['7d', '7 days'], ['14d', '14 days'], ['all', isJa ? '全期間' : 'All time']].map(([k, label]) => (
-              <button key={k} className={`${styles.rangeBtn} ${timeRange === k ? styles.rangeBtnActive : ''}`} onClick={() => setTimeRange(k)}>
-                {label}
-              </button>
-            ))}
+          {/* Alert banner */}
+          {!isPlayer && landingAlerts.length > 0 && (
+            <div className={styles.alertBanner}>
+              <span className={styles.alertTitle}>⚠ {isJa ? '着地衝撃アラート' : 'Landing Impact Alert'}</span>
+              {landingAlerts.map(r => (
+                <span key={r.name} className={styles.alertPlayer}>
+                  {r.name}
+                  {r.alert_impact_pct >= 10 && <> — Alert {r.alert_impact_pct}%</>}
+                  {r.elevated_pct    >= 20 && <> — Elevated {r.elevated_pct}%</>}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className={styles.statsControls}>
+            <div className={styles.rangeBar}>
+              {[['last', isJa ? '最新' : 'Last'], ['7d', '7d'], ['14d', '14d'], ['all', isJa ? '全期間' : 'All']].map(([k, label]) => (
+                <button key={k} className={`${styles.rangeBtn} ${timeRange === k ? styles.rangeBtnActive : ''}`} onClick={() => setTimeRange(k)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {!isPlayer && (
+              <div className={styles.statsRight}>
+                <input
+                  className={styles.playerSearch}
+                  placeholder={isJa ? '選手で絞り込み…' : 'Filter player…'}
+                  value={playerFilter}
+                  onChange={e => setPlayerFilter(e.target.value)}
+                />
+                <div className={styles.modeToggle}>
+                  <button className={`${styles.modeBtn} ${statsMode === 'avg' ? styles.modeBtnActive : ''}`} onClick={() => setStatsMode('avg')}>
+                    {isJa ? '平均' : 'Averages'}
+                  </button>
+                  <button className={`${styles.modeBtn} ${statsMode === 'sessions' ? styles.modeBtnActive : ''}`} onClick={() => setStatsMode('sessions')}>
+                    {isJa ? 'セッション別' : 'Per Session'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {statsRows.length === 0 ? (
+          {(statsMode === 'avg' ? statsRows : sessRows).length === 0 ? (
             <div className={styles.empty}>
               {isJa ? 'データなし。セッションをアップロードしてください。' : 'No data yet. Upload a session to get started.'}
             </div>
-          ) : (
+          ) : statsMode === 'avg' ? (
             <div className={styles.tableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.thSticky}>{isJa ? '選手' : 'Player'}</th>
-                    <th className={styles.thNum}>{isJa ? 'n' : 'n'}</th>
-                    {STAT_COLS.map(c => <th key={c.key} className={styles.thNum}>{c.label}</th>)}
+                    <SortTh col="name"  label={isJa ? '選手' : 'Player'} className={styles.thSticky} />
+                    <SortTh col="count" label="n" />
+                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={c.label} />)}
                   </tr>
                 </thead>
                 <tbody>
@@ -334,6 +425,33 @@ export default function VertDashboard({ lang, profile }) {
                     <tr key={i} className={i % 2 === 0 ? styles.trEven : ''}>
                       <td className={styles.tdSticky}>{row.name}</td>
                       <td className={styles.tdCenter}>{row.count}</td>
+                      {STAT_COLS.map(c => (
+                        <td key={c.key} className={`${styles.tdCenter} ${cellColor(c.key, row[c.key])}`}>
+                          {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <SortTh col="session_date" label={isJa ? '日付' : 'Date'} className={styles.thSticky} />
+                    {!isPlayer && <SortTh col="name" label={isJa ? '選手' : 'Player'} />}
+                    <SortTh col="session_name" label={isJa ? 'セッション' : 'Session'} />
+                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={c.label} />)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessRows.map((row, i) => (
+                    <tr key={i} className={i % 2 === 0 ? styles.trEven : ''}>
+                      <td className={styles.tdSticky}>{row.session_date}</td>
+                      {!isPlayer && <td className={styles.tdCenter}>{row.name}</td>}
+                      <td className={styles.tdCenter}>{row.session_name}</td>
                       {STAT_COLS.map(c => (
                         <td key={c.key} className={`${styles.tdCenter} ${cellColor(c.key, row[c.key])}`}>
                           {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './PlayerStats.module.css';
+import VertDashboard from './VertDashboard';
 
 const QUESTIONS = [
   { key: 'fatigue',     en: 'Fatigue',  ja: '疲労' },
@@ -65,7 +66,9 @@ function getLast7Dates() {
 
 export default function PlayerStats({ lang, profile, onEditWellness }) {
   const userId = profile?.id;
+  const isJa   = lang === 'ja';
 
+  const [activeTab,    setActiveTab]    = useState('wellness');
   const [wellnessRows, setWellnessRows] = useState([]);
   const [bodyPain,     setBodyPain]     = useState([]);
   const [rpeHistory,   setRpeHistory]   = useState([]);
@@ -143,15 +146,29 @@ export default function PlayerStats({ lang, profile, onEditWellness }) {
     loadData();
   };
 
-  const isJa = lang === 'ja';
-
   return (
     <div className={styles.wrapper}>
-      <h2 className={styles.pageTitle}>
-        {isJa ? 'マイデータ' : 'My Stats'}
-      </h2>
+      <div className={styles.pageHeader}>
+        <h2 className={styles.pageTitle}>
+          {isJa ? 'マイデータ' : 'My Stats'}
+        </h2>
+        <div className={styles.pageTabs}>
+          {[
+            { id: 'wellness', label: isJa ? 'ウェルネス / RPE' : 'Wellness / RPE' },
+            { id: 'vert',     label: isJa ? 'VERTジャンプ' : 'VERT Jumps' },
+          ].map(t => (
+            <button key={t.id}
+              className={`${styles.pageTab} ${activeTab === t.id ? styles.pageTabActive : ''}`}
+              onClick={() => setActiveTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {loading ? (
+      {activeTab === 'vert' ? (
+        <VertDashboard lang={lang} profile={profile} />
+      ) : loading ? (
         <div className={styles.loading}>{isJa ? '読込中...' : 'Loading…'}</div>
       ) : (
         <>
