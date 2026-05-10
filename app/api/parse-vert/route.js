@@ -6,7 +6,30 @@ export const maxDuration = 30;
 
 // ── PDF text extraction ────────────────────────────────────────────────────────
 
+function polyfillBrowserAPIs() {
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    globalThis.DOMMatrix = class DOMMatrix {
+      constructor(init) {
+        this.a=1;this.b=0;this.c=0;this.d=1;this.e=0;this.f=0;
+        if (Array.isArray(init) && init.length === 6) {
+          [this.a,this.b,this.c,this.d,this.e,this.f] = init;
+        }
+      }
+      transformPoint(p) { return p; }
+      multiply() { return this; }
+      inverse()  { return this; }
+      translate(){ return this; }
+      scale()    { return this; }
+      rotate()   { return this; }
+    };
+  }
+  if (typeof globalThis.Path2D        === 'undefined') globalThis.Path2D        = class {};
+  if (typeof globalThis.ImageData     === 'undefined') globalThis.ImageData     = class {};
+  if (typeof globalThis.OffscreenCanvas=== 'undefined') globalThis.OffscreenCanvas = class {};
+}
+
 async function extractText(buf) {
+  polyfillBrowserAPIs();
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
   const pdf = await getDocument({
