@@ -55,19 +55,31 @@ function AppStats({ profiles, lang }) {
     const sinceIso  = since.toISOString();
     const sinceDate = since.toISOString().slice(0, 10);
 
+    const curWeekStart = (() => {
+      const d = new Date(); const day = d.getDay();
+      d.setDate(d.getDate() - ((day + 6) % 7)); d.setHours(0,0,0,0);
+      return d.toISOString().slice(0,10);
+    })();
+
     Promise.all([
       supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', sinceIso),
       supabase.from('wellness_responses').select('user_id').gte('response_date', sinceDate),
       supabase.from('session_rpe').select('user_id').gte('event_date', sinceDate),
       supabase.from('tasks').select('id, assigned_to, status'),
       supabase.from('messages').select('sender_id').gte('created_at', sinceIso),
-    ]).then(([msgs, wellness, rpe, tasks, msgPerUser]) => {
+      supabase.from('player_bodyweight').select('user_id').eq('week_start', curWeekStart),
+      supabase.from('event_participants').select('profile_id, status, events!inner(start_time)').gte('events.start_time', sinceIso),
+      supabase.from('announcement_reads').select('user_id'),
+    ]).then(([msgs, wellness, rpe, tasks, msgPerUser, bw, rsvps, annReads]) => {
       const wellnessList  = wellness.data  ?? [];
       const rpeList       = rpe.data       ?? [];
       const msgList       = msgPerUser.data ?? [];
       const taskList      = tasks.data     ?? [];
+      const bwList        = bw.data        ?? [];
+      const rsvpList      = rsvps.data     ?? [];
+      const annReadList   = annReads.data  ?? [];
 
-      const def = () => ({ wellnessSubmitted: false, rpe: 0, messages: 0, tasksDone: 0, tasksTotal: 0 });
+      const def = () => ({ wellnessSubmitted: false, rpe: 0, messages: 0, tasksDone: 0, tasksTotal: 0, bwLogged: false, rsvpTotal: 0, rsvpDone: 0, eventsIn: 0, eventsTotal: 0, annRead: 0 });
 
       const perUser = {};
       for (const r of wellnessList) {
@@ -87,6 +99,21 @@ function AppStats({ profiles, lang }) {
         if (!perUser[t.assigned_to]) perUser[t.assigned_to] = def();
         perUser[t.assigned_to].tasksTotal++;
         if (t.status === 'done') perUser[t.assigned_to].tasksDone++;
+      }
+      for (const r of bwList) {
+        if (!perUser[r.user_id]) perUser[r.user_id] = def();
+        perUser[r.user_id].bwLogged = true;
+      }
+      for (const r of rsvpList) {
+        if (!perUser[r.profile_id]) perUser[r.profile_id] = def();
+        perUser[r.profile_id].rsvpTotal++;
+        if (r.status !== null) perUser[r.profile_id].rsvpDone++;
+        perUser[r.profile_id].eventsTotal++;
+        if ((r.status ?? 'in') === 'in') perUser[r.profile_id].eventsIn++;
+      }
+      for (const r of annReadList) {
+        if (!perUser[r.user_id]) perUser[r.user_id] = def();
+        perUser[r.user_id].annRead++;
       }
 
       setStats({
@@ -163,6 +190,9 @@ function AppStats({ profiles, lang }) {
             <span title={lang === 'ja' ? 'ウェルネス提出' : 'Wellness submitted'}>💪</span>
             <span title={lang === 'ja' ? 'RPEセッション数' : 'RPE sessions logged'}>📊</span>
             <span title={lang === 'ja' ? 'タスク完了' : 'Tasks done'}>✅</span>
+            <span title={lang === 'ja' ? '体重記録 (今週)' : 'Weight logged (this week)'}>⚖️</span>
+            <span title={lang === 'ja' ? 'RSVP率' : 'RSVP rate'}>📅</span>
+            <span title={lang === 'ja' ? 'お知らせ確認数' : 'Announcements read'}>📢</span>
             <span title={lang === 'ja' ? 'チャット' : 'Chat messages'}>💬</span>
           </div>
           {[...profiles].sort((a, b) => {
@@ -184,6 +214,10 @@ function AppStats({ profiles, lang }) {
             const wellnessCls  = !stats ? styles.userStatValGray : isPlayer ? (u.wellnessSubmitted ? styles.userStatValGreen : styles.userStatValRed) : styles.userStatValGray;
             const tasksCell    = !stats ? '…' : u.tasksTotal > 0 ? `${u.tasksDone}/${u.tasksTotal}` : '—';
             const tasksCls     = !stats ? styles.userStatValGray : u.tasksTotal > 0 && u.tasksDone === u.tasksTotal ? styles.userStatValGreen : styles.userStatValGray;
+            const bwCell       = !stats ? '…' : isPlayer ? (u.bwLogged ? '✓' : '✗') : '—';
+            const bwCls        = !stats ? styles.userStatValGray : isPlayer ? (u.bwLogged ? styles.userStatValGreen : styles.userStatValRed) : styles.userStatValGray;
+            const rsvpCell     = !stats ? '…' : u.rsvpTotal > 0 ? `${u.rsvpDone}/${u.rsvpTotal}` : '—';
+            const rsvpCls      = !stats ? styles.userStatValGray : u.rsvpTotal > 0 && u.rsvpDone === u.rsvpTotal ? styles.userStatValGreen : styles.userStatValGray;
             return (
               <div key={p.id} className={styles.userStatRow}>
                 <div className={styles.userStatName}>
@@ -198,6 +232,11 @@ function AppStats({ profiles, lang }) {
                   {isPlayer ? (stats ? u.rpe : '…') : '—'}
                 </span>
                 <span className={`${styles.userStatVal} ${tasksCls}`}>{tasksCell}</span>
+                <span className={`${styles.userStatVal} ${bwCls}`}>{bwCell}</span>
+                <span className={`${styles.userStatVal} ${rsvpCls}`}>{rsvpCell}</span>
+                <span className={`${styles.userStatVal} ${u.annRead > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
+                  {stats ? (u.annRead > 0 ? u.annRead : '—') : '…'}
+                </span>
                 <span className={`${styles.userStatVal} ${u.messages > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
                   {stats ? u.messages : '…'}
                 </span>

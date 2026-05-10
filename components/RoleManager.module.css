@@ -770,7 +770,7 @@
 
 .userStatHead {
   display: grid;
-  grid-template-columns: 1fr 100px 36px 36px 36px 36px;
+  grid-template-columns: 1fr 80px 32px 32px 32px 32px 44px 32px 32px;
   padding: 6px 16px;
   font-size: 10px;
   font-weight: 700;
@@ -782,7 +782,7 @@
 
 .userStatRow {
   display: grid;
-  grid-template-columns: 1fr 100px 36px 36px 36px 36px;
+  grid-template-columns: 1fr 80px 32px 32px 32px 32px 44px 32px 32px;
   align-items: center;
   padding: 8px 16px;
   border-bottom: 1px solid #f9fafb;
