@@ -183,11 +183,11 @@ const AUTO_TABS = {
 const ZONES     = ['1', '2', '3', '4', '5', '6'];
 
 const COMMAND_COLORS = {
-  'Step Left':        { bg: '#dbeafe', color: '#1d4ed8' },
-  'Half Step Left':   { bg: '#eff6ff', color: '#3b82f6' },
-  'Leave both Lines': { bg: '#dcfce7', color: '#15803d' },
-  'Half Step Right':  { bg: '#fff7ed', color: '#ea580c' },
-  'Step Right':       { bg: '#ffedd5', color: '#c2410c' },
+  'Step Left':        { bg: '#dbeafe', color: '#1d4ed8' }, // = Zone 5
+  'Half Step Left':   { bg: '#eff6ff', color: '#3b82f6' }, // lighter Zone 5
+  'Leave both Lines': { bg: '#f3e8ff', color: '#7e22ce' }, // = Zone 6
+  'Half Step Right':  { bg: '#ffe4e6', color: '#e11d48' }, // lighter Zone 1
+  'Step Right':       { bg: '#fee2e2', color: '#dc2626' }, // = Zone 1
 };
 
 const POSITION_COLORS = {
@@ -805,12 +805,12 @@ export default function Tactics({ lang = 'en', profile }) {
   }, []);
 
   const duplicateServer = useCallback(async (server) => {
-    const { id, created_at, ...rest } = server;
-    const payload = { ...rest, author_name: authorName, updated_at: new Date().toISOString() };
+    const { id, created_at, updated_at, ...rest } = server;
+    const payload = { ...rest, updated_at: new Date().toISOString() };
     const { data, error: err } = await supabase.from('tactics_notes').insert(payload).select().single();
     if (err) { setError(err.message); return; }
     setNotes(prev => [data, ...prev]);
-  }, [authorName]);
+  }, []);
 
   const isRoster   = activeCategory === 'roster';
   const isServer   = activeCategory === 'servers';
