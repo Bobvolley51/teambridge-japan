@@ -41,9 +41,9 @@ function toDateStr(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function getLast7Start(offset = 0) {
+function getPeriodStart(days, offset = 0) {
   const d = new Date();
-  d.setDate(d.getDate() - 6 + offset * 7);
+  d.setDate(d.getDate() - (days - 1) + offset * 7);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -146,6 +146,7 @@ export default function WellnessDashboard({ lang }) {
   const [tab,        setTab]        = useState('today');
   const [date,       setDate]       = useState(todayStr);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [weekDays,   setWeekDays]   = useState(7);
   const [rows,       setRows]       = useState([]);
   const [weekRows,   setWeekRows]   = useState([]);
   const [todayPain,  setTodayPain]  = useState([]);
@@ -172,8 +173,8 @@ export default function WellnessDashboard({ lang }) {
   // ── Load week ───────────────────────────────────────────────
   const loadWeek = useCallback(async () => {
     setLoading(true);
-    const ws = getLast7Start(weekOffset);
-    const dates = Array.from({ length: 7 }, (_, i) => {
+    const ws = getPeriodStart(weekDays, weekOffset);
+    const dates = Array.from({ length: weekDays }, (_, i) => {
       const d = new Date(ws); d.setDate(d.getDate() + i); return toDateStr(d);
     });
     const curWeek  = getWeekStart(dates[0]);
@@ -187,7 +188,7 @@ export default function WellnessDashboard({ lang }) {
     setWeekPain(pain ?? []);
     setBwRows(bw ?? []);
     setLoading(false);
-  }, [weekOffset]);
+  }, [weekOffset, weekDays]);
 
   useEffect(() => {
     if (tab === 'today') loadToday(); else loadWeek();
@@ -202,7 +203,7 @@ export default function WellnessDashboard({ lang }) {
   const todayCurWeek  = getWeekStart(date);
   const todayPrevWeek = prevWeekStartOf(date);
 
-  const ws         = getLast7Start(weekOffset);
+  const ws         = getPeriodStart(weekDays, weekOffset);
   const weekDates0 = toDateStr(ws);
   const weekCurWeek  = getWeekStart(weekDates0);
   const weekPrevWeek = prevWeekStartOf(weekDates0);
@@ -217,7 +218,7 @@ export default function WellnessDashboard({ lang }) {
   const alarmedToday = [...new Set(rows.filter(r => r.score < 5).map(r => r.user_name))];
 
   // ── Week: derived data ──────────────────────────────────────
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
+  const weekDates = Array.from({ length: weekDays }, (_, i) => {
     const d = new Date(ws); d.setDate(d.getDate() + i); return toDateStr(d);
   });
 
@@ -251,7 +252,7 @@ export default function WellnessDashboard({ lang }) {
   }));
 
   const alarmedWeek  = [...new Set(weekRows.filter(r => r.score < 5).map(r => r.user_name))];
-  const weekLabel    = `${weekDates[0]} – ${weekDates[6]}`;
+  const weekLabel    = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
 
   // ── Render ──────────────────────────────────────────────────
   return (
@@ -398,9 +399,18 @@ export default function WellnessDashboard({ lang }) {
             <button className={styles.navBtn} onClick={() => setWeekOffset(w => w + 1)} disabled={weekOffset >= 0}>›</button>
             {weekOffset < 0 && (
               <button className={styles.currentWeekBtn} onClick={() => setWeekOffset(0)}>
-                {lang === 'ja' ? '最新7日' : 'Latest 7 days'}
+                {lang === 'ja' ? '最新' : 'Latest'}
               </button>
             )}
+            <div className={styles.dayRangeBtns}>
+              {[7, 14].map(d => (
+                <button key={d}
+                  className={`${styles.dayRangeBtn} ${weekDays === d ? styles.dayRangeBtnActive : ''}`}
+                  onClick={() => { setWeekDays(d); setWeekOffset(0); }}>
+                  {d}{lang === 'ja' ? '日' : 'd'}
+                </button>
+              ))}
+            </div>
           </div>
 
           {alarmedWeek.length > 0 && (

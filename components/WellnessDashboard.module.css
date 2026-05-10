@@ -120,6 +120,27 @@
 }
 .currentWeekBtn:hover { background: #f3f4f6; }
 
+.dayRangeBtns {
+  display: flex;
+  gap: 3px;
+  margin-left: 4px;
+}
+
+.dayRangeBtn {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
+}
+.dayRangeBtn:hover { background: #f3f4f6; }
+.dayRangeBtnActive { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+
 .hint {
   font-size: 13px;
   color: #9ca3af;

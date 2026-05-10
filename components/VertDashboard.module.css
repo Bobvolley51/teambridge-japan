@@ -1,4 +1,6 @@
 .container {
+  height: 100%;
+  overflow-y: auto;
   padding: 24px;
   max-width: 100%;
   font-family: inherit;
