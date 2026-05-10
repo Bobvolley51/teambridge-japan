@@ -299,7 +299,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           await Promise.all([
             notifs.length ? supabase.from('notifications').insert(notifs) : Promise.resolve(),
             fetch('/api/notify-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ participantIds: others, eventTitle: payload.title, eventStart: payload.start_time, eventLocation: payload.location, addedBy: currentUserName }) }).catch(() => {}),
+              body: JSON.stringify({ participantIds: others, eventTitle: payload.title, eventStart: payload.start_time, eventLocation: payload.location, changedBy: currentUserName, type: 'update' }) }).catch(() => {}),
           ]);
         }
       } else {
