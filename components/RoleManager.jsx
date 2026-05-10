@@ -59,7 +59,7 @@ function AppStats({ profiles, lang }) {
       supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', sinceIso),
       supabase.from('wellness_responses').select('user_id').gte('response_date', sinceDate),
       supabase.from('session_rpe').select('user_id').gte('event_date', sinceDate),
-      supabase.from('tasks').select('status'),
+      supabase.from('tasks').select('id, assigned_to, status'),
       supabase.from('messages').select('sender_id').gte('created_at', sinceIso),
     ]).then(([msgs, wellness, rpe, tasks, msgPerUser]) => {
       const wellnessList  = wellness.data  ?? [];
@@ -67,18 +67,26 @@ function AppStats({ profiles, lang }) {
       const msgList       = msgPerUser.data ?? [];
       const taskList      = tasks.data     ?? [];
 
+      const def = () => ({ wellnessSubmitted: false, rpe: 0, messages: 0, tasksDone: 0, tasksTotal: 0 });
+
       const perUser = {};
       for (const r of wellnessList) {
-        if (!perUser[r.user_id]) perUser[r.user_id] = { wellness: 0, rpe: 0, messages: 0 };
-        perUser[r.user_id].wellness++;
+        if (!perUser[r.user_id]) perUser[r.user_id] = def();
+        perUser[r.user_id].wellnessSubmitted = true;
       }
       for (const r of rpeList) {
-        if (!perUser[r.user_id]) perUser[r.user_id] = { wellness: 0, rpe: 0, messages: 0 };
+        if (!perUser[r.user_id]) perUser[r.user_id] = def();
         perUser[r.user_id].rpe++;
       }
       for (const r of msgList) {
-        if (!perUser[r.sender_id]) perUser[r.sender_id] = { wellness: 0, rpe: 0, messages: 0 };
+        if (!perUser[r.sender_id]) perUser[r.sender_id] = def();
         perUser[r.sender_id].messages++;
+      }
+      for (const t of taskList) {
+        if (!t.assigned_to) continue;
+        if (!perUser[t.assigned_to]) perUser[t.assigned_to] = def();
+        perUser[t.assigned_to].tasksTotal++;
+        if (t.status === 'done') perUser[t.assigned_to].tasksDone++;
       }
 
       setStats({
@@ -152,9 +160,10 @@ function AppStats({ profiles, lang }) {
           <div className={styles.userStatHead}>
             <span>{lang === 'ja' ? 'ユーザー' : 'User'}</span>
             <span>{lang === 'ja' ? '最終ログイン' : 'Last seen'}</span>
-            <span title={lang === 'ja' ? 'ウェルネス' : 'Wellness'}>💪</span>
-            <span title="RPE">📊</span>
-            <span title={lang === 'ja' ? 'チャット' : 'Chat'}>💬</span>
+            <span title={lang === 'ja' ? 'ウェルネス提出' : 'Wellness submitted'}>💪</span>
+            <span title={lang === 'ja' ? 'RPEセッション数' : 'RPE sessions logged'}>📊</span>
+            <span title={lang === 'ja' ? 'タスク完了' : 'Tasks done'}>✅</span>
+            <span title={lang === 'ja' ? 'チャット' : 'Chat messages'}>💬</span>
           </div>
           {[...profiles].sort((a, b) => {
             const roleOrder = ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
@@ -165,26 +174,30 @@ function AppStats({ profiles, lang }) {
             return new Date(b.last_seen_at) - new Date(a.last_seen_at);
           }).map(p => {
             const name     = p.display_name || p.email.split('@')[0];
-            const u        = stats?.perUser?.[p.id] ?? { wellness: 0, rpe: 0, messages: 0 };
+            const u        = stats?.perUser?.[p.id] ?? { wellnessSubmitted: false, rpe: 0, messages: 0, tasksDone: 0, tasksTotal: 0 };
             const dot      = lastSeenDot(p.last_seen_at);
             const isPlayer = p.role === 'Player';
             const lastSeen = p.last_seen_at
               ? timeAgo(p.last_seen_at, lang)
               : (lang === 'ja' ? 'なし' : 'Never');
+            const wellnessCell = !stats ? '…' : isPlayer ? (u.wellnessSubmitted ? '✓' : '✗') : '—';
+            const wellnessCls  = !stats ? styles.userStatValGray : isPlayer ? (u.wellnessSubmitted ? styles.userStatValGreen : styles.userStatValRed) : styles.userStatValGray;
+            const tasksCell    = !stats ? '…' : u.tasksTotal > 0 ? `${u.tasksDone}/${u.tasksTotal}` : '—';
+            const tasksCls     = !stats ? styles.userStatValGray : u.tasksTotal > 0 && u.tasksDone === u.tasksTotal ? styles.userStatValGreen : styles.userStatValGray;
             return (
               <div key={p.id} className={styles.userStatRow}>
                 <div className={styles.userStatName}>
                   <span className={`${styles.activityDot} ${dot}`} />
                   <span className={styles.userStatLabel}>{name}</span>
                   <span className={`${styles.roleBadge} ${ROLE_COLORS[p.role] ?? ''}`}>{p.role}</span>
+                  {p.is_super_admin && <span className={styles.superAdminBadge} title="Super Admin">★</span>}
                 </div>
                 <span className={styles.userStatLastSeen}>{lastSeen}</span>
-                <span className={`${styles.userStatVal} ${isPlayer && u.wellness > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
-                  {isPlayer ? (stats ? u.wellness : '…') : '—'}
-                </span>
+                <span className={`${styles.userStatVal} ${wellnessCls}`}>{wellnessCell}</span>
                 <span className={`${styles.userStatVal} ${isPlayer && u.rpe > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
                   {isPlayer ? (stats ? u.rpe : '…') : '—'}
                 </span>
+                <span className={`${styles.userStatVal} ${tasksCls}`}>{tasksCell}</span>
                 <span className={`${styles.userStatVal} ${u.messages > 0 ? styles.userStatValGreen : styles.userStatValGray}`}>
                   {stats ? u.messages : '…'}
                 </span>
@@ -199,7 +212,7 @@ function AppStats({ profiles, lang }) {
 
 // ── Edit User Modal ──────────────────────────────────────────
 
-function EditModal({ profile, lang, onSave, onClose }) {
+function EditModal({ profile, lang, canEditRole, onSave, onClose }) {
   const [name,    setName]    = useState(profile.display_name ?? '');
   const [role,    setRole]    = useState(profile.role ?? 'Player');
   const [pos,     setPos]     = useState(profile.position ?? '');
@@ -211,15 +224,28 @@ function EditModal({ profile, lang, onSave, onClose }) {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const updates = {
+
+    // Non-role fields go directly; role change routes through the secure API
+    const profileUpdates = {
       display_name:  name.trim() || null,
-      role,
       position:      role === 'Player' ? (pos || null) : null,
       jersey_number: role === 'Player' && jersey !== '' ? Number(jersey) : null,
     };
-    const { error: err } = await supabase.from('profiles').update(updates).eq('id', profile.id);
+    const { error: err } = await supabase.from('profiles').update(profileUpdates).eq('id', profile.id);
     if (err) { setError(err.message); setSaving(false); return; }
-    onSave({ ...profile, ...updates });
+
+    if (canEditRole && role !== profile.role) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/set-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: profile.id, newRole: role, token: session?.access_token }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? 'Role update failed.'); setSaving(false); return; }
+    }
+
+    onSave({ ...profile, ...profileUpdates, role });
     onClose();
   };
 
@@ -244,9 +270,13 @@ function EditModal({ profile, lang, onSave, onClose }) {
           </div>
           <div className={styles.editField}>
             <label className={styles.editLabel}>{lang === 'ja' ? '役割' : 'Role'}</label>
-            <select className={styles.editInput} value={role} onChange={e => setRole(e.target.value)}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+            {canEditRole ? (
+              <select className={styles.editInput} value={role} onChange={e => setRole(e.target.value)}>
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            ) : (
+              <span className={`${styles.editInput} ${styles.editInputLocked}`}>{role}</span>
+            )}
           </div>
           {role === 'Player' && (
             <>
@@ -349,7 +379,7 @@ function DeleteModal({ profile, lang, currentUserId, onDelete, onClose }) {
 
 // ── Main Component ───────────────────────────────────────────
 
-export default function RoleManager({ lang = 'en', currentUserId, currentUserRole }) {
+export default function RoleManager({ lang = 'en', currentUserId, currentUserRole, isSuperAdmin = false }) {
   const [profiles,    setProfiles]    = useState([]);
   const [requests,    setRequests]    = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -380,12 +410,19 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
     else { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); }
   };
 
-  // Inline role change (quick select in row)
+  // Inline role change — only super-admins may call this
   const updateRole = async (profileId, newRole) => {
+    if (!isSuperAdmin) return;
     setSaving(profileId);
     setError(null); setSuccess(null);
-    const { error: err } = await supabase.from('profiles').update({ role: newRole }).eq('id', profileId);
-    if (err) { flash(err.message, true); }
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/set-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId: profileId, newRole, token: session?.access_token }),
+    });
+    const json = await res.json();
+    if (!res.ok) { flash(json.error ?? 'Update failed.', true); }
     else {
       setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, role: newRole } : p));
       flash(lang === 'ja' ? '役割を更新しました。' : 'Role updated.');
@@ -534,12 +571,19 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                   <span className={`${styles.roleBadge} ${ROLE_COLORS[profile.role] ?? ''}`}>
                     {profile.role}
                   </span>
-                  <select className={styles.roleSelect} value={profile.role}
-                    disabled={saving === profile.id}
-                    onChange={e => updateRole(profile.id, e.target.value)}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  {saving === profile.id && <span className={styles.spinner}>…</span>}
+                  {profile.is_super_admin && (
+                    <span className={styles.superAdminBadge} title="Super Admin">★</span>
+                  )}
+                  {isSuperAdmin && (
+                    <>
+                      <select className={styles.roleSelect} value={profile.role}
+                        disabled={saving === profile.id}
+                        onChange={e => updateRole(profile.id, e.target.value)}>
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      {saving === profile.id && <span className={styles.spinner}>…</span>}
+                    </>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -569,6 +613,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
         <EditModal
           profile={editProfile}
           lang={lang}
+          canEditRole={isSuperAdmin}
           onSave={updated => setProfiles(prev => prev.map(p => p.id === updated.id ? updated : p))}
           onClose={() => setEditProfile(null)}
         />

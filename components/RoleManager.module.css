@@ -769,7 +769,7 @@
 
 .userStatHead {
   display: grid;
-  grid-template-columns: 1fr 100px 36px 36px 36px;
+  grid-template-columns: 1fr 100px 36px 36px 36px 36px;
   padding: 6px 16px;
   font-size: 10px;
   font-weight: 700;
@@ -781,7 +781,7 @@
 
 .userStatRow {
   display: grid;
-  grid-template-columns: 1fr 100px 36px 36px 36px;
+  grid-template-columns: 1fr 100px 36px 36px 36px 36px;
   align-items: center;
   padding: 8px 16px;
   border-bottom: 1px solid #f9fafb;
@@ -819,6 +819,23 @@
 }
 .userStatValGreen { color: #16a34a; }
 .userStatValGray  { color: #d1d5db; }
+.userStatValRed   { color: #dc2626; }
+
+.superAdminBadge {
+  font-size: 11px;
+  color: #d97706;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.editInputLocked {
+  display: block;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .lastSeenBadge {
   font-size: 10px;
