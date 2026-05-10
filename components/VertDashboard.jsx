@@ -97,11 +97,12 @@ export default function VertDashboard({ lang, profile }) {
   }
 
   function autoMatchPlayer(vertName, playerList) {
-    const saved = loadMap()[vertName.trim().toLowerCase()];
+    if (!vertName) return '';
+    const key   = String(vertName).trim().toLowerCase();
+    const saved = loadMap()[key];
     if (saved) return saved;
-    const lower = vertName.trim().toLowerCase();
     const match = playerList.find(p =>
-      p.display_name?.toLowerCase().split(/\s+/).some(part => part === lower)
+      p.display_name && String(p.display_name).toLowerCase().split(/\s+/).some(part => part === key)
     );
     return match?.id || '';
   }
@@ -215,7 +216,7 @@ export default function VertDashboard({ lang, profile }) {
       const valid = sess.rows.filter(r => r.vert_name);
       if (!sess.sessionName || !sess.sessionDate || !valid.length) continue;
 
-      valid.forEach(r => { if (r.vert_name && r.user_id) map[r.vert_name.trim().toLowerCase()] = r.user_id; });
+      valid.forEach(r => { if (r.vert_name && r.user_id) map[String(r.vert_name).trim().toLowerCase()] = r.user_id; });
 
       await supabase.from('vert_sessions').insert(
         valid.map(r => ({
@@ -275,7 +276,7 @@ export default function VertDashboard({ lang, profile }) {
       count: p.rows.length,
       ...Object.fromEntries(NUMERIC_FIELDS.map(f => [f, avgField(p.rows, f)])),
     };
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   return (
     <div className={styles.container}>
