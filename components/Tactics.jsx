@@ -182,6 +182,38 @@ const AUTO_TABS = {
 };
 const ZONES     = ['1', '2', '3', '4', '5', '6'];
 
+const COMMAND_COLORS = {
+  'Step Left':        { bg: '#dbeafe', color: '#1d4ed8' },
+  'Half Step Left':   { bg: '#eff6ff', color: '#3b82f6' },
+  'Leave both Lines': { bg: '#dcfce7', color: '#15803d' },
+  'Half Step Right':  { bg: '#fff7ed', color: '#ea580c' },
+  'Step Right':       { bg: '#ffedd5', color: '#c2410c' },
+};
+
+const POSITION_COLORS = {
+  'Setter':    { bg: '#f3e8ff', color: '#7e22ce' },
+  'Middle':    { bg: '#dbeafe', color: '#1d4ed8' },
+  'Outside':   { bg: '#dcfce7', color: '#15803d' },
+  'Opposite':  { bg: '#fee2e2', color: '#dc2626' },
+  'Libero':    { bg: '#fefce8', color: '#a16207' },
+  'Universal': { bg: '#f3f4f6', color: '#374151' },
+};
+
+const ZONE_COLORS = {
+  '1': { bg: '#fee2e2', color: '#dc2626' },
+  '2': { bg: '#ffedd5', color: '#c2410c' },
+  '3': { bg: '#fefce8', color: '#a16207' },
+  '4': { bg: '#dcfce7', color: '#15803d' },
+  '5': { bg: '#dbeafe', color: '#1d4ed8' },
+  '6': { bg: '#f3e8ff', color: '#7e22ce' },
+};
+
+const TYP_COLORS = [
+  { match: 'jump',   bg: '#fee2e2', color: '#dc2626' },
+  { match: 'float',  bg: '#dbeafe', color: '#1d4ed8' },
+  { match: 'hybrid', bg: '#f3e8ff', color: '#7e22ce' },
+];
+
 // ── Roster modal ─────────────────────────────────────────────────────────────
 
 function RosterModal({ note, lang, onSave, onClose }) {
@@ -293,11 +325,19 @@ function RosterTable({ players, lang, onEdit, onDelete }) {
         <tbody>
           {players.map(p => (
             <tr key={p.id} className={styles.serverTr} onClick={() => onEdit(p)}>
-              {cols.map(c => (
-                <td key={c.key} className={`${styles.serverTd} ${c.key === 'body' ? styles.serverTdWrap : ''}`}>
-                  {p[c.key] || '—'}
-                </td>
-              ))}
+              {cols.map(c => {
+                const val = p[c.key];
+                let content = val || '—';
+                if (c.key === 'position' && val) {
+                  const col = POSITION_COLORS[val];
+                  if (col) content = <span className={styles.tacChip} style={{ background: col.bg, color: col.color }}>{val}</span>;
+                }
+                return (
+                  <td key={c.key} className={`${styles.serverTd} ${c.key === 'body' ? styles.serverTdWrap : ''}`}>
+                    {content}
+                  </td>
+                );
+              })}
               <td className={styles.serverTd} onClick={e => e.stopPropagation()}>
                 <button className={styles.noteDeleteBtn} onClick={() => onDelete(p.id)}>×</button>
               </td>
@@ -425,7 +465,7 @@ function ServerModal({ note, lang, onSave, onClose }) {
 
 // ── Server table ──────────────────────────────────────────────────────────────
 
-function ServerTable({ servers, lang, onEdit, onDelete }) {
+function ServerTable({ servers, lang, onEdit, onDelete, onDuplicate }) {
   if (servers.length === 0) return null;
   const cols = [
     { key: 'title',           label: 'Name'            },
@@ -440,6 +480,25 @@ function ServerTable({ servers, lang, onEdit, onDelete }) {
     { key: 'after_to',        label: 'AFTER TO'        },
   ];
 
+  function chip(colorMap, value) {
+    const c = colorMap[value];
+    if (!c) return value;
+    return <span className={styles.tacChip} style={{ background: c.bg, color: c.color }}>{value}</span>;
+  }
+
+  function renderCell(key, value) {
+    if (!value) return '—';
+    if (key === 'command')        return chip(COMMAND_COLORS, value);
+    if (key === 'position')       return chip(POSITION_COLORS, value);
+    if (key === 'starting_zone' || key === 'best_serve_zone') return chip(ZONE_COLORS, value);
+    if (key === 'typ') {
+      const v = value.toLowerCase();
+      const match = TYP_COLORS.find(t => v.includes(t.match));
+      if (match) return <span className={styles.tacChip} style={{ background: match.bg, color: match.color }}>{value}</span>;
+    }
+    return value;
+  }
+
   return (
     <div className={styles.serverTableWrap}>
       <table className={styles.serverTable}>
@@ -453,9 +512,10 @@ function ServerTable({ servers, lang, onEdit, onDelete }) {
           {servers.map(s => (
             <tr key={s.id} className={styles.serverTr} onClick={() => onEdit(s)}>
               {cols.map(c => (
-                <td key={c.key} className={styles.serverTd}>{s[c.key] || '—'}</td>
+                <td key={c.key} className={styles.serverTd}>{renderCell(c.key, s[c.key])}</td>
               ))}
               <td className={styles.serverTd} onClick={e => e.stopPropagation()}>
+                <button className={styles.noteDupBtn} title="Duplicate row" onClick={() => onDuplicate(s)}>⧉</button>
                 <button className={styles.noteDeleteBtn} onClick={() => onDelete(s.id)}>×</button>
               </td>
             </tr>
@@ -744,6 +804,14 @@ export default function Tactics({ lang = 'en', profile }) {
     await supabase.from('tactics_notes').delete().eq('id', noteId);
   }, []);
 
+  const duplicateServer = useCallback(async (server) => {
+    const { id, created_at, ...rest } = server;
+    const payload = { ...rest, author_name: authorName, updated_at: new Date().toISOString() };
+    const { data, error: err } = await supabase.from('tactics_notes').insert(payload).select().single();
+    if (err) { setError(err.message); return; }
+    setNotes(prev => [data, ...prev]);
+  }, [authorName]);
+
   const isRoster   = activeCategory === 'roster';
   const isServer   = activeCategory === 'servers';
   const catNotesRaw = notes.filter(n => n.category === activeCategory);
@@ -833,7 +901,7 @@ export default function Tactics({ lang = 'en', profile }) {
                   <>
                     {catNotes.length === 0
                       ? <p className={styles.emptyNotes}>{emptyLabel}</p>
-                      : <ServerTable servers={catNotes} lang={lang} onEdit={n => setNoteModal(n)} onDelete={deleteNote} />
+                      : <ServerTable servers={catNotes} lang={lang} onEdit={n => setNoteModal(n)} onDelete={deleteNote} onDuplicate={duplicateServer} />
                     }
                   </>
                 ) : catNotes.length === 0 ? (
