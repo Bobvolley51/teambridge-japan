@@ -80,6 +80,9 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
   const assigneeName = assignee ? profileName(assignee) : (task.assignee || null);
   const overdue = isOverdue(task.due_date);
 
+  const colIdx = COLUMNS.findIndex(c => c.id === task.status);
+  const nextCol = COLUMNS[colIdx + 1] ?? null;
+
   const touchX   = useRef(null);
   const [offset, setOffset] = useState(0);
   const [swiping, setSwiping] = useState(false);
@@ -147,6 +150,14 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
             ? <span className={styles.assignee}>{assigneeName}</span>
             : <span />}
           <div className={styles.cardRight}>
+            {nextCol && (
+              <button
+                className={styles.moveBtn}
+                onClick={(e) => { e.stopPropagation(); onMove(task.id, nextCol.id); }}
+              >
+                {nextCol.label[lang]} →
+              </button>
+            )}
             <PriorityDot priority={task.priority} />
             <button
               className={styles.deleteBtn}
@@ -290,7 +301,7 @@ function TaskModal({ task, colId, profiles, lang, onSave, onDelete, onClose }) {
 
 // ── Filter bar ────────────────────────────────────────────────────────────────
 
-function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onChange }) {
+function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onChange, isCoach }) {
   return (
     <div className={styles.filterBar}>
       <select
@@ -304,16 +315,18 @@ function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onC
         ))}
       </select>
 
-      <select
-        className={styles.filterSelect}
-        value={filterAssignee}
-        onChange={e => onChange('assignee', e.target.value)}
-      >
-        <option value="all">{tr('allMembers', lang)}</option>
-        {profiles.map(p => (
-          <option key={p.id} value={p.id}>{profileName(p)}</option>
-        ))}
-      </select>
+      {isCoach && (
+        <select
+          className={styles.filterSelect}
+          value={filterAssignee}
+          onChange={e => onChange('assignee', e.target.value)}
+        >
+          <option value="all">{tr('allMembers', lang)}</option>
+          {profiles.map(p => (
+            <option key={p.id} value={p.id}>{profileName(p)}</option>
+          ))}
+        </select>
+      )}
 
       <button
         className={styles.sortBtn}
@@ -423,9 +436,12 @@ export default function Tasks({ lang = 'en', profile }) {
     else if (type === 'sort') setSortBy(value);
   }, []);
 
+  const isCoach = profile?.role === 'coach';
+
   const visibleTasks = tasks
+    .filter(t => isCoach || t.assigned_to === profile?.id)
     .filter(t => filterPriority === 'all' || t.priority === filterPriority)
-    .filter(t => filterAssignee === 'all' || t.assigned_to === filterAssignee)
+    .filter(t => !isCoach || filterAssignee === 'all' || t.assigned_to === filterAssignee)
     .sort((a, b) => {
       if (sortBy !== 'due') return new Date(a.created_at) - new Date(b.created_at);
       if (!a.due_date && !b.due_date) return 0;
@@ -453,7 +469,7 @@ export default function Tasks({ lang = 'en', profile }) {
 
       <div className={styles.header}>
         <span className={styles.headerTitle}>{tr('tasks', lang)}</span>
-        <span className={styles.headerCount}>{tasks.length} {tr('total', lang)}</span>
+        <span className={styles.headerCount}>{visibleTasks.length} {tr('total', lang)}</span>
       </div>
 
       <FilterBar
@@ -463,6 +479,7 @@ export default function Tasks({ lang = 'en', profile }) {
         filterAssignee={filterAssignee}
         sortBy={sortBy}
         onChange={handleFilterChange}
+        isCoach={isCoach}
       />
 
       <div className={styles.kanban}>
