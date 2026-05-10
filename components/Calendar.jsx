@@ -48,7 +48,7 @@ const MONTHS = {
   ja: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
 };
 const HOUR_START = 6;
-const HOUR_END   = 22;
+const HOUR_END   = 24;
 const SLOT_H     = 64;
 const HOURS      = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
