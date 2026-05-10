@@ -213,7 +213,7 @@ export default function VertDashboard({ lang, profile }) {
     const map = loadMap();
 
     for (const sess of parsedSessions) {
-      const valid = sess.rows.filter(r => r.vert_name);
+      const valid = sess.rows.filter(r => r.vert_name && r.user_id);
       if (!sess.sessionName || !sess.sessionDate || !valid.length) continue;
 
       valid.forEach(r => { if (r.vert_name && r.user_id) map[String(r.vert_name).trim().toLowerCase()] = r.user_id; });
@@ -415,54 +415,87 @@ export default function VertDashboard({ lang, profile }) {
                   onChange={e => updateSession(sIdx, 'sessionDate', e.target.value)} />
               </div>
 
-              <div className={styles.tableScroll}>
-                <table className={styles.uploadTable}>
-                  <thead>
-                    <tr>
-                      <th className={styles.thVertName}>VERT Name</th>
-                      <th className={styles.thPlayer}>{isJa ? 'アプリ選手' : 'Player'}</th>
-                      <th>Jumps</th><th>Hi Jump cm</th><th>JPAM</th><th>Jump Power</th>
-                      <th>Hi Impact%</th><th>Alert%</th><th>Elevated%</th>
-                      <th>Energy</th><th>Sets</th><th>Intensity</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sess.rows.map((row, rIdx) => (
-                      <tr key={rIdx} className={row.user_id ? '' : styles.trUnlinked}>
-                        <td>
-                          <input className={styles.cellInput} value={row.vert_name}
-                            onChange={e => updateRow(sIdx, rIdx, 'vert_name', e.target.value)} />
-                        </td>
-                        <td>
-                          <select className={`${styles.cellSelect} ${row.user_id ? styles.cellSelectLinked : ''}`}
-                            value={row.user_id}
-                            onChange={e => updateRow(sIdx, rIdx, 'user_id', e.target.value)}>
-                            <option value="">— unlinked —</option>
-                            {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-                          </select>
-                        </td>
-                        {NUMERIC_FIELDS.map(field => (
-                          <td key={field}>
-                            <input className={styles.cellInput} type="number" value={row[field] ?? ''}
-                              step={DECIMAL_FIELDS.has(field) ? '0.1' : '1'}
-                              onChange={e => updateRow(sIdx, rIdx, field, e.target.value)} />
-                          </td>
-                        ))}
-                        <td>
-                          <button className={styles.removeBtn} onClick={() => removeRow(sIdx, rIdx)}>×</button>
-                        </td>
-                      </tr>
+              {(() => {
+                const indexedRows = sess.rows.map((row, i) => ({ row, i }));
+                const matched   = indexedRows.filter(({ row }) => row.user_id);
+                const unmatched = indexedRows.filter(({ row }) => !row.user_id);
+                const tableHead = (
+                  <tr>
+                    <th className={styles.thVertName}>VERT Name</th>
+                    <th className={styles.thPlayer}>{isJa ? 'アプリ選手' : 'Player'}</th>
+                    <th>Jumps</th><th>Hi Jump cm</th><th>JPAM</th><th>Jump Power</th>
+                    <th>Hi Impact%</th><th>Alert%</th><th>Elevated%</th>
+                    <th>Energy</th><th>Sets</th><th>Intensity</th>
+                    <th></th>
+                  </tr>
+                );
+                const renderRow = ({ row, i: rIdx }) => (
+                  <tr key={rIdx}>
+                    <td>
+                      <input className={styles.cellInput} value={row.vert_name}
+                        onChange={e => updateRow(sIdx, rIdx, 'vert_name', e.target.value)} />
+                    </td>
+                    <td>
+                      <select className={`${styles.cellSelect} ${row.user_id ? styles.cellSelectLinked : ''}`}
+                        value={row.user_id}
+                        onChange={e => updateRow(sIdx, rIdx, 'user_id', e.target.value)}>
+                        <option value="">— unlinked —</option>
+                        {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+                      </select>
+                    </td>
+                    {NUMERIC_FIELDS.map(field => (
+                      <td key={field}>
+                        <input className={styles.cellInput} type="number" value={row[field] ?? ''}
+                          step={DECIMAL_FIELDS.has(field) ? '0.1' : '1'}
+                          onChange={e => updateRow(sIdx, rIdx, field, e.target.value)} />
+                      </td>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                    <td>
+                      <button className={styles.removeBtn} onClick={() => removeRow(sIdx, rIdx)}>×</button>
+                    </td>
+                  </tr>
+                );
+                return (
+                  <>
+                    {matched.length > 0 && (
+                      <>
+                        <div className={styles.sectionLabel}>
+                          <span className={styles.sectionLabelSave}>
+                            ✓ {isJa ? `${matched.length}名 — 保存されます` : `${matched.length} player${matched.length !== 1 ? 's' : ''} — will be saved`}
+                          </span>
+                        </div>
+                        <div className={styles.tableScroll}>
+                          <table className={styles.uploadTable}>
+                            <thead>{tableHead}</thead>
+                            <tbody>{matched.map(renderRow)}</tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
 
-              {sess.rows.some(r => !r.user_id) && (
-                <div className={styles.unlinkWarn}>
-                  {isJa ? '⚠ 紐付けされていない選手がいます' : '⚠ Some players are unlinked — link them now or they will be saved without a profile connection'}
-                </div>
-              )}
+                    {unmatched.length > 0 && (
+                      <>
+                        <div className={styles.sectionLabel} style={{ marginTop: matched.length ? 16 : 0 }}>
+                          <span className={styles.sectionLabelSkip}>
+                            — {isJa ? `${unmatched.length}名 — スキップ（アプリユーザーなし）` : `${unmatched.length} player${unmatched.length !== 1 ? 's' : ''} — will be skipped (no app user)`}
+                          </span>
+                          <span className={styles.sectionLabelHint}>
+                            {isJa
+                              ? 'ユーザー管理でプロフィールを追加してから再アップロードするか、今すぐ紐付けてください。'
+                              : 'Link to an existing player now, or add them in Users admin first then re-upload.'}
+                          </span>
+                        </div>
+                        <div className={`${styles.tableScroll} ${styles.tableScrollMuted}`}>
+                          <table className={`${styles.uploadTable} ${styles.uploadTableMuted}`}>
+                            <thead>{tableHead}</thead>
+                            <tbody>{unmatched.map(renderRow)}</tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ))}
 

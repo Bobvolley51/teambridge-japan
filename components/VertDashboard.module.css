@@ -279,6 +279,47 @@
   color: #d97706;
 }
 
+/* Matched / skipped section labels */
+.sectionLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.sectionLabelSave {
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.sectionLabelSkip {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.sectionLabelHint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.tableScrollMuted {
+  opacity: 0.55;
+}
+
+.uploadTableMuted td,
+.uploadTableMuted th {
+  color: #9ca3af;
+}
+
+.uploadTableMuted .cellInput,
+.uploadTableMuted .cellSelect {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
 .cancelBtn {
   padding: 7px 14px;
   border: 1px solid #e5e7eb;
