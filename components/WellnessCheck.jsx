@@ -2,7 +2,30 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendAlertDM } from '@/lib/alertDM';
 import styles from './WellnessCheck.module.css';
+
+const SCORE_LABELS = {
+  fatigue:  { en: 'Fatigue',   ja: '疲労' },
+  sleep:    { en: 'Sleep',     ja: '睡眠' },
+  appetite: { en: 'Appetite',  ja: '食欲' },
+};
+
+const BODY_PART_LABELS = {
+  shoulder_l:  'Left Shoulder',  shoulder_r:  'Right Shoulder',
+  lower_back:  'Lower Back',     knee_l:      'Left Knee',
+  knee_r:      'Right Knee',     ankle_l:     'Left Ankle',
+  ankle_r:     'Right Ankle',    quad_l:      'Left Quad',
+  quad_r:      'Right Quad',     hamstring_l: 'Left Hamstring',
+  hamstring_r: 'Right Hamstring',
+};
+
+const SYMPTOM_LABELS = {
+  illness_headache:   'Headache',   illness_fever:     'Fever',
+  illness_sorethroat: 'Sore throat',illness_cough:     'Cough',
+  illness_runnynose:  'Runny nose', illness_nausea:    'Nausea',
+  illness_malaise:    'Fatigue/Malaise', illness_other: 'Other',
+};
 
 const QUESTIONS = [
   { key: 'fatigue',  en: 'Fatigue level today',       ja: '今日の疲労レベルは？' },
@@ -129,6 +152,29 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
           }))
         );
       }
+    }
+
+    // Build alert lines for any alarming values
+    const alerts = [];
+
+    for (const q of QUESTIONS) {
+      if (scores[q.key] != null && scores[q.key] <= 3) {
+        alerts.push(`⚠️ Low ${SCORE_LABELS[q.key].en.toLowerCase()} score: ${scores[q.key]}/10`);
+      }
+    }
+
+    if (illness === 'yes') {
+      const symptomList = illnessSymptoms.map(k => SYMPTOM_LABELS[k] ?? k).join(', ');
+      alerts.push(`🤒 Illness reported${symptomList ? `: ${symptomList}` : ''}`);
+    }
+
+    if (painScore >= 7) {
+      const partList = painParts.filter(k => k !== 'other').map(k => BODY_PART_LABELS[k] ?? k).join(', ');
+      alerts.push(`🩹 High pain level: ${painScore}/10${partList ? ` — ${partList}` : ''}`);
+    }
+
+    if (alerts.length > 0) {
+      sendAlertDM(userId, userName, [`📋 Wellness check — ${userName}`, ...alerts]).catch(() => {});
     }
 
     setSaving(false);

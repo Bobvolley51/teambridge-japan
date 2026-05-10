@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendAlertDM } from '@/lib/alertDM';
 import styles from './SessionRPE.module.css';
 
 function rpeBtnStyle(n, selected) {
@@ -69,6 +70,28 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         },
         { onConflict: 'user_id,event_id' }
       );
+      // Check ACWR after logging — alert if > 1.3
+      const since28 = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
+      const since7  = new Date(Date.now() -  7 * 86400000).toISOString().slice(0, 10);
+      const { data: rpeData } = await supabase
+        .from('session_rpe')
+        .select('event_date, load_au')
+        .eq('user_id', userId)
+        .gte('event_date', since28);
+
+      if (rpeData?.length) {
+        const acute   = rpeData.filter(r => r.event_date >= since7).reduce((s, r) => s + r.load_au, 0);
+        const chronic = rpeData.reduce((s, r) => s + r.load_au, 0) / 4;
+        if (chronic > 0 && acute / chronic > 1.3) {
+          const ratio = (acute / chronic).toFixed(1);
+          sendAlertDM(userId, userName, [
+            `📊 High training load — ${userName}`,
+            `⚠️ ACWR: ${ratio} (above 1.3 threshold)`,
+            `   Acute load (7d): ${Math.round(acute)} AU`,
+            `   Chronic load (28d avg): ${Math.round(chronic)} AU`,
+          ]).catch(() => {});
+        }
+      }
     } catch (_) {}
     setSaving(false);
     advance();
