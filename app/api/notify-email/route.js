@@ -41,29 +41,37 @@ export async function POST(req) {
     hour: '2-digit', minute: '2-digit',
   });
 
-  const isUpdate  = type === 'update';
-  const byPerson  = isUpdate ? changedBy : addedBy;
-  const byLabel   = isUpdate ? 'Changed by' : 'Added by';
-  const intro     = isUpdate
-    ? `An event you are participating in has been <strong>updated</strong> — less than 36 hours before it starts:`
-    : `You have been added to an upcoming event:`;
-  const subject   = isUpdate
-    ? `[TeamBridge] ⚠ UPDATED: ${eventTitle} — ${fmtDate}`
-    : `[TeamBridge] ${eventTitle} — ${fmtDate}`;
+  const isUpdate = type === 'update';
+  const subject  = isUpdate
+    ? `⚠ Urgent: Team schedule changed — ${eventTitle}`
+    : `[TeamBridge] Added to event: ${eventTitle}`;
 
-  const accentColor = isUpdate ? '#d97706' : '#7e0027';
-
-  const html = `
+  const html = isUpdate ? `
+    <div style="font-family:sans-serif;font-size:15px;color:#111827;max-width:480px">
+      <div style="background:#dc2626;color:#fff;font-weight:700;font-size:16px;padding:12px 16px;border-radius:6px 6px 0 0">
+        ⚠ Urgent — Team schedule has been changed
+      </div>
+      <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 6px 6px;padding:16px">
+        <p style="margin:0 0 14px;color:#374151">Please check the updated details for your upcoming event:</p>
+        <table style="border-collapse:collapse;width:100%">
+          <tr><td style="padding:5px 14px 5px 0;font-weight:600;color:#6b7280;white-space:nowrap">Event</td><td style="font-weight:700;color:#111827">${eventTitle}</td></tr>
+          <tr><td style="padding:5px 14px 5px 0;font-weight:600;color:#6b7280;white-space:nowrap">When</td><td>${fmtDate}</td></tr>
+          ${eventLocation ? `<tr><td style="padding:5px 14px 5px 0;font-weight:600;color:#6b7280;white-space:nowrap">Where</td><td>${eventLocation}</td></tr>` : ''}
+          ${changedBy ? `<tr><td style="padding:5px 14px 5px 0;font-weight:600;color:#6b7280;white-space:nowrap">Changed by</td><td>${changedBy}</td></tr>` : ''}
+        </table>
+        <p style="margin:14px 0 0;font-size:12px;color:#9ca3af">Open the Teambridge app for full details.</p>
+      </div>
+    </div>
+  ` : `
     <div style="font-family:sans-serif;font-size:14px;color:#111827;max-width:480px">
-      ${isUpdate ? `<div style="background:#fef3c7;border-left:4px solid ${accentColor};padding:10px 14px;border-radius:4px;margin-bottom:14px;font-weight:600;color:#92400e">⚠ Last-minute change</div>` : ''}
-      <p style="margin:0 0 12px">${intro}</p>
-      <table style="border-collapse:collapse;margin:0 0 14px">
-        <tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280;white-space:nowrap">Event</td><td style="font-weight:600">${eventTitle}</td></tr>
-        <tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280;white-space:nowrap">When</td><td>${fmtDate}</td></tr>
-        ${eventLocation ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280;white-space:nowrap">Where</td><td>${eventLocation}</td></tr>` : ''}
-        ${byPerson ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280;white-space:nowrap">${byLabel}</td><td>${byPerson}</td></tr>` : ''}
+      <p>You have been added to an upcoming event:</p>
+      <table style="border-collapse:collapse;margin:12px 0">
+        <tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280">Event</td><td style="font-weight:600">${eventTitle}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280">When</td><td>${fmtDate}</td></tr>
+        ${eventLocation ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280">Where</td><td>${eventLocation}</td></tr>` : ''}
+        ${addedBy ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600;color:#6b7280">Added by</td><td>${addedBy}</td></tr>` : ''}
       </table>
-      <p style="color:#6b7280;font-size:12px;margin:0">Open the Teambridge Tridents app for full details.</p>
+      <p style="color:#9ca3af;font-size:12px">Open the Teambridge app for details.</p>
     </div>
   `;
 
