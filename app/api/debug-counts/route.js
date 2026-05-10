@@ -7,15 +7,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export async function GET() {
-  const [{ count: rpeCount }, { count: playerCount }] = await Promise.all([
-    supabase.from('session_rpe').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'Player'),
-  ]);
-  return Response.json({ session_rpe_rows: rpeCount, player_profiles: playerCount });
-}
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
 
-export async function POST() {
+  if (!searchParams.has('seed')) {
+    const [{ count: rpeCount }, { count: playerCount }] = await Promise.all([
+      supabase.from('session_rpe').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'Player'),
+    ]);
+    return Response.json({ session_rpe_rows: rpeCount, player_profiles: playerCount });
+  }
+
+  // ?seed — insert test data
   // Get all players
   const { data: players } = await supabase
     .from('profiles')
@@ -70,3 +73,4 @@ export async function POST() {
 
   return Response.json({ inserted: rows.length, players: players.length });
 }
+
