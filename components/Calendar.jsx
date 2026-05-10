@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
 import { SkeletonLine } from './Skeleton';
@@ -225,6 +225,35 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
     );
   };
 
+  const POS_ORDER  = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Universal'];
+  const ROLE_ORDER = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
+
+  const participantGroups = useMemo(() => {
+    const byPos  = {};
+    const byRole = {};
+    for (const p of profiles) {
+      if (p.position) { (byPos[p.position]  = byPos[p.position]  ?? []).push(p.id); }
+      if (p.role && p.role !== 'Player') { (byRole[p.role] = byRole[p.role] ?? []).push(p.id); }
+    }
+    const all = profiles.map(p => p.id);
+    const groups = [];
+    if (all.length > 0) groups.push({ label: lang === 'ja' ? '全員' : 'All', ids: all });
+    for (const pos of POS_ORDER) {
+      if (byPos[pos]?.length) groups.push({ label: pos, ids: byPos[pos] });
+    }
+    for (const r of ROLE_ORDER) {
+      if (byRole[r]?.length) groups.push({ label: r, ids: byRole[r] });
+    }
+    return groups;
+  }, [profiles, lang]);
+
+  const toggleGroup = (ids) => {
+    const allIn = ids.every(id => participantIds.includes(id));
+    setParticipantIds(prev =>
+      allIn ? prev.filter(id => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+    );
+  };
+
   const toggleRecurrDay = (dayIdx) => {
     setRecurrenceDays(prev =>
       prev.includes(dayIdx) ? prev.filter(d => d !== dayIdx) : [...prev, dayIdx]
@@ -442,6 +471,20 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           {profiles.length > 0 && (
             <div className={styles.tf}>
               <label className={styles.tl}>{lang === 'ja' ? '参加者' : 'Participants'}</label>
+              {participantGroups.length > 1 && (
+                <div className={styles.groupChips}>
+                  {participantGroups.map(g => {
+                    const allIn = g.ids.every(id => participantIds.includes(id));
+                    return (
+                      <button key={g.label} type="button"
+                        className={allIn ? styles.groupChipOn : styles.groupChip}
+                        onClick={() => toggleGroup(g.ids)}>
+                        {g.label} <span className={styles.groupChipCount}>{g.ids.length}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className={styles.participantsList}>
                 {profiles.map(p => (
                   <label key={p.id} className={styles.participantRow}>
@@ -449,7 +492,10 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
                       checked={participantIds.includes(p.id)}
                       onChange={() => toggleParticipant(p.id)} />
                     <span className={styles.participantName}>{p.display_name || p.email}</span>
-                    {p.role && <span className={styles.participantRole}>{p.role}</span>}
+                    {p.position
+                      ? <span className={styles.participantRole}>{p.position}</span>
+                      : p.role && p.role !== 'Player' && <span className={styles.participantRole}>{p.role}</span>
+                    }
                   </label>
                 ))}
               </div>
@@ -809,7 +855,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   const canEdit = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'].includes(role);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, email, role')
+    supabase.from('profiles').select('id, display_name, email, role, position')
       .order('display_name')
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
