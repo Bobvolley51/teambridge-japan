@@ -1,10 +1,43 @@
-// Free PDF text extraction — no AI API key required.
-// Uses pdf-parse v1 to extract raw text then regex-parses the VERT report layout.
+// Free PDF text extraction using pdfjs-dist (official PDF.js, handles custom font encodings).
+// No API key required — zero cost per upload.
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-// ── Text parser ────────────────────────────────────────────────────────────────
+// ── PDF text extraction ────────────────────────────────────────────────────────
+
+async function extractText(buf) {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+  const pdf = await getDocument({
+    data: new Uint8Array(buf),
+    useSystemFonts: true,
+    // Suppress the "canvas not found" worker warning — we only need text
+    verbosity: 0,
+  }).promise;
+
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // Join items; insert newline when there's a significant Y-position jump
+    let prevY = null;
+    const parts = [];
+    for (const item of content.items) {
+      if ('str' in item) {
+        if (prevY !== null && Math.abs(item.transform[5] - prevY) > 2) {
+          parts.push('\n');
+        }
+        parts.push(item.str);
+        prevY = item.transform[5];
+      }
+    }
+    pages.push(parts.join(''));
+  }
+  return pages.join('\n');
+}
+
+// ── VERT text parser ───────────────────────────────────────────────────────────
 
 function parseNum(s) {
   if (s == null) return null;
@@ -23,7 +56,7 @@ const SKIP = new Set([
   'JUMP','JUMPS','LANDING','WORK','BREAKDOWN','NONE','ENERGY','INTENSITY','SETS',
   'TEAM','SESSION','AVERAGES','POSITION','REPORT','AVERAGE','HIGH','ALERT',
   'ELEVATED','IMPACT','POWER','ACTIVE','MINUTE','INSIDER','VERT','ENTRY','NO',
-  'AVG','HI','MAX','JUMP','COACH','SESSION','PRACTICE','MATCH','GAME',
+  'AVG','HI','MAX','COACH','PRACTICE','MATCH','GAME','TRAINING',
 ]);
 
 function isName(s) {
@@ -43,8 +76,10 @@ function parseRows(secLines, numCount) {
   const map = {};
   let i = 0;
   while (i < secLines.length) {
-    if (isName(secLines[i]) && secLines[i + 1]?.toUpperCase() === 'NONE') {
-      const name = secLines[i];
+    const cur  = secLines[i];
+    const next = secLines[i + 1];
+    if (isName(cur) && next?.toUpperCase() === 'NONE') {
+      const name = cur;
       const nums = [];
       let j = i + 2;
       while (j < secLines.length && nums.length < numCount + 3) {
@@ -67,7 +102,7 @@ function parseVertText(raw) {
 
   let sessionName = '';
   let sessionDate = '';
-  for (const line of lines.slice(0, 40)) {
+  for (const line of lines.slice(0, 60)) {
     if (!sessionName && /^(Practice|Match|Game|Training|Scrimmage)\s*[-–]\s*\d+/i.test(line)) {
       sessionName = line;
     }
@@ -121,11 +156,7 @@ export async function POST(req) {
 
   let rawText;
   try {
-    // Import the lib file directly — the package entry point runs its own test
-    // suite on load and fails with ENOENT when test PDFs aren't present.
-    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
-    const parsed   = await pdfParse(buf);
-    rawText = parsed.text;
+    rawText = await extractText(buf);
   } catch (err) {
     return Response.json({ error: 'PDF read failed: ' + err.message }, { status: 422 });
   }
@@ -134,7 +165,7 @@ export async function POST(req) {
 
   if (result.players.length === 0) {
     result._raw    = rawText.slice(0, 3000);
-    result._notice = 'No players found — check _raw to see extracted text';
+    result._notice = 'No players found';
   }
 
   return Response.json(result);
