@@ -146,9 +146,9 @@ export default function VertDashboard({ lang, profile }) {
       const successful = results.filter(r => r.players?.length > 0);
 
       if (!successful.length) {
-        setParseError(isJa
-          ? 'データが見つかりませんでした。VERT Session Report PDF（Coach Reportではなく）をアップロードしてください。'
-          : 'No player data found. Use the VERT Session Report PDF, not the Coach Report.');
+        const firstRaw = results[0]?._raw || '';
+        if (firstRaw) console.log('[VERT raw text]', firstRaw);
+        setParseError('No players found. Check browser console for raw text, or paste it here:\n\n' + firstRaw.slice(0, 600));
         setUploadState('idle');
         return;
       }
