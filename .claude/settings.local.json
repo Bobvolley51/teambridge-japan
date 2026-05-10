@@ -4,7 +4,11 @@
       "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\Git\\\\cmd;C:\\\\Users\\\\Bob\\\\AppData\\\\Roaming\\\\npm\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; vercel --prod 2>&1 | head -40)",
       "PowerShell($env:PATH = $env:PATH + \";C:\\\\Users\\\\Bob\\\\AppData\\\\Roaming\\\\npm\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; vercel --prod)",
       "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\Git\\\\cmd\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; git status)",
-      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\cmd\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; git add app/page.jsx components/RoleManager.jsx components/RoleManager.module.css; git commit -m \"feat\\(admin\\): headcoach-only usage stats tab with activity tiles and team composition\"; if \\($?\\) { git push })"
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\cmd\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; git add app/page.jsx components/RoleManager.jsx components/RoleManager.module.css; git commit -m \"feat\\(admin\\): headcoach-only usage stats tab with activity tiles and team composition\"; if \\($?\\) { git push })",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const p=JSON.parse\\(d\\);console.log\\('main:',p.main,'exports keys:',Object.keys\\(p.exports||{}\\).slice\\(0,8\\)\\)\")",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(node --input-type=module -e \"import { extractText } from 'unpdf'; console.log\\('ok', typeof extractText\\)\")",
+      "Bash(grep -A15 \"async function extractText\\\\$1\")"
     ]
   }
 }

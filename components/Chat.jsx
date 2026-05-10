@@ -429,6 +429,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
 
+  // Stamp last-visited time so Dashboard can filter already-seen messages
+  useEffect(() => {
+    if (currentUser?.id) {
+      localStorage.setItem(`chat_last_visited_${currentUser.id}`, new Date().toISOString());
+    }
+  }, [currentUser?.id]);
+
   // Load channels on mount
   useEffect(() => {
     async function loadChannels() {

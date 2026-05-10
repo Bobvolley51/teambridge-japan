@@ -280,6 +280,38 @@
   margin-bottom: 0;
 }
 
+.tempRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #fee2e2;
+}
+
+.tempLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.tempInput {
+  width: 110px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  font-family: inherit;
+}
+.tempInput:focus {
+  outline: none;
+  border-color: #f87171;
+  box-shadow: 0 0 0 2px rgba(248,113,113,0.15);
+}
+
 .followUpTitle {
   font-size: 13px;
   font-weight: 600;

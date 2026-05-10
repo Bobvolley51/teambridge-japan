@@ -4,13 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './VertDashboard.module.css';
 
-// Thresholds from VERT legend (OH/M volleyball)
+// Thresholds from VERT legend (OH/M volleyball) — avg-mode fields only
 const T = {
-  jumps:             { low: 90,   mid: 120,  inv: false },
   avg_hi_jump_cm:    { low: 40,   mid: 50,   inv: false },
   jpam:              { low: 0.7,  mid: 1.2,  inv: false },
   avg_hi_jump_power: { low: 40,   mid: 55,   inv: false },
-  energy:            { low: 4500, mid: 6500, inv: false },
   sets_by_energy:    { low: 2,    mid: 5,    inv: false },
   intensity:         { low: 55,   mid: 90,   inv: false },
   high_impact_pct:   { low: 10,   mid: 20,   inv: true  },
@@ -24,8 +22,8 @@ function cellColor(field, value) {
   const v = parseFloat(value);
   if (isNaN(v)) return '';
   const hi = v >= t.mid, mid = v >= t.low;
-  if (t.inv) return hi ? styles.red : mid ? styles.amber : styles.green;
-  return hi ? styles.green : mid ? styles.amber : styles.red;
+  if (t.inv) return hi ? '#dc2626' : mid ? '#d97706' : '#059669';
+  return hi ? '#059669' : mid ? '#d97706' : '#dc2626';
 }
 
 const NUMERIC_FIELDS = [
@@ -35,18 +33,21 @@ const NUMERIC_FIELDS = [
 ];
 const DECIMAL_FIELDS = new Set(['avg_hi_jump_cm', 'jpam', 'avg_hi_jump_power', 'sets_by_energy']);
 
+// sum: totalled across sessions in avg mode; avg: averaged across sessions
 const STAT_COLS = [
-  { key: 'jumps',             label: 'Jumps',      unit: ''   },
-  { key: 'avg_hi_jump_cm',    label: 'Hi Jump',    unit: ' cm'},
-  { key: 'jpam',              label: 'JPAM',       unit: ''   },
-  { key: 'avg_hi_jump_power', label: 'Jump Power', unit: ''   },
-  { key: 'high_impact_pct',   label: 'Hi Impact',  unit: '%'  },
-  { key: 'alert_impact_pct',  label: 'Alert',      unit: '%'  },
-  { key: 'elevated_pct',      label: 'Elevated',   unit: '%'  },
-  { key: 'energy',            label: 'Energy',     unit: ''   },
-  { key: 'sets_by_energy',    label: 'Sets',       unit: ''   },
-  { key: 'intensity',         label: 'Intensity',  unit: ''   },
+  { key: 'jumps',             label: 'Total\nJumps',   unit: '',    sum: true  },
+  { key: 'avg_hi_jump_cm',    label: 'Avg Hi\nJump',   unit: ' cm', sum: false },
+  { key: 'jpam',              label: 'JPAM\n(avg)',     unit: '',    sum: false },
+  { key: 'avg_hi_jump_power', label: 'Jump\nPower',    unit: '',    sum: false },
+  { key: 'high_impact_pct',   label: 'Hi\nImpact',     unit: '%',   sum: false },
+  { key: 'alert_impact_pct',  label: 'Alert\n%',       unit: '%',   sum: false },
+  { key: 'elevated_pct',      label: 'Elevated\n%',    unit: '%',   sum: false },
+  { key: 'energy',            label: 'Total\nEnergy',  unit: '',    sum: true  },
+  { key: 'sets_by_energy',    label: 'Sets\n(avg)',    unit: '',    sum: false },
+  { key: 'intensity',         label: 'Intensity\n(avg)',unit: '',   sum: false },
 ];
+
+const SUM_FIELDS = new Set(STAT_COLS.filter(c => c.sum).map(c => c.key));
 
 const MAP_KEY  = 'vert_name_map';
 const loadMap  = () => { try { return JSON.parse(localStorage.getItem(MAP_KEY) || '{}'); } catch { return {}; } };
@@ -54,7 +55,9 @@ const saveMap  = m  => localStorage.setItem(MAP_KEY, JSON.stringify(m));
 
 function avgField(arr, field) {
   const vals = arr.map(s => s[field]).filter(v => v != null);
-  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  if (!vals.length) return null;
+  const total = vals.reduce((a, b) => a + b, 0);
+  return SUM_FIELDS.has(field) ? total : total / vals.length;
 }
 
 function fmt(val, field) {
@@ -425,11 +428,16 @@ export default function VertDashboard({ lang, profile }) {
                     <tr key={i} className={i % 2 === 0 ? styles.trEven : ''}>
                       <td className={styles.tdSticky}>{row.name}</td>
                       <td className={styles.tdCenter}>{row.count}</td>
-                      {STAT_COLS.map(c => (
-                        <td key={c.key} className={`${styles.tdCenter} ${row[c.key] != null ? cellColor(c.key, row[c.key]) : styles.null}`}>
-                          {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}
-                        </td>
-                      ))}
+                      {STAT_COLS.map(c => {
+                        const val = row[c.key];
+                        const clr = val != null ? cellColor(c.key, val) : '';
+                        return (
+                          <td key={c.key} className={styles.tdCenter}
+                              style={clr ? { color: clr, fontWeight: 600 } : val == null ? { color: '#d1d5db' } : { color: '#374151' }}>
+                            {fmt(val, c.key)}{val != null ? c.unit : ''}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -452,11 +460,16 @@ export default function VertDashboard({ lang, profile }) {
                       <td className={styles.tdSticky}>{row.session_date}</td>
                       {!isPlayer && <td className={styles.tdCenter}>{row.name}</td>}
                       <td className={styles.tdCenter}>{row.session_name}</td>
-                      {STAT_COLS.map(c => (
-                        <td key={c.key} className={`${styles.tdCenter} ${row[c.key] != null ? cellColor(c.key, row[c.key]) : styles.null}`}>
-                          {fmt(row[c.key], c.key)}{row[c.key] != null ? c.unit : ''}
-                        </td>
-                      ))}
+                      {STAT_COLS.map(c => {
+                        const val = row[c.key];
+                        const clr = val != null ? cellColor(c.key, val) : '';
+                        return (
+                          <td key={c.key} className={styles.tdCenter}
+                              style={clr ? { color: clr, fontWeight: 600 } : val == null ? { color: '#d1d5db' } : { color: '#374151' }}>
+                            {fmt(val, c.key)}{val != null ? c.unit : ''}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

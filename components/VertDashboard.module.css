@@ -259,6 +259,7 @@
 .green  { color: #059669 !important; font-weight: 600; }
 .amber  { color: #d97706 !important; font-weight: 600; }
 .red    { color: #dc2626 !important; font-weight: 600; }
+.null   { color: #d1d5db !important; font-weight: 400; }
 
 /* Legend */
 .legend {

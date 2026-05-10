@@ -79,6 +79,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [illness,         setIllness]         = useState(null);
   const [painScore,       setPainScore]       = useState(null);
   const [illnessSymptoms, setIllnessSymptoms] = useState([]);
+  const [bodyTemp,        setBodyTemp]        = useState('');
   const [painParts,       setPainParts]       = useState([]);
   const [otherMessage,    setOtherMessage]    = useState('');
   const [saving,          setSaving]          = useState(false);
@@ -110,10 +111,13 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       user_id: userId, user_name: userName,
       question_key: q.key, score: scores[q.key], response_date: today,
     }));
-    wellnessRows.push({
-      user_id: userId, user_name: userName,
-      question_key: 'temperature', score: illness === 'no' ? 10 : 1, response_date: today,
-    });
+    const tempVal = illness === 'yes' && bodyTemp !== '' ? parseFloat(bodyTemp) : null;
+    if (tempVal != null && !isNaN(tempVal)) {
+      wellnessRows.push({
+        user_id: userId, user_name: userName,
+        question_key: 'temperature', score: tempVal, response_date: today,
+      });
+    }
     wellnessRows.push({
       user_id: userId, user_name: userName,
       question_key: 'pain', score: 11 - painScore, response_date: today,
@@ -165,7 +169,8 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
 
     if (illness === 'yes') {
       const symptomList = illnessSymptoms.map(k => SYMPTOM_LABELS[k] ?? k).join(', ');
-      alerts.push(`🤒 Illness reported${symptomList ? `: ${symptomList}` : ''}`);
+      const tempStr = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
+      alerts.push(`🤒 Illness reported${symptomList ? `: ${symptomList}` : ''}${tempStr}`);
     }
 
     if (painScore >= 7) {
@@ -322,6 +327,21 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                         </button>
                       );
                     })}
+                  </div>
+                  <div className={styles.tempRow}>
+                    <label className={styles.tempLabel}>
+                      🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
+                    </label>
+                    <input
+                      className={styles.tempInput}
+                      type="number"
+                      step="0.1"
+                      min="35"
+                      max="42"
+                      value={bodyTemp}
+                      onChange={e => setBodyTemp(e.target.value)}
+                      placeholder="e.g. 37.2"
+                    />
                   </div>
                 </div>
               )}

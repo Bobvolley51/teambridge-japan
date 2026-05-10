@@ -227,10 +227,31 @@ export default function Dashboard({
   const wellnessToday     = wellnessAlerts.filter(w => w.date === todayDateStr);
   const wellnessYesterday = wellnessAlerts.filter(w => w.date === yesterdayDateStr);
 
-  // Group messages by channel, take 4 most recent per channel (exclude DMs)
+  // Messages: only show those newer than the last time user visited Chat
+  const lastChatVisit = typeof window !== 'undefined'
+    ? localStorage.getItem(`chat_last_visited_${currentUserId}`) || ''
+    : '';
+
+  // Announcements: only show those < 72h old and not dismissed
+  const dismissedAnns = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem(`ann_dismissed_${currentUserId}`) || '[]')
+    : [];
+  const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const visibleAnnouncements = announcements.filter(
+    a => a.created_at >= cutoff72h && !dismissedAnns.includes(a.id)
+  );
+
+  const dismissAnnouncement = (id) => {
+    const updated = [...dismissedAnns, id];
+    localStorage.setItem(`ann_dismissed_${currentUserId}`, JSON.stringify(updated));
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+  };
+
+  // Group messages by channel, take 4 most recent per channel (exclude DMs, show only new)
   const channels = {};
   for (const msg of messages) {
     if (msg.channel?.startsWith('dm:')) continue;
+    if (lastChatVisit && msg.created_at <= lastChatVisit) continue;
     if (!channels[msg.channel]) channels[msg.channel] = [];
     if (channels[msg.channel].length < 4) channels[msg.channel].push(msg);
   }
@@ -569,23 +590,28 @@ export default function Dashboard({
               <div className={styles.cardHead}>
                 <span className={styles.cardTitle}>
                   📢 {lang === 'ja' ? 'お知らせ' : 'Announcements'}
-                  {announcements.length > 0 && <span className={styles.countBadgeGreen}>{announcements.length}</span>}
+                  {visibleAnnouncements.length > 0 && <span className={styles.countBadgeGreen}>{visibleAnnouncements.length}</span>}
                 </span>
               </div>
               <div className={styles.cardBody}>
-                {announcements.length === 0 ? (
-                  <EmptyState>{lang === 'ja' ? 'お知らせはまだありません。' : 'No announcements yet.'}</EmptyState>
+                {visibleAnnouncements.length === 0 ? (
+                  <EmptyState>{lang === 'ja' ? '新しいお知らせはありません。' : 'No new announcements.'}</EmptyState>
                 ) : (
-                  announcements.map(a => {
+                  visibleAnnouncements.map(a => {
                     const pri = PRI[a.priority] ?? PRI.medium;
                     return (
-                      <div key={a.id} className={styles.annItem} onClick={() => onNavigate('feed')}>
-                        <span className={styles.annPriBadge}
-                          style={{ background: pri.bg, border: `1px solid ${pri.border}`, color: pri.dot }}>
-                          <span className={styles.annPriDot} style={{ background: pri.dot }} />
-                          {pri[lang]}
-                        </span>
-                        <div className={styles.annTitle}>{a.title}</div>
+                      <div key={a.id} className={styles.annItem}>
+                        <div className={styles.annItemTop}>
+                          <span className={styles.annPriBadge}
+                            style={{ background: pri.bg, border: `1px solid ${pri.border}`, color: pri.dot }}>
+                            <span className={styles.annPriDot} style={{ background: pri.dot }} />
+                            {pri[lang]}
+                          </span>
+                          <button className={styles.noticedBtn} onClick={() => dismissAnnouncement(a.id)}>
+                            ✓ {lang === 'ja' ? '確認済み' : 'Noticed'}
+                          </button>
+                        </div>
+                        <div className={styles.annTitle} onClick={() => onNavigate('feed')} style={{ cursor: 'pointer' }}>{a.title}</div>
                         <div className={styles.annContent}>{a.content}</div>
                         <div className={styles.annMeta}>{a.author_name} · {timeAgo(a.created_at, lang)}</div>
                       </div>

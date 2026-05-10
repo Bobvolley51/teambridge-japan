@@ -441,24 +441,25 @@ export default function WellnessDashboard({ lang }) {
                       return acc;
                     }, {});
                     const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-                    const max = sorted[0]?.[1] ?? 1;
                     return (
                       <div className={styles.painSection}>
                         <div className={styles.painTitle}>
                           🩹 {lang === 'ja' ? '7日間の痛み・張り頻度' : 'Pain / Tightness Frequency (7 days)'}
                         </div>
-                        {sorted.map(([key, count]) => {
-                          const label = BODY_PARTS.find(b => b.key === key);
-                          return (
-                            <div key={key} className={styles.freqRow}>
-                              <span className={styles.freqLabel}>{label ? (lang === 'ja' ? label.ja : label.en) : key}</span>
-                              <div className={styles.freqBar}>
-                                <div className={styles.freqFill} style={{ width: `${(count / max) * 100}%` }} />
-                              </div>
-                              <span className={styles.freqCount}>{count}</span>
-                            </div>
-                          );
-                        })}
+                        <div className={styles.freqChips}>
+                          {sorted.map(([key, count]) => {
+                            const label = BODY_PARTS.find(b => b.key === key);
+                            const chipCls = count >= 3 ? styles.freqChipRed
+                              : count === 2 ? styles.freqChipOrange
+                              : styles.freqChipYellow;
+                            return (
+                              <span key={key} className={`${styles.freqChip} ${chipCls}`}>
+                                {label ? (lang === 'ja' ? label.ja : label.en) : key}
+                                <span className={styles.freqBadge}>{count}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })()}

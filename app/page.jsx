@@ -13,6 +13,7 @@ import RoleManager           from '@/components/RoleManager';
 import Calendar              from '@/components/Calendar';
 import UserMenu              from '@/components/UserMenu';
 import WellnessCheck         from '@/components/WellnessCheck';
+import ProfileSetup          from '@/components/ProfileSetup';
 import WellnessDashboard     from '@/components/WellnessDashboard';
 import SessionRPE            from '@/components/SessionRPE';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
@@ -26,13 +27,16 @@ import GlobalSearch          from '@/components/GlobalSearch';
 import styles                from './page.module.css';
 
 const NAV_BASE = [
-  { id: 'dashboard', icon: '🏠', label: { en: 'Dashboard',    ja: 'ダッシュボード' } },
-  { id: 'calendar',  icon: '📅', label: { en: 'Calendar',     ja: 'カレンダー'    } },
-  { id: 'chat',      icon: '💬', label: { en: 'Chat',         ja: 'チャット'      } },
-  { id: 'tasks',     icon: '✅', label: { en: 'Tasks',        ja: 'タスク'        } },
-  { id: 'tactics',   icon: '🎯', label: { en: 'Tactics',       ja: '戦術'          } },
-  { id: 'travel',    icon: '✈️', label: { en: 'Travel',        ja: '旅程'          } },
-  { id: 'feed',      icon: '📢', label: { en: 'Announcements',ja: 'お知らせ'      } },
+  { id: 'dashboard', icon: '🏠', label: { en: 'Dashboard', ja: 'ダッシュボード' } },
+  { id: 'calendar',  icon: '📅', label: { en: 'Calendar',  ja: 'カレンダー'    } },
+  { id: 'chat',      icon: '💬', label: { en: 'Chat',      ja: 'チャット'      } },
+  { id: 'tactics',   icon: '🎯', label: { en: 'Tactics',   ja: '戦術'          } },
+];
+
+const NAV_CAL_SUBS = [
+  { id: 'tasks',  icon: '✅', label: { en: 'Tasks',         ja: 'タスク'   } },
+  { id: 'feed',   icon: '📢', label: { en: 'Announcements', ja: 'お知らせ' } },
+  { id: 'travel', icon: '✈️', label: { en: 'Travel',        ja: '旅程'     } },
 ];
 
 const NAV_ADMIN       = { id: 'admin',       icon: '👥', label: { en: 'Users',       ja: 'ユーザー管理'   } };
@@ -47,11 +51,21 @@ const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Staff/Orga']
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
   const [profile,       setProfile]       = useState(null);
-  const [nav,           setNav]           = useState('dashboard');
+  const [nav,           setNav]           = useState(() =>
+    (typeof window !== 'undefined' && localStorage.getItem('tb_nav')) || 'dashboard'
+  );
   const [lang,          setLang]          = useState(() =>
     (typeof window !== 'undefined' && localStorage.getItem('tb_lang')) || 'en'
   );
+  const navigate = (id) => { setNav(id); localStorage.setItem('tb_nav', id); };
+
+  const [calGroupOpen,     setCalGroupOpen]     = useState(() =>
+    ['calendar', 'tasks', 'feed', 'travel'].includes(
+      typeof window !== 'undefined' ? localStorage.getItem('tb_nav') || 'dashboard' : 'dashboard'
+    )
+  );
   const [showPrivacy,      setShowPrivacy]      = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showWellness,     setShowWellness]     = useState(false);
   const [showRPE,          setShowRPE]          = useState(false);
   const [pendingRPEEvents, setPendingRPEEvents] = useState([]);
@@ -182,6 +196,11 @@ export default function Home() {
       return;
     }
 
+    if (!prof?.first_name || !prof?.last_name || !prof?.date_of_birth) {
+      setShowProfileSetup(true);
+      return;
+    }
+
     if (checkWellness && prof?.role === 'Player') {
       const today = new Date().toISOString().slice(0, 10);
       // localStorage prevents re-showing after skip or submit within the same day
@@ -233,7 +252,9 @@ export default function Home() {
   if (!session) return <Login lang={lang} onLangChange={(l) => { setLang(l); localStorage.setItem('tb_lang', l); }} />;
 
   const user         = session.user;
-  const displayName  = profile?.display_name || user.email;
+  const displayName  = profile?.display_name
+    || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : null)
+    || user.email;
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
   const isAdmin        = ['GM', 'Headcoach'].includes(profile?.role);
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
@@ -263,30 +284,49 @@ export default function Home() {
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
-          <NotificationBell userId={user.id} lang={lang} onNavigate={setNav} />
+          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} />
           <UserMenu user={user} profile={profile} lang={lang} onProfileUpdate={() => loadProfile(user.id, false)} />
         </div>
       </header>
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          {nav_items.map(item => (
-            <button key={item.id}
-              className={`${styles.navItem} ${nav===item.id?styles.navActive:''}`}
-              onClick={() => { setNav(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
-              <span className={styles.navIcon}>{item.icon}</span>
-              {item.label[lang]}
-              {item.id === 'performance' && perfAlertCount > 0 && (
-                <span className={styles.navBadge}>{perfAlertCount}</span>
-              )}
-              {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
-                <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
-              )}
-            </button>
-          ))}
+          {nav_items.map(item => {
+            const isCalGroup = item.id === 'calendar';
+            const calActive  = isCalGroup && (['calendar', ...NAV_CAL_SUBS.map(s => s.id)].includes(nav));
+            return (
+              <div key={item.id}>
+                <button
+                  className={`${styles.navItem} ${(nav===item.id || (isCalGroup && calActive)) ? styles.navActive : ''}`}
+                  onClick={() => {
+                    navigate(item.id);
+                    if (item.id === 'chat') setUnreadChat(0);
+                    if (isCalGroup) setCalGroupOpen(o => !o);
+                  }}>
+                  <span className={styles.navIcon}>{item.icon}</span>
+                  {item.label[lang]}
+                  {isCalGroup && <span className={styles.navCaret}>{calGroupOpen ? '▾' : '▸'}</span>}
+                  {item.id === 'performance' && perfAlertCount > 0 && (
+                    <span className={styles.navBadge}>{perfAlertCount}</span>
+                  )}
+                  {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
+                    <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
+                  )}
+                </button>
+                {isCalGroup && calGroupOpen && NAV_CAL_SUBS.map(sub => (
+                  <button key={sub.id}
+                    className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
+                    onClick={() => navigate(sub.id)}>
+                    <span className={styles.navIcon}>{sub.icon}</span>
+                    {sub.label[lang]}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </aside>
         <main className={styles.main}>
-          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={setNav} />}
+          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} />}
           {nav==='calendar'  && <Calendar          lang={lang} currentUserName={displayName} role={profile?.role} currentUserId={user.id} />}
           {nav==='chat'      && <Chat              uiLang={lang} currentUser={{ name: displayName, initials, id: user.id, avatarUrl: profile?.avatar_url }} profile={profile} />}
           {nav==='tasks'     && <Tasks             lang={lang} profile={profile} />}
@@ -302,10 +342,10 @@ export default function Home() {
 
       {/* Mobile bottom navigation */}
       <nav className={styles.mobileNav}>
-        {nav_items.map(item => (
+        {[...nav_items, ...NAV_CAL_SUBS].map(item => (
           <button key={item.id}
             className={`${styles.mobileNavItem} ${nav===item.id?styles.mobileNavActive:''}`}
-            onClick={() => { setNav(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
+            onClick={() => { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
             <span className={styles.mobileNavIconWrap}>
               {item.icon}
               {item.id === 'performance' && perfAlertCount > 0 && (
@@ -321,7 +361,7 @@ export default function Home() {
       </nav>
 
       {showSearch && (
-        <GlobalSearch lang={lang} onNavigate={setNav} onClose={() => setShowSearch(false)} />
+        <GlobalSearch lang={lang} onNavigate={navigate} onClose={() => setShowSearch(false)} />
       )}
 
       {showPrivacy && (
@@ -330,6 +370,19 @@ export default function Home() {
           lang={lang}
           onLangChange={(l) => { setLang(l); localStorage.setItem('tb_lang', l); }}
           onAccept={() => { setShowPrivacy(false); loadProfile(user.id); }}
+        />
+      )}
+
+      {showProfileSetup && (
+        <ProfileSetup
+          userId={user.id}
+          currentRole={profile?.role}
+          lang={lang}
+          onComplete={(updates) => {
+            setProfile(prev => ({ ...prev, ...updates }));
+            setShowProfileSetup(false);
+            loadProfile(user.id);
+          }}
         />
       )}
 
