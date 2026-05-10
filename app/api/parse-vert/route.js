@@ -1,4 +1,4 @@
-// Free PDF text extraction using pdfjs-dist (official PDF.js, handles custom font encodings).
+// Free PDF text extraction using unpdf (serverless-safe, no worker required).
 // No API key required — zero cost per upload.
 
 export const runtime = 'nodejs';
@@ -6,58 +6,10 @@ export const maxDuration = 30;
 
 // ── PDF text extraction ────────────────────────────────────────────────────────
 
-function polyfillBrowserAPIs() {
-  if (typeof globalThis.DOMMatrix === 'undefined') {
-    globalThis.DOMMatrix = class DOMMatrix {
-      constructor(init) {
-        this.a=1;this.b=0;this.c=0;this.d=1;this.e=0;this.f=0;
-        if (Array.isArray(init) && init.length === 6) {
-          [this.a,this.b,this.c,this.d,this.e,this.f] = init;
-        }
-      }
-      transformPoint(p) { return p; }
-      multiply() { return this; }
-      inverse()  { return this; }
-      translate(){ return this; }
-      scale()    { return this; }
-      rotate()   { return this; }
-    };
-  }
-  if (typeof globalThis.Path2D        === 'undefined') globalThis.Path2D        = class {};
-  if (typeof globalThis.ImageData     === 'undefined') globalThis.ImageData     = class {};
-  if (typeof globalThis.OffscreenCanvas=== 'undefined') globalThis.OffscreenCanvas = class {};
-}
-
 async function extractText(buf) {
-  polyfillBrowserAPIs();
-  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-  const pdf = await getDocument({
-    data: new Uint8Array(buf),
-    useSystemFonts: true,
-    // Suppress the "canvas not found" worker warning — we only need text
-    verbosity: 0,
-  }).promise;
-
-  const pages = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page    = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    // Join items; insert newline when there's a significant Y-position jump
-    let prevY = null;
-    const parts = [];
-    for (const item of content.items) {
-      if ('str' in item) {
-        if (prevY !== null && Math.abs(item.transform[5] - prevY) > 2) {
-          parts.push('\n');
-        }
-        parts.push(item.str);
-        prevY = item.transform[5];
-      }
-    }
-    pages.push(parts.join(''));
-  }
-  return pages.join('\n');
+  const { extractText: unpdfExtract } = await import('unpdf');
+  const { text } = await unpdfExtract(new Uint8Array(buf), { mergePages: true });
+  return text || '';
 }
 
 // ── VERT text parser ───────────────────────────────────────────────────────────
