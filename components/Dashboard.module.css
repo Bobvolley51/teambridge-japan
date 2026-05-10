@@ -551,3 +551,60 @@
   transition: background 0.1s;
 }
 .footBtn:hover { background: #fdf2f4; }
+
+/* ── RSVP badge on schedule events ─────────────────────────── */
+
+.rsvpBadge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.rsvpIn    { background: #dcfce7; color: #15803d; }
+.rsvpMaybe { background: #fef3c7; color: #b45309; }
+.rsvpOut   { background: #fee2e2; color: #b91c1c; }
+
+/* ── Missed wellness banner ─────────────────────────────────── */
+
+.wellnessBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #22c55e;
+  border-radius: 8px;
+}
+
+.wellnessBannerIcon { font-size: 20px; flex-shrink: 0; }
+
+.wellnessBannerBody { flex: 1; min-width: 0; }
+
+.wellnessBannerTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.wellnessBannerBtn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.wellnessBannerBtn:hover { background: #16a34a; }
+
+@media (max-width: 768px) {
+  .wellnessBanner { margin: 10px 12px 0; }
+}

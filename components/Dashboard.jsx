@@ -77,6 +77,7 @@ export default function Dashboard({
   currentUserInitials,
   currentUserName,
   onNavigate,
+  onOpenWellness,
 }) {
   const [events,          setEvents]          = useState([]);
   const [messages,        setMessages]        = useState([]);
@@ -162,7 +163,7 @@ export default function Dashboard({
 
     // Filter to events in the 7-day window
     const myEventsRaw = (myPartsData ?? [])
-      .map(p => p.events)
+      .map(p => ({ ...p.events, _myStatus: p.status ?? 'in' }))
       .filter(ev => ev && new Date(ev.start_time) >= todayStart && new Date(ev.start_time) <= weekEnd);
     myEventsRaw.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     setEvents(myEventsRaw);
@@ -231,6 +232,16 @@ export default function Dashboard({
 
   const todayEvents  = events.filter(ev => new Date(ev.start_time) <= todayEnd);
   const soonEvents   = events.filter(ev => new Date(ev.start_time) > todayEnd);
+
+  const wellnessDoneToday = typeof window !== 'undefined'
+    ? !!localStorage.getItem(`wellness_done_${currentUserId}_${todayDateStr}`)
+    : true;
+
+  const RSVP_LABEL = {
+    in:    { en: '✓ In',    ja: '✓ 参加',  cls: 'rsvpIn' },
+    maybe: { en: '? Maybe', ja: '? 未定',  cls: 'rsvpMaybe' },
+    out:   { en: '✗ Out',   ja: '✗ 欠席',  cls: 'rsvpOut' },
+  };
   const urgentTasks  = tasks.filter(t => t.priority === 'high');
   const weekTasks    = tasks.filter(t => t.priority !== 'high');
   const canSeeWellness = WELLNESS_ALERT_ROLES.includes(profile?.role);
@@ -344,6 +355,21 @@ export default function Dashboard({
         </div>
       ))}
 
+      {/* ── Missed wellness reminder ── */}
+      {profile?.role === 'Player' && !wellnessDoneToday && onOpenWellness && (
+        <div className={styles.wellnessBanner}>
+          <span className={styles.wellnessBannerIcon}>💪</span>
+          <div className={styles.wellnessBannerBody}>
+            <div className={styles.wellnessBannerTitle}>
+              {lang === 'ja' ? '今日のチェックインがまだです' : "You haven't completed today's check-in"}
+            </div>
+          </div>
+          <button className={styles.wellnessBannerBtn} onClick={onOpenWellness}>
+            {lang === 'ja' ? 'チェックイン →' : 'Check in →'}
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -386,17 +412,23 @@ export default function Dashboard({
                     {todayEvents.length > 0 && (
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '本日' : 'Today'}</SectionLabel>
-                        {todayEvents.map(ev => (
-                          <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
-                            <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
-                            <div>
-                              <div className={styles.alertText}>{ev.title}</div>
-                              <div className={styles.alertSub}>
-                                {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
+                        {todayEvents.map(ev => {
+                          const rsvp = RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in;
+                          return (
+                            <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
+                              <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className={styles.alertText}>{ev.title}</div>
+                                <div className={styles.alertSub}>
+                                  {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
+                                </div>
                               </div>
+                              <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
+                                {lang === 'ja' ? rsvp.ja : rsvp.en}
+                              </span>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     {soonEvents.length > 0 && profile?.role !== 'Player' && (

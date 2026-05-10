@@ -378,7 +378,7 @@ export default function Home() {
           })}
         </aside>
         <main className={styles.main}>
-          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} />}
+          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} onOpenWellness={profile?.role === 'Player' ? () => setShowWellness(true) : undefined} />}
           {nav==='calendar'  && <Calendar          lang={lang} currentUserName={displayName} role={profile?.role} currentUserId={user.id} />}
           {nav==='chat'      && <Chat              uiLang={lang} currentUser={{ name: displayName, initials, id: user.id, avatarUrl: profile?.avatar_url }} profile={profile} />}
           {nav==='tasks'     && <Tasks             lang={lang} profile={profile} />}
