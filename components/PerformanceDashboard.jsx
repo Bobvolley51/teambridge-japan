@@ -213,7 +213,7 @@ export default function PerformanceDashboard({ lang, profile }) {
             </>
           )
 
-        ) : (
+        ) : tab === 'vert' ? null : (
           /* Session History */
           records.length === 0 ? (
             <div className={styles.empty}>
