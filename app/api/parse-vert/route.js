@@ -2,11 +2,14 @@
 //
 // VERT PDFs use custom font encoding that free text-extraction libraries can't
 // decode (pdfjs returns empty strings). Claude reads the PDF visually and
-// extracts the structured data reliably for ~$0.002 per upload.
+// extracts the structured data reliably.
+//
+// The last page of every VERT report is the legend — we strip it before
+// sending to reduce token cost by ~33%.
 //
 // Requires ANTHROPIC_API_KEY in Vercel environment variables.
-// Without it the route returns a clear error so the UI can fall back to
-// manual entry.
+
+import { PDFDocument } from 'pdf-lib';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -57,7 +60,20 @@ export async function POST(req) {
     if (!file) return Response.json({ error: 'No file' }, { status: 400 });
 
     const buf = Buffer.from(await file.arrayBuffer());
-    const b64 = buf.toString('base64');
+
+    // Strip the last page (always the VERT legend — not needed for extraction)
+    let sendBuf = buf;
+    try {
+      const pdfDoc = await PDFDocument.load(buf);
+      if (pdfDoc.getPageCount() > 1) {
+        pdfDoc.removePage(pdfDoc.getPageCount() - 1);
+        sendBuf = Buffer.from(await pdfDoc.save());
+      }
+    } catch {
+      // If pdf-lib can't parse it, just send the original
+    }
+
+    const b64 = sendBuf.toString('base64');
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
