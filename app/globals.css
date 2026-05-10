@@ -38,3 +38,8 @@ body {
 input, textarea, select, button {
   font-family: inherit;
 }
+
+::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
