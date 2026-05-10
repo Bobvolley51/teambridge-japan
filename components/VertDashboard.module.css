@@ -174,6 +174,100 @@
   font-size: 11px;
 }
 
+.legendBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legendSwatches {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.legendToggle {
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.legendToggle:hover { border-color: #9ca3af; color: #374151; }
+
+.legendTable {
+  margin-top: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lgTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.lgTable thead tr { background: #f9fafb; }
+
+.lgThMetric {
+  padding: 7px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  width: 140px;
+  white-space: nowrap;
+}
+
+.lgThDesc {
+  padding: 7px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.lgTh {
+  padding: 7px 12px;
+  font-weight: 700;
+  border-bottom: 2px solid #e5e7eb;
+  text-align: center;
+  width: 90px;
+}
+
+.lgRow:nth-child(even) { background: #f9fafb; }
+
+.lgTdMetric {
+  padding: 6px 10px;
+  font-weight: 600;
+  color: #111827;
+  border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
+}
+
+.lgTdDesc {
+  padding: 6px 10px;
+  color: #6b7280;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 11px;
+}
+
+.lgTd {
+  padding: 6px 12px;
+  text-align: center;
+  border-bottom: 1px solid #f3f4f6;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .lgGreen { color: #059669; font-weight: 600; }
 .lgAmber { color: #d97706; font-weight: 600; }
 .lgRed   { color: #dc2626; font-weight: 600; }

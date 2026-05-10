@@ -67,6 +67,7 @@ export default function VertDashboard({ lang, profile }) {
   const [players,    setPlayers]    = useState([]);
   const [sessions,   setSessions]   = useState([]);
   const [timeRange,  setTimeRange]  = useState('7d');
+  const [showLegend, setShowLegend] = useState(false);
 
   // Upload flow state
   // sessions: [{ sessionName, sessionDate, rows, fileName }]
@@ -345,12 +346,55 @@ export default function VertDashboard({ lang, profile }) {
             </div>
           )}
 
-          <div className={styles.legend}>
-            <span className={styles.lgGreen}>{isJa ? '高' : 'High'}</span>
-            <span className={styles.lgAmber}>{isJa ? '中' : 'Med'}</span>
-            <span className={styles.lgRed}>{isJa ? '低' : 'Low'}</span>
-            <span className={styles.lgNote}>· {isJa ? '着地衝撃は逆スケール' : 'Landing impact: inverted scale'}</span>
+          <div className={styles.legendBar}>
+            <div className={styles.legendSwatches}>
+              <span className={styles.lgGreen}>{isJa ? '高' : 'High'}</span>
+              <span className={styles.lgAmber}>{isJa ? '中' : 'Med'}</span>
+              <span className={styles.lgRed}>{isJa ? '低' : 'Low'}</span>
+              <span className={styles.lgNote}>· {isJa ? '着地衝撃は逆スケール' : 'Landing impact: inverted scale'}</span>
+            </div>
+            <button className={styles.legendToggle} onClick={() => setShowLegend(v => !v)}>
+              {showLegend ? (isJa ? '閉じる ▲' : 'Hide legend ▲') : (isJa ? '凡例を表示 ▼' : 'Show legend ▼')}
+            </button>
           </div>
+
+          {showLegend && (
+            <div className={styles.legendTable}>
+              <table className={styles.lgTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.lgThMetric}>{isJa ? '指標' : 'Metric'}</th>
+                    <th className={styles.lgThDesc}>{isJa ? '説明' : 'Description'}</th>
+                    <th className={`${styles.lgTh} ${styles.lgRed}`}>{isJa ? '低' : 'Low'}</th>
+                    <th className={`${styles.lgTh} ${styles.lgAmber}`}>{isJa ? '中' : 'Medium'}</th>
+                    <th className={`${styles.lgTh} ${styles.lgGreen}`}>{isJa ? '高' : 'High'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'Jumps (OH/M)',       desc: 'Total jumps counted',                           low: '<90',    mid: '90–119',     hi: '≥120' },
+                    { label: 'Avg High Jump',       desc: 'Average of top 25% of jump heights',           low: '<40 cm', mid: '40–49 cm',   hi: '≥50 cm' },
+                    { label: 'JPAM',               desc: 'Jumps per active minute',                       low: '<0.7',   mid: '0.7–1.2',    hi: '≥1.2' },
+                    { label: 'Avg High Jump Power', desc: 'Jump quickness (jumps over 38 cm)',            low: '<40',    mid: '40–54',      hi: '≥55' },
+                    { label: 'Energy',             desc: 'How hard the athlete works their body (J/kg)',  low: '<4500',  mid: '4500–6499',  hi: '≥6500' },
+                    { label: 'Sets by Energy',     desc: 'Equivalent sets played based on energy',        low: '<2',     mid: '2–4',        hi: '≥5' },
+                    { label: 'Intensity',          desc: 'Workload per minute (J/kg/min)',                low: '<55',    mid: '55–89',      hi: '≥90' },
+                    { label: 'Hi Impact %',        desc: 'Peak acceleration ≥15 G & <20 G — hard landings (lower is better)',    low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
+                    { label: 'Alert %',            desc: 'Peak acceleration ≥20 G — harder landings (lower is better)',          low: '≥10%', mid: '5–9%',   hi: '<5%',  inv: true },
+                    { label: 'Elevated %',         desc: 'Hi Impact + Alert combined (lower is better)',                          low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
+                  ].map(r => (
+                    <tr key={r.label} className={styles.lgRow}>
+                      <td className={styles.lgTdMetric}>{r.label}</td>
+                      <td className={styles.lgTdDesc}>{r.desc}</td>
+                      <td className={`${styles.lgTd} ${r.inv ? styles.red : styles.red}`}>{r.low}</td>
+                      <td className={`${styles.lgTd} ${styles.amber}`}>{r.mid}</td>
+                      <td className={`${styles.lgTd} ${r.inv ? styles.green : styles.green}`}>{r.hi}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
