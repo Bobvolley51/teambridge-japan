@@ -1,6 +1,5 @@
 // Free PDF text extraction — no AI API key required.
-// If VERT changes their report layout and parsing breaks, set ANTHROPIC_API_KEY
-// in Vercel env vars and this route will automatically use Claude as fallback.
+// Uses pdf-parse v1 to extract raw text then regex-parses the VERT report layout.
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -14,19 +13,19 @@ function parseNum(s) {
 }
 
 function parseDate(text) {
-  // "May 7, 2026 @ 5:50PM"  or  "7 May 2026"
   const m = text.match(/(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i);
   if (!m) return null;
   const d = new Date(m[1]);
   return isNaN(d) ? null : d.toISOString().slice(0, 10);
 }
 
-// Single capitalized word that isn't a PDF header keyword
 const SKIP = new Set([
   'JUMP','JUMPS','LANDING','WORK','BREAKDOWN','NONE','ENERGY','INTENSITY','SETS',
   'TEAM','SESSION','AVERAGES','POSITION','REPORT','AVERAGE','HIGH','ALERT',
   'ELEVATED','IMPACT','POWER','ACTIVE','MINUTE','INSIDER','VERT','ENTRY','NO',
+  'AVG','HI','MAX','JUMP','COACH','SESSION','PRACTICE','MATCH','GAME',
 ]);
+
 function isName(s) {
   return /^[A-ZÜÖÄ][a-zA-ZüöäÜÖÄß-]{1,25}$/.test(s) && !SKIP.has(s.toUpperCase());
 }
@@ -41,7 +40,6 @@ function extractSection(lines, fromKeyword, toKeyword) {
 }
 
 function parseRows(secLines, numCount) {
-  // Find pattern: Name → None → N numbers
   const map = {};
   let i = 0;
   while (i < secLines.length) {
@@ -67,10 +65,9 @@ function parseRows(secLines, numCount) {
 function parseVertText(raw) {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Session name: looks like "Practice - 1" or "Match - 3"
   let sessionName = '';
   let sessionDate = '';
-  for (const line of lines.slice(0, 30)) {
+  for (const line of lines.slice(0, 40)) {
     if (!sessionName && /^(Practice|Match|Game|Training|Scrimmage)\s*[-–]\s*\d+/i.test(line)) {
       sessionName = line;
     }
@@ -81,10 +78,9 @@ function parseVertText(raw) {
     if (sessionName && sessionDate) break;
   }
 
-  // Jump section → [jumps, avg_hi_jump_cm, jpam, avg_hi_jump_power]
-  const jumpSec  = extractSection(lines, 'JUMP BREAKDOWN',    'LANDING BREAKDOWN');
-  const landSec  = extractSection(lines, 'LANDING BREAKDOWN', 'WORK BREAKDOWN');
-  const workSec  = extractSection(lines, 'WORK BREAKDOWN');
+  const jumpSec = extractSection(lines, 'JUMP BREAKDOWN',    'LANDING BREAKDOWN');
+  const landSec = extractSection(lines, 'LANDING BREAKDOWN', 'WORK BREAKDOWN');
+  const workSec = extractSection(lines, 'WORK BREAKDOWN');
 
   const jumpMap = parseRows(jumpSec, 4);
   const landMap = parseRows(landSec, 3);
@@ -134,10 +130,9 @@ export async function POST(req) {
 
   const result = parseVertText(rawText);
 
-  // If the parser found no players, include raw text so the UI can show a helpful message
   if (result.players.length === 0) {
-    result._raw    = rawText.slice(0, 2000); // first 2000 chars for debugging
-    result._notice = 'No players found — check _raw to see what was extracted';
+    result._raw    = rawText.slice(0, 3000);
+    result._notice = 'No players found — check _raw to see extracted text';
   }
 
   return Response.json(result);

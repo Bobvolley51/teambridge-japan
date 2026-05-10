@@ -69,14 +69,14 @@ export default function VertDashboard({ lang, profile }) {
   const [timeRange,  setTimeRange]  = useState('7d');
 
   // Upload flow state
-  const [uploadState, setUploadState] = useState('idle');  // 'idle' | 'parsing' | 'review'
-  const [parseError,  setParseError]  = useState('');
-  const [sessionName, setSessionName] = useState('');
-  const [sessionDate, setSessionDate] = useState('');
-  const [rows,        setRows]        = useState([]);
-  const [saving,      setSaving]      = useState(false);
-  const [savedMsg,    setSavedMsg]    = useState('');
-  const [dragOver,    setDragOver]    = useState(false);
+  // sessions: [{ sessionName, sessionDate, rows, fileName }]
+  const [uploadState,   setUploadState]   = useState('idle'); // 'idle'|'parsing'|'review'
+  const [parseError,    setParseError]    = useState('');
+  const [parsedSessions,setParsedSessions]= useState([]);     // multi-session review
+  const [activeSession, setActiveSession] = useState(0);      // which session tab is open
+  const [saving,        setSaving]        = useState(false);
+  const [savedMsg,      setSavedMsg]      = useState('');
+  const [dragOver,      setDragOver]      = useState(false);
   const fileInputRef = useRef();
 
   const isJa      = lang === 'ja';
@@ -106,54 +106,60 @@ export default function VertDashboard({ lang, profile }) {
     return match?.id || '';
   }
 
-  async function handleFile(file) {
-    if (!file || file.type !== 'application/pdf') {
-      setParseError(isJa ? 'PDFファイルを選択してください' : 'Please select a PDF file');
+  async function parseOneFile(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const res  = await fetch('/api/parse-vert', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Parse failed');
+    return data;
+  }
+
+  function buildRows(playerData, playerList) {
+    return (playerData || []).map(p => ({
+      vert_name:         p.vert_name         ?? '',
+      user_id:           autoMatchPlayer(p.vert_name ?? '', playerList),
+      jumps:             p.jumps             ?? '',
+      avg_hi_jump_cm:    p.avg_hi_jump_cm    ?? '',
+      jpam:              p.jpam              ?? '',
+      avg_hi_jump_power: p.avg_hi_jump_power ?? '',
+      high_impact_pct:   p.high_impact_pct   ?? '',
+      alert_impact_pct:  p.alert_impact_pct  ?? '',
+      elevated_pct:      p.elevated_pct      ?? '',
+      energy:            p.energy            ?? '',
+      sets_by_energy:    p.sets_by_energy    ?? '',
+      intensity:         p.intensity         ?? '',
+    }));
+  }
+
+  async function handleFiles(fileList) {
+    const files = [...fileList].filter(f => f.type === 'application/pdf');
+    if (!files.length) {
+      setParseError(isJa ? 'PDFファイルを選択してください' : 'Please select PDF files');
       return;
     }
     setParseError('');
     setUploadState('parsing');
 
-    const form = new FormData();
-    form.append('file', file);
-
     try {
-      const res  = await fetch('/api/parse-vert', { method: 'POST', body: form });
-      const data = await res.json();
+      const results = await Promise.all(files.map(parseOneFile));
+      const successful = results.filter(r => r.players?.length > 0);
 
-      if (!res.ok || data.error) {
-        setParseError((data.error || 'Parse failed') + (data._raw ? ` — raw preview: "${data._raw.slice(0, 200)}"` : ''));
-        setUploadState('idle');
-        return;
-      }
-
-      if (!data.players?.length) {
+      if (!successful.length) {
         setParseError(isJa
           ? 'データが見つかりませんでした。VERT Session Report PDF（Coach Reportではなく）をアップロードしてください。'
-          : 'No player data found. Make sure you upload the VERT Session Report PDF (not the Coach Report).');
+          : 'No player data found. Use the VERT Session Report PDF, not the Coach Report.');
         setUploadState('idle');
         return;
       }
 
-      // Build rows, auto-matching player names against current players list
-      const mappedRows = (data.players || []).map(p => ({
-        vert_name:         p.vert_name   ?? '',
-        user_id:           autoMatchPlayer(p.vert_name ?? '', players),
-        jumps:             p.jumps             ?? '',
-        avg_hi_jump_cm:    p.avg_hi_jump_cm    ?? '',
-        jpam:              p.jpam              ?? '',
-        avg_hi_jump_power: p.avg_hi_jump_power ?? '',
-        high_impact_pct:   p.high_impact_pct   ?? '',
-        alert_impact_pct:  p.alert_impact_pct  ?? '',
-        elevated_pct:      p.elevated_pct      ?? '',
-        energy:            p.energy            ?? '',
-        sets_by_energy:    p.sets_by_energy    ?? '',
-        intensity:         p.intensity         ?? '',
-      }));
-
-      setSessionName(data.session_name || '');
-      setSessionDate(data.session_date || new Date().toISOString().slice(0, 10));
-      setRows(mappedRows);
+      setParsedSessions(successful.map((data, i) => ({
+        fileName:    files[i]?.name || `Session ${i + 1}`,
+        sessionName: data.session_name || '',
+        sessionDate: data.session_date || new Date().toISOString().slice(0, 10),
+        rows:        buildRows(data.players, players),
+      })));
+      setActiveSession(0);
       setUploadState('review');
     } catch (err) {
       setParseError(err.message || 'Network error');
@@ -164,56 +170,69 @@ export default function VertDashboard({ lang, profile }) {
   function handleDrop(e) {
     e.preventDefault();
     setDragOver(false);
-    handleFile(e.dataTransfer.files[0]);
+    handleFiles(e.dataTransfer.files);
   }
 
-  function handleRowChange(idx, field, val) {
-    setRows(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
+  function updateSession(sIdx, field, val) {
+    setParsedSessions(prev => prev.map((s, i) => i === sIdx ? { ...s, [field]: val } : s));
+  }
+
+  function updateRow(sIdx, rIdx, field, val) {
+    setParsedSessions(prev => prev.map((s, i) => {
+      if (i !== sIdx) return s;
+      const rows = [...s.rows];
+      rows[rIdx] = { ...rows[rIdx], [field]: val };
       if (field === 'vert_name' && val) {
         const matched = autoMatchPlayer(val, players);
-        if (matched) next[idx] = { ...next[idx], user_id: matched };
+        if (matched) rows[rIdx] = { ...rows[rIdx], user_id: matched };
       }
-      return next;
-    });
+      return { ...s, rows };
+    }));
   }
 
-  async function handleSave() {
-    const valid = rows.filter(r => r.vert_name);
-    if (!sessionName || !sessionDate || !valid.length) return;
+  function removeRow(sIdx, rIdx) {
+    setParsedSessions(prev => prev.map((s, i) =>
+      i === sIdx ? { ...s, rows: s.rows.filter((_, j) => j !== rIdx) } : s
+    ));
+  }
+
+  async function handleSaveAll() {
     setSaving(true);
-
     const map = loadMap();
-    valid.forEach(r => { if (r.vert_name && r.user_id) map[r.vert_name.trim().toLowerCase()] = r.user_id; });
+
+    for (const sess of parsedSessions) {
+      const valid = sess.rows.filter(r => r.vert_name);
+      if (!sess.sessionName || !sess.sessionDate || !valid.length) continue;
+
+      valid.forEach(r => { if (r.vert_name && r.user_id) map[r.vert_name.trim().toLowerCase()] = r.user_id; });
+
+      await supabase.from('vert_sessions').insert(
+        valid.map(r => ({
+          session_name:      sess.sessionName,
+          session_date:      sess.sessionDate,
+          vert_name:         r.vert_name,
+          user_id:           r.user_id || null,
+          jumps:             r.jumps             !== '' ? parseInt(r.jumps)               : null,
+          avg_hi_jump_cm:    r.avg_hi_jump_cm    !== '' ? parseFloat(r.avg_hi_jump_cm)    : null,
+          jpam:              r.jpam              !== '' ? parseFloat(r.jpam)               : null,
+          avg_hi_jump_power: r.avg_hi_jump_power !== '' ? parseFloat(r.avg_hi_jump_power) : null,
+          high_impact_pct:   r.high_impact_pct   !== '' ? parseInt(r.high_impact_pct)     : null,
+          alert_impact_pct:  r.alert_impact_pct  !== '' ? parseInt(r.alert_impact_pct)    : null,
+          elevated_pct:      r.elevated_pct      !== '' ? parseInt(r.elevated_pct)        : null,
+          energy:            r.energy            !== '' ? parseInt(r.energy)              : null,
+          sets_by_energy:    r.sets_by_energy    !== '' ? parseFloat(r.sets_by_energy)    : null,
+          intensity:         r.intensity         !== '' ? parseInt(r.intensity)           : null,
+          uploaded_by:       profile?.id,
+        }))
+      );
+    }
+
     saveMap(map);
-
-    await supabase.from('vert_sessions').insert(
-      valid.map(r => ({
-        session_name:      sessionName,
-        session_date:      sessionDate,
-        vert_name:         r.vert_name,
-        user_id:           r.user_id || null,
-        jumps:             r.jumps             !== '' ? parseInt(r.jumps)              : null,
-        avg_hi_jump_cm:    r.avg_hi_jump_cm    !== '' ? parseFloat(r.avg_hi_jump_cm)   : null,
-        jpam:              r.jpam              !== '' ? parseFloat(r.jpam)              : null,
-        avg_hi_jump_power: r.avg_hi_jump_power !== '' ? parseFloat(r.avg_hi_jump_power): null,
-        high_impact_pct:   r.high_impact_pct   !== '' ? parseInt(r.high_impact_pct)    : null,
-        alert_impact_pct:  r.alert_impact_pct  !== '' ? parseInt(r.alert_impact_pct)   : null,
-        elevated_pct:      r.elevated_pct      !== '' ? parseInt(r.elevated_pct)       : null,
-        energy:            r.energy            !== '' ? parseInt(r.energy)             : null,
-        sets_by_energy:    r.sets_by_energy    !== '' ? parseFloat(r.sets_by_energy)   : null,
-        intensity:         r.intensity         !== '' ? parseInt(r.intensity)          : null,
-        uploaded_by:       profile?.id,
-      }))
-    );
-
     setSaving(false);
-    setSavedMsg(isJa ? '保存しました ✓' : 'Saved ✓');
+    setSavedMsg(isJa ? `${parsedSessions.length}セッション保存しました ✓` : `${parsedSessions.length} session${parsedSessions.length > 1 ? 's' : ''} saved ✓`);
     setTimeout(() => setSavedMsg(''), 3000);
     setUploadState('idle');
-    setRows([]);
-    setSessionName('');
+    setParsedSessions([]);
     await loadSessions();
     setView('stats');
   }
@@ -328,13 +347,13 @@ export default function VertDashboard({ lang, profile }) {
             onClick={() => fileInputRef.current?.click()}>
             <div className={styles.dropIcon}>📄</div>
             <div className={styles.dropTitle}>
-              {isJa ? 'VERT Session Report PDF をドロップ' : 'Drop the VERT Session Report PDF here'}
+              {isJa ? 'VERT Session Report PDF をドロップ' : 'Drop VERT Session Report PDFs here'}
             </div>
             <div className={styles.dropSub}>
-              {isJa ? 'またはクリックしてファイルを選択' : 'or click to browse'}
+              {isJa ? '複数ファイル可 · クリックして選択' : 'Multiple files supported · or click to browse'}
             </div>
-            <input ref={fileInputRef} type="file" accept="application/pdf" className={styles.fileHidden}
-              onChange={e => handleFile(e.target.files[0])} />
+            <input ref={fileInputRef} type="file" accept="application/pdf" multiple className={styles.fileHidden}
+              onChange={e => handleFiles(e.target.files)} />
           </div>
           {parseError && <div className={styles.parseError}>{parseError}</div>}
         </div>
@@ -345,91 +364,106 @@ export default function VertDashboard({ lang, profile }) {
         <div className={styles.parsingState}>
           <div className={styles.spinner} />
           <div className={styles.parsingText}>
-            {isJa ? 'PDFを解析中…' : 'Reading PDF…'}
+            {isJa ? 'PDFを解析中…' : 'Reading PDFs…'}
           </div>
         </div>
       )}
 
-      {/* ── UPLOAD: REVIEW ─────────────────────────────────── */}
+      {/* ── UPLOAD: REVIEW (multi-session) ─────────────────── */}
       {view === 'upload' && canUpload && uploadState === 'review' && (
         <div className={styles.uploadView}>
-          <div className={styles.reviewHeader}>
-            <div className={styles.sessionMetaRow}>
-              <label className={styles.metaLabel}>{isJa ? 'セッション名' : 'Session'}</label>
-              <input className={styles.metaInput} value={sessionName}
-                onChange={e => setSessionName(e.target.value)} />
-              <label className={styles.metaLabel}>{isJa ? '日付' : 'Date'}</label>
-              <input className={styles.metaInput} type="date" value={sessionDate}
-                onChange={e => setSessionDate(e.target.value)} />
-            </div>
-            <p className={styles.reviewHint}>
-              {isJa
-                ? 'PDFから読み取ったデータです。選手の紐付けを確認して「保存」してください。'
-                : 'Data read from PDF. Check the player links then save.'}
-            </p>
-          </div>
+          <p className={styles.reviewHint}>
+            {isJa
+              ? `${parsedSessions.length}件のセッションを読み込みました。選手の紐付けを確認して「すべて保存」してください。`
+              : `${parsedSessions.length} session${parsedSessions.length > 1 ? 's' : ''} read. Check player links then save all.`}
+          </p>
 
-          <div className={styles.tableScroll}>
-            <table className={styles.uploadTable}>
-              <thead>
-                <tr>
-                  <th className={styles.thVertName}>VERT Name</th>
-                  <th className={styles.thPlayer}>{isJa ? 'アプリ選手' : 'Player'}</th>
-                  <th>Jumps</th><th>Hi Jump cm</th><th>JPAM</th><th>Jump Power</th>
-                  <th>Hi Impact%</th><th>Alert%</th><th>Elevated%</th>
-                  <th>Energy</th><th>Sets</th><th>Intensity</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => (
-                  <tr key={idx} className={row.user_id ? '' : styles.trUnlinked}>
-                    <td>
-                      <input className={styles.cellInput} value={row.vert_name}
-                        onChange={e => handleRowChange(idx, 'vert_name', e.target.value)} />
-                    </td>
-                    <td>
-                      <select className={`${styles.cellSelect} ${row.user_id ? styles.cellSelectLinked : ''}`}
-                        value={row.user_id}
-                        onChange={e => handleRowChange(idx, 'user_id', e.target.value)}>
-                        <option value="">— unlinked —</option>
-                        {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-                      </select>
-                    </td>
-                    {NUMERIC_FIELDS.map(field => (
-                      <td key={field}>
-                        <input className={styles.cellInput} type="number" value={row[field] ?? ''}
-                          step={DECIMAL_FIELDS.has(field) ? '0.1' : '1'}
-                          onChange={e => handleRowChange(idx, field, e.target.value)} />
-                      </td>
-                    ))}
-                    <td>
-                      <button className={styles.removeBtn} onClick={() => setRows(r => r.filter((_, i) => i !== idx))}>×</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {rows.some(r => !r.user_id) && (
-            <div className={styles.unlinkWarn}>
-              {isJa
-                ? '⚠ 紐付けされていない選手がいます。後でマッピングを設定することもできます。'
-                : '⚠ Some players are unlinked. You can link them later by re-uploading.'}
+          {/* Session tabs */}
+          {parsedSessions.length > 1 && (
+            <div className={styles.sessionTabs}>
+              {parsedSessions.map((s, i) => (
+                <button key={i}
+                  className={`${styles.sessionTab} ${activeSession === i ? styles.sessionTabActive : ''}`}
+                  onClick={() => setActiveSession(i)}>
+                  {s.sessionName || s.fileName}
+                  {s.rows.some(r => !r.user_id) && <span className={styles.warnDot}>!</span>}
+                </button>
+              ))}
             </div>
           )}
 
+          {parsedSessions.map((sess, sIdx) => sIdx !== activeSession ? null : (
+            <div key={sIdx}>
+              <div className={styles.sessionMetaRow}>
+                <label className={styles.metaLabel}>{isJa ? 'セッション名' : 'Session'}</label>
+                <input className={styles.metaInput} value={sess.sessionName}
+                  onChange={e => updateSession(sIdx, 'sessionName', e.target.value)} />
+                <label className={styles.metaLabel}>{isJa ? '日付' : 'Date'}</label>
+                <input className={styles.metaInput} type="date" value={sess.sessionDate}
+                  onChange={e => updateSession(sIdx, 'sessionDate', e.target.value)} />
+              </div>
+
+              <div className={styles.tableScroll}>
+                <table className={styles.uploadTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.thVertName}>VERT Name</th>
+                      <th className={styles.thPlayer}>{isJa ? 'アプリ選手' : 'Player'}</th>
+                      <th>Jumps</th><th>Hi Jump cm</th><th>JPAM</th><th>Jump Power</th>
+                      <th>Hi Impact%</th><th>Alert%</th><th>Elevated%</th>
+                      <th>Energy</th><th>Sets</th><th>Intensity</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sess.rows.map((row, rIdx) => (
+                      <tr key={rIdx} className={row.user_id ? '' : styles.trUnlinked}>
+                        <td>
+                          <input className={styles.cellInput} value={row.vert_name}
+                            onChange={e => updateRow(sIdx, rIdx, 'vert_name', e.target.value)} />
+                        </td>
+                        <td>
+                          <select className={`${styles.cellSelect} ${row.user_id ? styles.cellSelectLinked : ''}`}
+                            value={row.user_id}
+                            onChange={e => updateRow(sIdx, rIdx, 'user_id', e.target.value)}>
+                            <option value="">— unlinked —</option>
+                            {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+                          </select>
+                        </td>
+                        {NUMERIC_FIELDS.map(field => (
+                          <td key={field}>
+                            <input className={styles.cellInput} type="number" value={row[field] ?? ''}
+                              step={DECIMAL_FIELDS.has(field) ? '0.1' : '1'}
+                              onChange={e => updateRow(sIdx, rIdx, field, e.target.value)} />
+                          </td>
+                        ))}
+                        <td>
+                          <button className={styles.removeBtn} onClick={() => removeRow(sIdx, rIdx)}>×</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {sess.rows.some(r => !r.user_id) && (
+                <div className={styles.unlinkWarn}>
+                  {isJa ? '⚠ 紐付けされていない選手がいます' : '⚠ Some players are unlinked — link them now or they will be saved without a profile connection'}
+                </div>
+              )}
+            </div>
+          ))}
+
           <div className={styles.uploadActions}>
-            <button className={styles.cancelBtn} onClick={() => setUploadState('idle')}>
+            <button className={styles.cancelBtn} onClick={() => { setUploadState('idle'); setParsedSessions([]); }}>
               {isJa ? '← 戻る' : '← Back'}
             </button>
             <div className={styles.actionsRight}>
               {savedMsg && <span className={styles.savedMsg}>{savedMsg}</span>}
               <button className={styles.saveBtn}
-                disabled={saving || !sessionName || rows.length === 0}
-                onClick={handleSave}>
-                {saving ? '…' : (isJa ? '保存する' : 'Save Session')}
+                disabled={saving || parsedSessions.length === 0}
+                onClick={handleSaveAll}>
+                {saving ? '…' : (isJa ? 'すべて保存する' : `Save All${parsedSessions.length > 1 ? ` (${parsedSessions.length})` : ''}`)}
               </button>
             </div>
           </div>

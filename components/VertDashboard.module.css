@@ -291,6 +291,49 @@
 
 .cancelBtn:hover { border-color: #9ca3af; }
 
+/* Multi-session tabs */
+.sessionTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.sessionTab {
+  padding: 6px 14px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+
+.sessionTabActive {
+  background: #fff;
+  border-color: #7e0027;
+  color: #7e0027;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.warnDot {
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .sessionMeta {
   display: flex;
   align-items: center;
