@@ -143,12 +143,23 @@ export default function VertDashboard({ lang, profile }) {
 
     try {
       const results = await Promise.all(files.map(parseOneFile));
+
+      // Check for missing API key
+      const noKey = results.find(r => r.error === 'NO_API_KEY');
+      if (noKey) {
+        setParseError(isJa
+          ? 'PDFの解析にはANTHROPIC_API_KEYが必要です。VercelのEnvironment Variablesに追加してください（1回のアップロードは約0.2円）。'
+          : 'PDF parsing requires an Anthropic API key (~$0.002/upload). Add ANTHROPIC_API_KEY in your Vercel project → Settings → Environment Variables, then redeploy.');
+        setUploadState('idle');
+        return;
+      }
+
       const successful = results.filter(r => r.players?.length > 0);
 
       if (!successful.length) {
-        const firstRaw = results[0]?._raw || '';
-        if (firstRaw) console.log('[VERT raw text]', firstRaw);
-        setParseError('No players found. Check browser console for raw text, or paste it here:\n\n' + firstRaw.slice(0, 600));
+        setParseError(isJa
+          ? 'データが見つかりませんでした。VERT Session Report PDFを使用してください（Coach Reportではなく）。'
+          : 'No player data found. Use the VERT Session Report PDF, not the Coach Report.');
         setUploadState('idle');
         return;
       }

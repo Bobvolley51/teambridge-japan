@@ -1,147 +1,91 @@
-// Free PDF text extraction using unpdf (serverless-safe, no worker required).
-// No API key required — zero cost per upload.
+// VERT PDF parser.
+//
+// VERT PDFs use custom font encoding that free text-extraction libraries can't
+// decode (pdfjs returns empty strings). Claude reads the PDF visually and
+// extracts the structured data reliably for ~$0.002 per upload.
+//
+// Requires ANTHROPIC_API_KEY in Vercel environment variables.
+// Without it the route returns a clear error so the UI can fall back to
+// manual entry.
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-// ── PDF text extraction ────────────────────────────────────────────────────────
+const PROMPT = `Extract the per-player data from this VERT session report PDF.
 
-async function extractText(buf) {
-  const { extractText: unpdfExtract } = await import('unpdf');
-  const { text } = await unpdfExtract(new Uint8Array(buf), { mergePages: true });
-  return text || '';
-}
-
-// ── VERT text parser ───────────────────────────────────────────────────────────
-
-function parseNum(s) {
-  if (s == null) return null;
-  const n = parseFloat(String(s).replace(/[^\d.]/g, ''));
-  return isNaN(n) ? null : n;
-}
-
-function parseDate(text) {
-  const m = text.match(/(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i);
-  if (!m) return null;
-  const d = new Date(m[1]);
-  return isNaN(d) ? null : d.toISOString().slice(0, 10);
-}
-
-const SKIP = new Set([
-  'JUMP','JUMPS','LANDING','WORK','BREAKDOWN','NONE','ENERGY','INTENSITY','SETS',
-  'TEAM','SESSION','AVERAGES','POSITION','REPORT','AVERAGE','HIGH','ALERT',
-  'ELEVATED','IMPACT','POWER','ACTIVE','MINUTE','INSIDER','VERT','ENTRY','NO',
-  'AVG','HI','MAX','COACH','PRACTICE','MATCH','GAME','TRAINING',
-]);
-
-function isName(s) {
-  return /^[A-ZÜÖÄ][a-zA-ZüöäÜÖÄß-]{1,25}$/.test(s) && !SKIP.has(s.toUpperCase());
-}
-
-function extractSection(lines, fromKeyword, toKeyword) {
-  const from = lines.findIndex(l => new RegExp(fromKeyword, 'i').test(l));
-  if (from < 0) return [];
-  const to = toKeyword
-    ? lines.findIndex((l, i) => i > from && new RegExp(toKeyword, 'i').test(l))
-    : -1;
-  return lines.slice(from + 1, to > from ? to : undefined);
-}
-
-function parseRows(secLines, numCount) {
-  const map = {};
-  let i = 0;
-  while (i < secLines.length) {
-    const cur  = secLines[i];
-    const next = secLines[i + 1];
-    if (isName(cur) && next?.toUpperCase() === 'NONE') {
-      const name = cur;
-      const nums = [];
-      let j = i + 2;
-      while (j < secLines.length && nums.length < numCount + 3) {
-        if (isName(secLines[j]) && secLines[j + 1]?.toUpperCase() === 'NONE') break;
-        const n = parseNum(secLines[j]);
-        if (n !== null) nums.push(n);
-        j++;
-      }
-      map[name] = nums;
-      i = j;
-    } else {
-      i++;
+Return ONLY valid JSON — no markdown, no explanation:
+{
+  "session_name": "Practice - 1",
+  "session_date": "YYYY-MM-DD",
+  "players": [
+    {
+      "vert_name": "Yamamoto",
+      "jumps": 63,
+      "avg_hi_jump_cm": 67.6,
+      "jpam": 1.0,
+      "avg_hi_jump_power": 54.1,
+      "high_impact_pct": 8,
+      "alert_impact_pct": 3,
+      "elevated_pct": 10,
+      "energy": 2942,
+      "sets_by_energy": 3.3,
+      "intensity": 49
     }
-  }
-  return map;
+  ]
 }
 
-function parseVertText(raw) {
-  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-
-  let sessionName = '';
-  let sessionDate = '';
-  for (const line of lines.slice(0, 60)) {
-    if (!sessionName && /^(Practice|Match|Game|Training|Scrimmage)\s*[-–]\s*\d+/i.test(line)) {
-      sessionName = line;
-    }
-    if (!sessionDate) {
-      const d = parseDate(line);
-      if (d) sessionDate = d;
-    }
-    if (sessionName && sessionDate) break;
-  }
-
-  const jumpSec = extractSection(lines, 'JUMP BREAKDOWN',    'LANDING BREAKDOWN');
-  const landSec = extractSection(lines, 'LANDING BREAKDOWN', 'WORK BREAKDOWN');
-  const workSec = extractSection(lines, 'WORK BREAKDOWN');
-
-  const jumpMap = parseRows(jumpSec, 4);
-  const landMap = parseRows(landSec, 3);
-  const workMap = parseRows(workSec, 3);
-
-  const allNames = new Set([...Object.keys(jumpMap), ...Object.keys(landMap), ...Object.keys(workMap)]);
-
-  const players = [...allNames].map(name => {
-    const j = jumpMap[name] || [];
-    const l = landMap[name] || [];
-    const w = workMap[name] || [];
-    return {
-      vert_name:         name,
-      jumps:             j[0] ?? null,
-      avg_hi_jump_cm:    j[1] ?? null,
-      jpam:              j[2] ?? null,
-      avg_hi_jump_power: j[3] ?? null,
-      high_impact_pct:   l[0] ?? null,
-      alert_impact_pct:  l[1] ?? null,
-      elevated_pct:      l[2] ?? null,
-      energy:            w[0] ?? null,
-      sets_by_energy:    w[1] ?? null,
-      intensity:         w[2] ?? null,
-    };
-  });
-
-  return { session_name: sessionName, session_date: sessionDate, players };
-}
-
-// ── Route handler ──────────────────────────────────────────────────────────────
+Rules:
+- One entry per player row — do NOT include team averages or position averages
+- vert_name: last name only as shown
+- session_date: convert the report date to YYYY-MM-DD
+- elevated_pct: use the ELEVATED (HIGH + ALERT) column from Landing Breakdown
+- Numbers only — no units (cm, %, etc.)
+- Missing values: use null`;
 
 export async function POST(req) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return Response.json({
+      error: 'NO_API_KEY',
+      message: 'VERT PDFs use custom font encoding that free text extraction cannot decode. Add ANTHROPIC_API_KEY to your Vercel environment variables to enable PDF parsing (~$0.002 per upload).',
+    }, { status: 503 });
+  }
+
   const form = await req.formData();
   const file = form.get('file');
   if (!file) return Response.json({ error: 'No file' }, { status: 400 });
 
   const buf = Buffer.from(await file.arrayBuffer());
+  const b64 = buf.toString('base64');
 
-  let rawText;
   try {
-    rawText = await extractText(buf);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type':      'application/json',
+      },
+      body: JSON.stringify({
+        model:      'claude-haiku-4-5-20251001',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+            { type: 'text', text: PROMPT },
+          ],
+        }],
+      }),
+    });
+
+    const ai   = await res.json();
+    const raw  = ai.content?.[0]?.text || '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return Response.json({ error: 'AI returned no JSON', raw }, { status: 422 });
+
+    return Response.json(JSON.parse(match[0]));
   } catch (err) {
-    return Response.json({ error: 'PDF read failed: ' + err.message }, { status: 422 });
+    return Response.json({ error: err.message }, { status: 500 });
   }
-
-  const result = parseVertText(rawText);
-
-  if (result.players.length === 0) {
-    result._raw    = rawText.slice(0, 3000);
-    result._notice = 'No players found';
-  }
-
-  return Response.json(result);
 }
