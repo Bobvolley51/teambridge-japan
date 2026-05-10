@@ -43,22 +43,22 @@ Rules:
 - Missing values: use null`;
 
 export async function POST(req) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return Response.json({
-      error: 'NO_API_KEY',
-      message: 'VERT PDFs use custom font encoding that free text extraction cannot decode. Add ANTHROPIC_API_KEY to your Vercel environment variables to enable PDF parsing (~$0.002 per upload).',
-    }, { status: 503 });
-  }
-
-  const form = await req.formData();
-  const file = form.get('file');
-  if (!file) return Response.json({ error: 'No file' }, { status: 400 });
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  const b64 = buf.toString('base64');
-
   try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return Response.json({
+        error: 'NO_API_KEY',
+        message: 'Add ANTHROPIC_API_KEY to Vercel Environment Variables then redeploy.',
+      }, { status: 503 });
+    }
+
+    const form = await req.formData();
+    const file = form.get('file');
+    if (!file) return Response.json({ error: 'No file' }, { status: 400 });
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    const b64 = buf.toString('base64');
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -79,13 +79,18 @@ export async function POST(req) {
       }),
     });
 
-    const ai   = await res.json();
-    const raw  = ai.content?.[0]?.text || '';
+    if (!res.ok) {
+      const errText = await res.text();
+      return Response.json({ error: `Anthropic API error ${res.status}: ${errText}` }, { status: 502 });
+    }
+
+    const ai    = await res.json();
+    const raw   = ai.content?.[0]?.text || '';
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return Response.json({ error: 'AI returned no JSON', raw }, { status: 422 });
 
     return Response.json(JSON.parse(match[0]));
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: err.message, stack: err.stack?.slice(0, 300) }, { status: 500 });
   }
 }
