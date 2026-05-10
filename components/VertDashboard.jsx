@@ -101,7 +101,7 @@ export default function VertDashboard({ lang, profile }) {
     if (saved) return saved;
     const lower = vertName.trim().toLowerCase();
     const match = playerList.find(p =>
-      p.display_name.toLowerCase().split(/\s+/).some(part => part === lower)
+      p.display_name?.toLowerCase().split(/\s+/).some(part => part === lower)
     );
     return match?.id || '';
   }
