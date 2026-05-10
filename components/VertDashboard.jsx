@@ -97,14 +97,20 @@ export default function VertDashboard({ lang, profile }) {
   }
 
   function autoMatchPlayer(vertName, playerList) {
-    if (!vertName) return '';
-    const key   = String(vertName).trim().toLowerCase();
-    const saved = loadMap()[key];
-    if (saved) return saved;
-    const match = playerList.find(p =>
-      p.display_name && String(p.display_name).toLowerCase().split(/\s+/).some(part => part === key)
-    );
-    return match?.id || '';
+    try {
+      if (!vertName) return '';
+      const key  = String(vertName).trim().toLowerCase();
+      if (!key) return '';
+      const saved = loadMap()[key];
+      if (saved) return saved;
+      const match = (playerList || []).find(p => {
+        if (!p?.display_name) return false;
+        return String(p.display_name).trim().toLowerCase().split(/\s+/).some(part => part === key);
+      });
+      return match?.id || '';
+    } catch {
+      return '';
+    }
   }
 
   async function parseOneFile(file) {

@@ -21,7 +21,7 @@ async function translateMessage(text, targetLang) {
 }
 
 function slugify(str) {
-  return str.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return (str || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
 function dmChannelId(uid1, uid2) {
