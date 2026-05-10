@@ -121,7 +121,9 @@ export async function POST(req) {
 
   let rawText;
   try {
-    const pdfParse = (await import('pdf-parse')).default;
+    // Import the lib file directly — the package entry point runs its own test
+    // suite on load and fails with ENOENT when test PDFs aren't present.
+    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
     const parsed   = await pdfParse(buf);
     rawText = parsed.text;
   } catch (err) {
