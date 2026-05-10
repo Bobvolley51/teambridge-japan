@@ -85,6 +85,7 @@ export default function Dashboard({
   const [wellnessAlerts,  setWellnessAlerts]  = useState([]);
   const [acwrAlerts,      setAcwrAlerts]      = useState([]); // { name, acwr, zone }
   const [overlapAlerts,   setOverlapAlerts]   = useState([]);
+  const [calChanges,      setCalChanges]      = useState([]);
   const [loading,         setLoading]         = useState(true);
 
   useEffect(() => { load(); }, [currentUserInitials, currentUserId, profile?.role]);
@@ -111,6 +112,7 @@ export default function Dashboard({
       { data: taskData },
       { data: wellData },
       { data: rpeData },
+      { data: calChangeData },
     ] = await Promise.all([
       currentUserId
         ? supabase.from('event_participants')
@@ -148,6 +150,14 @@ export default function Dashboard({
             .select('user_id, user_name, event_date, load_au')
             .gte('event_date', (() => { const d = new Date(); d.setDate(d.getDate() - 28); return d.toISOString().slice(0, 10); })())
         : Promise.resolve({ data: [] }),
+      currentUserId
+        ? supabase.from('notifications')
+            .select('id, title, body, created_at, ref_id')
+            .eq('user_id', currentUserId)
+            .eq('type', 'calendar_change')
+            .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
     ]);
 
     // Filter to events in the 7-day window
@@ -176,6 +186,7 @@ export default function Dashboard({
     setMessages(msgData ?? []);
     setAnnouncements(annData ?? []);
     setTasks(taskData ?? []);
+    setCalChanges(calChangeData ?? []);
 
     // Group low-score responses by date + player name
     const warnMap = {};
@@ -247,6 +258,16 @@ export default function Dashboard({
     setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
+  const dismissedCalChanges = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem(`cal_changes_dismissed_${currentUserId}`) || '[]')
+    : [];
+  const visibleCalChanges = calChanges.filter(n => !dismissedCalChanges.includes(n.id));
+  const dismissCalChange = (id) => {
+    const updated = [...dismissedCalChanges, id];
+    localStorage.setItem(`cal_changes_dismissed_${currentUserId}`, JSON.stringify(updated));
+    setCalChanges(prev => prev.filter(n => n.id !== id));
+  };
+
   // Group messages by channel, take 4 most recent per channel (exclude DMs, show only new)
   const channels = {};
   for (const msg of messages) {
@@ -308,6 +329,20 @@ export default function Dashboard({
           </div>
         )}
       </div>
+
+      {/* ── Schedule change banners ── */}
+      {visibleCalChanges.map(n => (
+        <div key={n.id} className={styles.calChangeBanner} onClick={() => onNavigate('calendar')}>
+          <span className={styles.calChangeBannerIcon}>⚠️</span>
+          <div className={styles.calChangeBannerBody}>
+            <div className={styles.calChangeBannerTitle}>
+              {lang === 'ja' ? '⚡ チームスケジュールが変更されました' : '⚡ Team schedule has been changed'}
+            </div>
+            <div className={styles.calChangeBannerSub}>{n.title.replace(/^Event updated: /, '').replace(/^予定変更: /, '')} · {n.body}</div>
+          </div>
+          <button className={styles.calChangeDismiss} onClick={e => { e.stopPropagation(); dismissCalChange(n.id); }}>✕</button>
+        </div>
+      ))}
 
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>

@@ -292,7 +292,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           const others = participantIds.filter(pid => pid !== currentUserId);
           const body   = new Date(payload.start_time).toLocaleString(lang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
           const notifs = others.map(pid => ({
-            user_id: pid, type: 'calendar_invite',
+            user_id: pid, type: 'calendar_change',
             title: lang === 'ja' ? `予定変更: ${payload.title}` : `Event updated: ${payload.title}`,
             body, nav_target: 'calendar', ref_id: event.id,
           }));
