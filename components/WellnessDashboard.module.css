@@ -233,6 +233,26 @@
   font-weight: 700;
 }
 
+.bwCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bwValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.bwChange {
+  font-size: 10px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
 .footRow {
   border-top: 2px solid #e5e7eb;
   background: #f9fafb;

@@ -60,6 +60,19 @@ function avg(arr) {
   return v.length ? parseFloat((v.reduce((s, x) => s + x, 0) / v.length).toFixed(1)) : null;
 }
 
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr);
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow);
+  return toDateStr(d);
+}
+
+function prevWeekStartOf(dateStr) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() - 7);
+  return getWeekStart(toDateStr(d));
+}
+
 // ── SVG Bar Chart ─────────────────────────────────────────────
 
 function BarChart({ data }) {
@@ -137,17 +150,22 @@ export default function WellnessDashboard({ lang }) {
   const [weekRows,   setWeekRows]   = useState([]);
   const [todayPain,  setTodayPain]  = useState([]);
   const [weekPain,   setWeekPain]   = useState([]);
+  const [bwRows,     setBwRows]     = useState([]);
   const [loading,    setLoading]    = useState(true);
 
   // ── Load today ──────────────────────────────────────────────
   const loadToday = useCallback(async () => {
     setLoading(true);
-    const [{ data }, { data: pain }] = await Promise.all([
+    const curWeek  = getWeekStart(date);
+    const prevWeek = prevWeekStartOf(date);
+    const [{ data }, { data: pain }, { data: bw }] = await Promise.all([
       supabase.from('wellness_responses').select('*').eq('response_date', date).order('user_name'),
       supabase.from('wellness_body_pain').select('user_name, body_part').eq('response_date', date),
+      supabase.from('player_bodyweight').select('user_name, weight_kg, week_start').in('week_start', [curWeek, prevWeek]),
     ]);
     setRows(data ?? []);
     setTodayPain(pain ?? []);
+    setBwRows(bw ?? []);
     setLoading(false);
   }, [date]);
 
@@ -158,18 +176,36 @@ export default function WellnessDashboard({ lang }) {
     const dates = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(ws); d.setDate(d.getDate() + i); return toDateStr(d);
     });
-    const [{ data }, { data: pain }] = await Promise.all([
+    const curWeek  = getWeekStart(dates[0]);
+    const prevWeek = prevWeekStartOf(dates[0]);
+    const [{ data }, { data: pain }, { data: bw }] = await Promise.all([
       supabase.from('wellness_responses').select('*').in('response_date', dates).order('user_name'),
       supabase.from('wellness_body_pain').select('user_name, body_part, response_date').in('response_date', dates),
+      supabase.from('player_bodyweight').select('user_name, weight_kg, week_start').in('week_start', [curWeek, prevWeek]),
     ]);
     setWeekRows(data ?? []);
     setWeekPain(pain ?? []);
+    setBwRows(bw ?? []);
     setLoading(false);
   }, [weekOffset]);
 
   useEffect(() => {
     if (tab === 'today') loadToday(); else loadWeek();
   }, [tab, loadToday, loadWeek]);
+
+  // ── Body weight map: { userName: { weekStart: weight_kg } } ─
+  const bwMap = {};
+  for (const r of bwRows) {
+    if (!bwMap[r.user_name]) bwMap[r.user_name] = {};
+    bwMap[r.user_name][r.week_start] = parseFloat(r.weight_kg);
+  }
+  const todayCurWeek  = getWeekStart(date);
+  const todayPrevWeek = prevWeekStartOf(date);
+
+  const ws         = getLast7Start(weekOffset);
+  const weekDates0 = toDateStr(ws);
+  const weekCurWeek  = getWeekStart(weekDates0);
+  const weekPrevWeek = prevWeekStartOf(weekDates0);
 
   // ── Today: derived data ─────────────────────────────────────
   const todayPlayers = {};
@@ -181,7 +217,6 @@ export default function WellnessDashboard({ lang }) {
   const alarmedToday = [...new Set(rows.filter(r => r.score < 5).map(r => r.user_name))];
 
   // ── Week: derived data ──────────────────────────────────────
-  const ws        = getLast7Start(weekOffset);
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(ws); d.setDate(d.getDate() + i); return toDateStr(d);
   });
@@ -267,6 +302,7 @@ export default function WellnessDashboard({ lang }) {
                       <tr>
                         <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
                         {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
+                        <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
                         <th className={styles.th}>{lang === 'ja' ? '平均' : 'Avg'}</th>
                       </tr>
                     </thead>
@@ -274,6 +310,9 @@ export default function WellnessDashboard({ lang }) {
                       {todayList.map(([name, qs]) => {
                         const scores = QUESTIONS.map(q => qs[q.key]);
                         const a = avg(scores);
+                        const curBw  = bwMap[name]?.[todayCurWeek];
+                        const prevBw = bwMap[name]?.[todayPrevWeek];
+                        const pct    = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                         return (
                           <tr key={name} className={styles.tr}>
                             <td className={styles.tdName}>{name}</td>
@@ -282,6 +321,19 @@ export default function WellnessDashboard({ lang }) {
                                 <ScoreBadge score={qs[q.key]} alarm={qs[q.key] != null && qs[q.key] < 5} />
                               </td>
                             ))}
+                            <td className={styles.td}>
+                              {curBw != null
+                                ? <div className={styles.bwCell}>
+                                    <span className={styles.bwValue}>{curBw} kg</span>
+                                    {pct !== null && (
+                                      <span className={styles.bwChange}>
+                                        {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                : <span className={styles.noData}>—</span>
+                              }
+                            </td>
                             <td className={styles.td}>
                               <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
                             </td>
@@ -300,6 +352,7 @@ export default function WellnessDashboard({ lang }) {
                             </td>
                           );
                         })}
+                        <td className={styles.td} />
                         <td className={styles.td} />
                       </tr>
                     </tfoot>
@@ -396,12 +449,16 @@ export default function WellnessDashboard({ lang }) {
                         <tr>
                           <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
                           {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
+                          <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
                           <th className={styles.th}>{lang === 'ja' ? '週平均' : 'Wk avg'}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {weekPlayerList.map(({ name, avgs }) => {
                           const overall = avg(QUESTIONS.map(q => avgs[q.key]));
+                          const curBw   = bwMap[name]?.[weekCurWeek];
+                          const prevBw  = bwMap[name]?.[weekPrevWeek];
+                          const pct     = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                           return (
                             <tr key={name} className={styles.tr}>
                               <td className={styles.tdName}>{name}</td>
@@ -410,6 +467,19 @@ export default function WellnessDashboard({ lang }) {
                                   <ScoreBadge score={avgs[q.key]} alarm={avgs[q.key] != null && avgs[q.key] < 5} />
                                 </td>
                               ))}
+                              <td className={styles.td}>
+                                {curBw != null
+                                  ? <div className={styles.bwCell}>
+                                      <span className={styles.bwValue}>{curBw} kg</span>
+                                      {pct !== null && (
+                                        <span className={styles.bwChange}>
+                                          {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  : <span className={styles.noData}>—</span>
+                                }
+                              </td>
                               <td className={styles.td}>
                                 <span className={styles.avgText} style={{ color: colorOf(overall) }}>{overall ?? '—'}</span>
                               </td>
@@ -428,6 +498,7 @@ export default function WellnessDashboard({ lang }) {
                               </td>
                             );
                           })}
+                          <td className={styles.td} />
                           <td className={styles.td} />
                         </tr>
                       </tfoot>
