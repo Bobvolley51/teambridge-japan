@@ -190,8 +190,14 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   const editStartStr = event ? (event._baseStartTime ?? event.start_time) : null;
   const editEndStr   = event ? (event._baseEndTime   ?? event.end_time)   : null;
 
-  const base         = initialDate ?? new Date();
-  const defaultStartDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), base.getHours() || 10, 0);
+  const now  = new Date();
+  const base = initialDate ?? now;
+  const rm   = Math.ceil(now.getMinutes() / 15) * 15;
+  const nowH = now.getHours() + (rm >= 60 ? 1 : 0);
+  const nowM = rm % 60;
+  const h    = base.getHours() || nowH;
+  const m    = base.getHours() ? 0 : nowM;
+  const defaultStartDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m);
   const defaultStart = toLocalDT(defaultStartDate);
   const initDuration = DEFAULT_DURATION[event?.category ?? 'Ball-Practice'] ?? 60;
   const defaultEnd   = toLocalDT(new Date(defaultStartDate.getTime() + initDuration * 60000));
@@ -279,10 +285,6 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
     }
     if (endDate <= startDate) {
       setError(lang === 'ja' ? '終了は開始より後にしてください。' : 'End must be after start.');
-      return;
-    }
-    if (!isEditing && startDate < new Date(Date.now() + 60 * 60 * 1000)) {
-      setError(lang === 'ja' ? '開始時間は現在から1時間以上先にしてください。' : 'Start time must be at least 1 hour from now.');
       return;
     }
     setSaving(true);
