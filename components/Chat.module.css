@@ -605,6 +605,37 @@
   margin-bottom: 8px;
 }
 
+.modalInput {
+  width: 100%;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.modalInput:focus { border-color: #7e0027; }
+
+.modalSelect {
+  flex: 1;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: auto;
+}
+.modalSelect:focus { border-color: #7e0027; }
+
 .emptyMembers {
   font-size: 13px;
   color: #9ca3af;
