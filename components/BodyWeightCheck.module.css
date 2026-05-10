@@ -1,0 +1,135 @@
+/* components/BodyWeightCheck.module.css */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.headerEmoji { font-size: 34px; }
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.body {
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weightInput {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  width: 140px;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.weightInput:focus { border-color: #d97706; }
+
+.unit {
+  font-size: 22px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.error {
+  font-size: 12px;
+  color: #dc2626;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 24px 16px;
+}
+
+.skipBtn {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.skipBtn:hover { background: #f3f4f6; }
+
+.submitBtn {
+  flex: 2;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px;
+  background: #d97706;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.submitBtn:hover    { background: #b45309; }
+.submitBtn:disabled { background: #fde68a; cursor: not-allowed; color: #92400e; }
+
+.privacyNote {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 0 24px 16px;
+  margin: 0;
+  line-height: 1.5;
+}

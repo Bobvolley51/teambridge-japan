@@ -16,6 +16,7 @@ import WellnessCheck         from '@/components/WellnessCheck';
 import ProfileSetup          from '@/components/ProfileSetup';
 import WellnessDashboard     from '@/components/WellnessDashboard';
 import SessionRPE            from '@/components/SessionRPE';
+import BodyWeightCheck       from '@/components/BodyWeightCheck';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
 import NotificationBell      from '@/components/NotificationBell';
 import PrivacyNotice, { PRIVACY_VERSION } from '@/components/PrivacyNotice';
@@ -69,6 +70,8 @@ export default function Home() {
   const [showWellness,     setShowWellness]     = useState(false);
   const [showRPE,          setShowRPE]          = useState(false);
   const [pendingRPEEvents, setPendingRPEEvents] = useState([]);
+  const [showBodyWeight,   setShowBodyWeight]   = useState(false);
+  const [bwWeekStart,      setBwWeekStart]      = useState('');
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
   const [unreadChat,       setUnreadChat]       = useState(0);
   const [showSearch,       setShowSearch]       = useState(false);
@@ -177,6 +180,46 @@ export default function Home() {
     }
   };
 
+  const checkPendingBodyWeight = async (userId) => {
+    // Monday of current ISO week
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - dow);
+    monday.setHours(0, 0, 0, 0);
+    const weekStart = monday.toISOString().slice(0, 10);
+
+    if (localStorage.getItem(`bw_done_${userId}_${weekStart}`)) return;
+
+    // Check already submitted to DB
+    const { data: existing } = await supabase
+      .from('player_bodyweight')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('week_start', weekStart)
+      .limit(1);
+    if (existing?.length) return;
+
+    // Check for any Weightlifting event this week the player was part of
+    const { data: participation } = await supabase
+      .from('event_participants')
+      .select('event_id')
+      .eq('profile_id', userId);
+    if (!participation?.length) return;
+
+    const { data: events } = await supabase
+      .from('events')
+      .select('id')
+      .in('id', participation.map(p => p.event_id))
+      .eq('category', 'Weightlifting')
+      .gte('start_time', monday.toISOString())
+      .lte('start_time', now.toISOString());
+    if (!events?.length) return;
+
+    setBwWeekStart(weekStart);
+    setShowBodyWeight(true);
+  };
+
   // Load profile + show wellness check once per day on first login
   const loadProfile = async (userId, checkWellness = true) => {
     // fire-and-forget — stamp the user's last active time
@@ -216,8 +259,9 @@ export default function Home() {
           return; // show wellness first; RPE will be checked after
         }
       }
-      // Wellness already done today — check for pending RPE
+      // Wellness already done today — check for pending RPE then body weight
       await checkPendingRPE(userId);
+      await checkPendingBodyWeight(userId);
     }
 
     // For performance-viewer roles, pre-fetch alert count
@@ -232,8 +276,16 @@ export default function Home() {
       localStorage.setItem(`wellness_done_${session.user.id}_${today}`, '1');
     }
     setShowWellness(false);
-    // After wellness, check for pending session RPE
-    if (session?.user) checkPendingRPE(session.user.id);
+    // After wellness, check for pending session RPE then body weight
+    if (session?.user) {
+      checkPendingRPE(session.user.id);
+      checkPendingBodyWeight(session.user.id);
+    }
+  };
+
+  const handleBodyWeightDone = () => {
+    localStorage.setItem(`bw_done_${session?.user?.id}_${bwWeekStart}`, '1');
+    setShowBodyWeight(false);
   };
 
   useEffect(() => {
@@ -402,6 +454,16 @@ export default function Home() {
           userName={displayName}
           lang={lang}
           onComplete={() => { setShowRPE(false); setPendingRPEEvents([]); }}
+        />
+      )}
+
+      {showBodyWeight && (
+        <BodyWeightCheck
+          userId={user.id}
+          userName={displayName}
+          weekStart={bwWeekStart}
+          lang={lang}
+          onComplete={handleBodyWeightDone}
         />
       )}
     </div>
