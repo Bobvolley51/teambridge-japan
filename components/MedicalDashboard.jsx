@@ -365,6 +365,20 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
       updated_by:  currentUserName,
       updated_at:  new Date().toISOString(),
     }, { onConflict: 'player_id' });
+
+    // Auto-notify coaches when a player drops below full training
+    if (player.status === 'full' && newStatus !== 'full') {
+      const cfg = STATUS_CFG[newStatus];
+      const statusLabel = lang === 'ja' ? cfg.ja : cfg.en;
+      await supabase.from('medical_comms').insert({
+        title:      `⚠️ ${player.player_name} — ${statusLabel}`,
+        content:    lang === 'ja'
+          ? `${player.player_name} のステータスが「全体練習可」から「${statusLabel}」に変更されました。\n更新者：${currentUserName}`
+          : `${player.player_name}'s availability has changed from Full Training to ${statusLabel}.\nUpdated by: ${currentUserName}`,
+        created_by: currentUserName,
+      });
+    }
+
     await load();
     toast(lang === 'ja' ? '更新しました' : 'Status updated', 'success');
   };

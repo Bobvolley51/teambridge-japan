@@ -160,6 +160,16 @@
 .annContent { font-size: 12px; color: #4b5563; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
 .annMeta { font-size: 11px; color: #9ca3af; }
 
+.avStatusPill {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; border: 1px solid;
+  white-space: nowrap; flex-shrink: 0;
+}
+.avFullLine {
+  font-size: 12px; color: #16a34a; margin-top: 6px;
+  padding: 6px 10px; background: #f0fdf4; border-radius: 6px;
+}
+
 .cardFoot { padding: 10px 16px; border-top: 1px solid #f3f4f6; display: flex; justify-content: center; flex-shrink: 0; }
 .footBtn {
   font-size: 12px; font-weight: 700; color: #fff; background: #7e0027;

@@ -35,7 +35,8 @@ function fmtEventTime(ev, lang) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const WELLNESS_ALERT_ROLES = ['Headcoach', 'Staff/Orga', 'Athletic', 'Therapist'];
+const WELLNESS_ALERT_ROLES    = ['Headcoach', 'Staff/Orga', 'Athletic', 'Therapist'];
+const AVAILABILITY_VIEWER_ROLES = ['Headcoach', 'Athletic', 'GM', 'Therapist', 'Staff/Orga'];
 
 const QUESTION_LABELS = {
   fatigue:     { en: 'Fatigue',     ja: '疲労' },
@@ -87,6 +88,7 @@ export default function Dashboard({
   const [acwrAlerts,      setAcwrAlerts]      = useState([]); // { name, acwr, zone }
   const [overlapAlerts,   setOverlapAlerts]   = useState([]);
   const [calChanges,      setCalChanges]      = useState([]);
+  const [availability,    setAvailability]    = useState([]);
   const [loading,         setLoading]         = useState(true);
 
   useEffect(() => { load(); }, [currentUserInitials, currentUserId, profile?.role]);
@@ -104,7 +106,8 @@ export default function Dashboard({
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayDateStr = yesterday.toISOString().slice(0, 10);
 
-    const canSeeWellness = WELLNESS_ALERT_ROLES.includes(profile?.role);
+    const canSeeWellness      = WELLNESS_ALERT_ROLES.includes(profile?.role);
+    const canSeeAvailability  = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
 
     const [
       { data: myPartsData },
@@ -114,6 +117,7 @@ export default function Dashboard({
       { data: wellData },
       { data: rpeData },
       { data: calChangeData },
+      { data: avData },
     ] = await Promise.all([
       currentUserId
         ? supabase.from('event_participants')
@@ -158,6 +162,9 @@ export default function Dashboard({
             .eq('type', 'calendar_change')
             .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
             .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
+      canSeeAvailability
+        ? supabase.from('player_availability').select('*').order('player_name')
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -220,6 +227,7 @@ export default function Dashboard({
       setAcwrAlerts(alerts);
     }
 
+    setAvailability(avData ?? []);
     setLoading(false);
   }
 
@@ -244,7 +252,10 @@ export default function Dashboard({
   };
   const urgentTasks  = tasks.filter(t => t.priority === 'high');
   const weekTasks    = tasks.filter(t => t.priority !== 'high');
-  const canSeeWellness = WELLNESS_ALERT_ROLES.includes(profile?.role);
+  const canSeeWellness      = WELLNESS_ALERT_ROLES.includes(profile?.role);
+  const canSeeAvailability  = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
+  const avIssues            = availability.filter(p => p.status !== 'full');
+  const avFull              = availability.filter(p => p.status === 'full').length;
 
   const wellnessToday     = wellnessAlerts.filter(w => w.date === todayDateStr);
   const wellnessYesterday = wellnessAlerts.filter(w => w.date === yesterdayDateStr);
@@ -651,6 +662,62 @@ export default function Dashboard({
                 </button>
               </div>
             </div>
+
+            {/* Player Availability (coaching staff) */}
+            {canSeeAvailability && (
+              <div className={styles.card}>
+                <div className={styles.cardHead}>
+                  <span className={styles.cardTitle}>
+                    🩺 {lang === 'ja' ? '選手の状態' : 'Player Availability'}
+                    {avIssues.length > 0 && <span className={styles.countBadge}>{avIssues.length}</span>}
+                  </span>
+                </div>
+                <div className={styles.cardBody}>
+                  {availability.length === 0 ? (
+                    <EmptyState>{lang === 'ja' ? 'データなし' : 'No data yet'}</EmptyState>
+                  ) : avIssues.length === 0 ? (
+                    <EmptyState>✓ {lang === 'ja' ? `全${avFull}名 — 全体練習可` : `All ${avFull} players available`}</EmptyState>
+                  ) : (
+                    <>
+                      {['out', 'limited'].map(st => {
+                        const group = avIssues.filter(p => p.status === st);
+                        if (!group.length) return null;
+                        const cfg = { out: { color: '#dc2626', bg: '#fee2e2', border: '#fca5a5', en: 'Out', ja: '練習不可' }, limited: { color: '#d97706', bg: '#fef3c7', border: '#fcd34d', en: 'Limited', ja: '制限あり' } }[st];
+                        return (
+                          <div key={st} className={styles.alertSection}>
+                            <SectionLabel>
+                              {st === 'out' ? '🔴' : '🟡'} {lang === 'ja' ? cfg.ja : cfg.en}
+                            </SectionLabel>
+                            {group.map(p => (
+                              <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical')} style={{ cursor: 'pointer' }}>
+                                <span className={styles.alertDot} style={{ background: cfg.color }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div className={styles.alertText}>{p.player_name}</div>
+                                  {p.reason && <div className={styles.alertSub}>{p.reason}</div>}
+                                </div>
+                                <span className={styles.avStatusPill} style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
+                                  {lang === 'ja' ? cfg.ja : cfg.en}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {avFull > 0 && (
+                        <div className={styles.avFullLine}>
+                          ✓ {avFull} {lang === 'ja' ? '名が全体練習可' : `player${avFull > 1 ? 's' : ''} full training`}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className={styles.cardFoot}>
+                  <button className={styles.footBtn} onClick={() => onNavigate('medical')}>
+                    {lang === 'ja' ? 'メディカルを開く →' : 'Open Medical →'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Announcements */}
             <div className={styles.card}>
