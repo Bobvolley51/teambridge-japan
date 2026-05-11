@@ -9,7 +9,8 @@
       "Bash(node --input-type=module -e ' *)",
       "Bash(node --input-type=module -e \"import { extractText } from 'unpdf'; console.log\\('ok', typeof extractText\\)\")",
       "Bash(grep -A15 \"async function extractText\\\\$1\")",
-      "mcp__claude_ai_Google_Drive__read_file_content"
+      "mcp__claude_ai_Google_Drive__read_file_content",
+      "Bash(npm run *)"
     ]
   }
 }

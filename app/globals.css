@@ -1,8 +1,18 @@
+/* app/globals.css — Tridents Red brand tokens */
+
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Tridents Red brand palette */
+  --tridents-red:        #7e0027;
+  --tridents-red-deep:   #5c001a;
+  --tridents-red-bright: #9b0030;
+  --tridents-red-soft:   #fdf2f4;
+  --tridents-red-tint:   #fce8ed;
+  --tridents-red-line:   #f5c2ce;
 }
 
 @theme inline {
@@ -19,9 +29,7 @@
   }
 }
 
-html {
-  height: -webkit-fill-available;
-}
+html { height: -webkit-fill-available; }
 
 body {
   background: var(--background);
@@ -31,15 +39,23 @@ body {
   min-height: -webkit-fill-available;
 }
 
-* {
-  -webkit-tap-highlight-color: transparent;
-}
+* { -webkit-tap-highlight-color: transparent; }
 
 input, textarea, select, button {
   font-family: inherit;
 }
 
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--tridents-red);
+  outline-offset: 1px;
+}
+
 ::placeholder {
   color: #6b7280;
   opacity: 1;
+}
+
+::selection {
+  background: var(--tridents-red);
+  color: #fff;
 }
