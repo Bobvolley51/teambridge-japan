@@ -88,8 +88,9 @@
 .calChangeDismiss:hover { color: #7e0027; }
 @media (max-width: 768px) { .calChangeBanner { margin: 10px 12px 0; } }
 
-.topRow      { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 16px; padding: 20px 24px 0; align-items: start; }
+.topRow      { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 20px 24px 0; align-items: start; }
 .topRowFull  { grid-template-columns: 1fr; }
+.topRowTwo   { grid-template-columns: 1.2fr 1fr; }
 .topRowThree { grid-template-columns: 1fr 1fr 1fr; }
 @media (max-width: 900px) { .topRow { grid-template-columns: 1fr; } }
 

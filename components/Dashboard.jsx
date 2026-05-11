@@ -35,8 +35,8 @@ function fmtEventTime(ev, lang) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const WELLNESS_ALERT_ROLES    = ['Headcoach', 'Staff/Orga', 'Athletic', 'Therapist'];
-const AVAILABILITY_VIEWER_ROLES = ['Headcoach', 'Athletic', 'GM', 'Therapist', 'Staff/Orga'];
+const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Staff/Orga', 'Athletic', 'Therapist'];
+const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
 
 const QUESTION_LABELS = {
   fatigue:     { en: 'Fatigue',     ja: '疲労' },
@@ -395,7 +395,7 @@ export default function Dashboard({
       ) : (
         <>
           {/* ── Top row: Schedule | Availability | Health+Performance ── */}
-          <div className={`${styles.topRow} ${canSeeAvailability && canSeeWellness ? styles.topRowThree : !canSeeWellness ? styles.topRowFull : ''}`}>
+          <div className={`${styles.topRow} ${canSeeAvailability && canSeeWellness ? styles.topRowThree : !canSeeWellness && !canSeeAvailability ? styles.topRowFull : styles.topRowTwo}`}>
 
             {/* Today's Schedule */}
             <div className={styles.card}>
