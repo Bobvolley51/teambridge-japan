@@ -362,6 +362,16 @@ export default function WellnessDashboard({ lang }) {
               )
           }
 
+          {/* Score legend */}
+          {todayList.length > 0 && (
+            <div className={styles.chartLegend} style={{ marginTop: 8 }}>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 7–10' : 'Good 7–10'}</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 5–6' : 'Moderate 5–6'}</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <5 ⚠️' : 'Alert <5 ⚠️'}</span>
+              <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：1（低）→ 10（高）' : 'Scale: 1 (low) → 10 (high)'}</span>
+            </div>
+          )}
+
           {/* Body pain today */}
           {todayPain.length > 0 && (
             <div className={styles.painSection}>
@@ -436,9 +446,10 @@ export default function WellnessDashboard({ lang }) {
                     </div>
                     <BarChart data={dailyAvg} />
                     <div className={styles.chartLegend}>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />7–10</span>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />5–6</span>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />&lt;5 ⚠️</span>
+                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 7–10' : 'Good 7–10'}</span>
+                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 5–6' : 'Moderate 5–6'}</span>
+                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <5 ⚠️' : 'Alert <5 ⚠️'}</span>
+                      <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：1（低）→ 10（高）' : 'Scale: 1 (low) → 10 (high)'}</span>
                     </div>
                   </div>
 
@@ -448,6 +459,11 @@ export default function WellnessDashboard({ lang }) {
                       <div key={q.key} className={styles.qChartCard}>
                         <div className={styles.qChartTitle}>{lang === 'ja' ? q.ja : q.en}</div>
                         <BarChart data={q.days} />
+                        <div className={styles.chartLegend}>
+                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />7–10</span>
+                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />5–6</span>
+                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />&lt;5</span>
+                        </div>
                       </div>
                     ))}
                   </div>

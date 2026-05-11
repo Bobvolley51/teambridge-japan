@@ -110,6 +110,7 @@
 .chartLegend { display: flex; gap: 14px; margin-top: 6px; }
 .legendItem { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #6b7280; }
 .legendDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legendScale { font-size: 10px; color: #9ca3af; margin-left: auto; font-style: italic; }
 
 .qGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 900px) { .qGrid { grid-template-columns: repeat(2, 1fr); } }
