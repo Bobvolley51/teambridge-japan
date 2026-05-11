@@ -87,6 +87,9 @@
 .loadNum  { font-size: 13px; font-weight: 700; color: #374151; }
 
 .thDiv, .tdDiv { width: 8px; padding: 0 !important; background: #f3f4f6; }
+.thSortable { cursor: pointer; user-select: none; }
+.thSortable:hover { background: #fdf2f4; }
+.thSortActive { color: #5c001a !important; }
 .trNoVert td { opacity: 0.7; }
 .cellGreen { color: #059669 !important; font-weight: 700; }
 .cellAmber { color: #d97706 !important; font-weight: 700; }

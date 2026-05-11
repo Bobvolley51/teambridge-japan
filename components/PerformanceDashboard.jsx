@@ -39,6 +39,7 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [attRows,     setAttRows]     = useState([]);
   const [attLoading,  setAttLoading]  = useState(false);
   const [attRange,    setAttRange]    = useState(60);
+  const [sessSort,    setSessSort]    = useState({ col: 'date', dir: 'desc' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,7 +70,11 @@ export default function PerformanceDashboard({ lang, profile }) {
       .in('event_id', evs.map(e => e.id));
     const catMap = Object.fromEntries(evs.map(e => [e.id, e.category]));
     const playerMap = {};
+    const seenParts = new Set();
     for (const p of parts ?? []) {
+      const dedupKey = `${p.event_id}::${p.profile_id}`;
+      if (seenParts.has(dedupKey)) continue;
+      seenParts.add(dedupKey);
       const name = p.profiles?.display_name
         || (p.profiles?.first_name && p.profiles?.last_name ? `${p.profiles.first_name} ${p.profiles.last_name}` : null)
         || p.profile_id;
@@ -336,11 +341,39 @@ export default function PerformanceDashboard({ lang, profile }) {
               combined.push({ rpe: null, vert: v });
             }
           }
-          combined.sort((a, b) => {
-            const da = (a.rpe?.event_date || a.vert?.session_date) ?? '';
-            const db = (b.rpe?.event_date || b.vert?.session_date) ?? '';
-            return db.localeCompare(da);
-          });
+          const sessSortFn = (a, b) => {
+            const dir = sessSort.dir === 'asc' ? 1 : -1;
+            const col = sessSort.col;
+            const av = col === 'date'    ? (a.rpe?.event_date || a.vert?.session_date ?? '')
+                     : col === 'player'  ? (a.rpe?.user_name || a.vert?.vert_name ?? '')
+                     : col === 'session' ? (a.rpe?.event_title || a.vert?.session_name ?? '')
+                     : col === 'rpe'     ? (a.rpe?.rpe ?? -1)
+                     : col === 'load'    ? (a.rpe?.load_au ?? -1)
+                     : col === 'jumps'   ? (a.vert?.jumps ?? -1)
+                     : col === 'hijump'  ? (a.vert?.avg_hi_jump_cm ?? -1)
+                     : 0;
+            const bv = col === 'date'    ? (b.rpe?.event_date || b.vert?.session_date ?? '')
+                     : col === 'player'  ? (b.rpe?.user_name || b.vert?.vert_name ?? '')
+                     : col === 'session' ? (b.rpe?.event_title || b.vert?.session_name ?? '')
+                     : col === 'rpe'     ? (b.rpe?.rpe ?? -1)
+                     : col === 'load'    ? (b.rpe?.load_au ?? -1)
+                     : col === 'jumps'   ? (b.vert?.jumps ?? -1)
+                     : col === 'hijump'  ? (b.vert?.avg_hi_jump_cm ?? -1)
+                     : 0;
+            if (typeof av === 'string') return av.localeCompare(bv) * dir;
+            return (av - bv) * dir;
+          };
+          combined.sort(sessSortFn);
+
+          const sortTh = (col, label, cls = styles.th) => {
+            const active = sessSort.col === col;
+            return (
+              <th className={`${cls} ${styles.thSortable} ${active ? styles.thSortActive : ''}`}
+                  onClick={() => setSessSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))}>
+                {label}{active ? (sessSort.dir === 'asc' ? ' ▲' : ' ▼') : ''}
+              </th>
+            );
+          };
 
           return combined.length === 0 ? (
             <div className={styles.empty}>
@@ -351,15 +384,15 @@ export default function PerformanceDashboard({ lang, profile }) {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.thName}>{lang === 'ja' ? '日付' : 'Date'}</th>
-                    <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                    <th className={styles.thName}>{lang === 'ja' ? 'セッション' : 'Session'}</th>
-                    <th className={styles.th}>RPE</th>
+                    {sortTh('date',    lang === 'ja' ? '日付'       : 'Date',       styles.thName)}
+                    {sortTh('player',  lang === 'ja' ? '選手'       : 'Player',     styles.thName)}
+                    {sortTh('session', lang === 'ja' ? 'セッション' : 'Session',    styles.thName)}
+                    {sortTh('rpe',     'RPE')}
                     <th className={styles.th}>{lang === 'ja' ? '時間' : 'Min'}</th>
-                    <th className={styles.th}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                    {sortTh('load',    lang === 'ja' ? '負荷 AU'    : 'Load AU')}
                     <th className={styles.thDiv}></th>
-                    <th className={styles.th}>{lang === 'ja' ? 'ジャンプ' : 'Jumps'}</th>
-                    <th className={styles.th}>{lang === 'ja' ? '最高跳躍' : 'Hi Jump'}</th>
+                    {sortTh('jumps',   lang === 'ja' ? 'ジャンプ'   : 'Jumps')}
+                    {sortTh('hijump',  lang === 'ja' ? '最高跳躍'   : 'Hi Jump')}
                     <th className={styles.th}>{lang === 'ja' ? '着地%' : 'Elevated%'}</th>
                     <th className={styles.th}>{lang === 'ja' ? '強度' : 'Intensity'}</th>
                   </tr>
