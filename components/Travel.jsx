@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
+import { useTranslated } from '@/lib/translate';
 import styles from './Travel.module.css';
+
+function TText({ text, lang }) {
+  const t = useTranslated(text, lang);
+  return <>{t}</>;
+}
 
 const EDIT_ROLES = ['Staff/Orga', 'GM', 'Headcoach'];
 
@@ -429,7 +435,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                 <span className={styles.logIcon}>📋</span>
                 <div>
                   <div className={styles.logLabel}>{lang === 'ja' ? 'メモ' : 'Notes'}</div>
-                  <div className={styles.logValue} style={{ whiteSpace: 'pre-wrap' }}>{trip.notes}</div>
+                  <div className={styles.logValue} style={{ whiteSpace: 'pre-wrap' }}><TText text={trip.notes} lang={lang} /></div>
                 </div>
               </div>
             )}
@@ -500,8 +506,8 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                         <span className={styles.itemIcon}>{t.icon}</span>
                         <span className={styles.itemTime}>{item.item_time ? item.item_time.slice(0, 5) : '—'}</span>
                         <div className={styles.itemContent}>
-                          <div className={styles.itemTitle}>{item.title}</div>
-                          {item.description && <div className={styles.itemDesc}>{item.description}</div>}
+                          <div className={styles.itemTitle}><TText text={item.title} lang={lang} /></div>
+                          {item.description && <div className={styles.itemDesc}><TText text={item.description} lang={lang} /></div>}
                         </div>
                         {canEdit && (
                           <div className={styles.itemActions}>
@@ -535,7 +541,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
 
         <div className={styles.cardHeader} onClick={() => handleCardClick(trip.id)}>
           <div className={styles.cardHeaderLeft}>
-            <div className={styles.cardTitle}>{trip.title}</div>
+            <div className={styles.cardTitle}><TText text={trip.title} lang={lang} /></div>
             <div className={styles.cardMeta}>
               <span>📅 {fmtShort(trip.start_date, lang)}{trip.end_date && trip.end_date !== trip.start_date ? ` – ${fmtShort(trip.end_date, lang)}` : ''}</span>
               {trip.location && <span>📍 {trip.location}</span>}

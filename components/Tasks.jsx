@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
+import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock } from './Skeleton';
 import styles from './Tasks.module.css';
 
@@ -79,6 +80,8 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
   const assignee = profiles.find(p => p.id === task.assigned_to);
   const assigneeName = assignee ? profileName(assignee) : (task.assignee || null);
   const overdue = isOverdue(task.due_date);
+  const taskTitle = useTranslated(task.title, lang);
+  const taskDesc  = useTranslated(task.description, lang);
 
   const colIdx = COLUMNS.findIndex(c => c.id === task.status);
   const nextCol = COLUMNS[colIdx + 1] ?? null;
@@ -136,9 +139,9 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
         onTouchEnd={handleTouchEnd}
         style={{ transform: `translateX(${offset}px)`, transition: offset === 0 ? 'transform 0.2s ease' : 'none', willChange: 'transform' }}
       >
-        <p className={styles.cardTitle}>{task.title}</p>
+        <p className={styles.cardTitle}>{taskTitle}</p>
         {task.description && (
-          <p className={styles.cardDesc}>{task.description}</p>
+          <p className={styles.cardDesc}>{taskDesc}</p>
         )}
         {task.due_date && (
           <span className={`${styles.dueChip} ${overdue ? styles.overdueChip : ''}`}>

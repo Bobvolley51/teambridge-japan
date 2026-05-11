@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/date';
 import { useToast } from '@/lib/toast';
+import { useTranslated } from '@/lib/translate';
 import styles from './Announcements.module.css';
 
 const PRIORITY_CONFIG = {
@@ -33,19 +34,21 @@ function fmtEventDate(dateStr, timeStr, lang) {
 }
 
 function AnnouncementCard({ ann, lang, readCount, totalUsers }) {
-  const cfg = PRIORITY_CONFIG[ann.priority] ?? PRIORITY_CONFIG.medium;
+  const cfg   = PRIORITY_CONFIG[ann.priority] ?? PRIORITY_CONFIG.medium;
+  const title   = useTranslated(ann.title,   lang);
+  const content = useTranslated(ann.content, lang);
   return (
     <div className={styles.card}>
       <span className={`${styles.badge} ${cfg.className}`}>
         {cfg.label[lang]}
       </span>
-      <h3 className={styles.cardTitle}>{ann.title}</h3>
+      <h3 className={styles.cardTitle}>{title}</h3>
       {ann.event_date && (
         <div className={styles.cardDate}>
           📅 {fmtEventDate(ann.event_date, ann.event_time, lang)}
         </div>
       )}
-      <p  className={styles.cardContent}>{ann.content}</p>
+      <p  className={styles.cardContent}>{content}</p>
       <div className={styles.cardFooter}>
         <span>{lang === 'ja' ? '投稿者' : 'by'}: {ann.author_name}</span>
         <span>{timeAgo(ann.created_at, lang)}</span>

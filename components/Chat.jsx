@@ -2,23 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { translate } from '@/lib/translate';
 import { SkeletonList } from './Skeleton';
 import styles from './Chat.module.css';
 
 const MAX_HISTORY = 50;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function translateMessage(text, targetLang) {
-  const res = await fetch('/api/translate', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ text, targetLang: targetLang === 'ja' ? 'Japanese' : 'English' }),
-  });
-  if (!res.ok) throw new Error('Translation failed');
-  const data = await res.json();
-  return data.translation;
-}
 
 function slugify(str) {
   return (str || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -59,21 +47,14 @@ function Avatar({ initials, isMe, avatarUrl }) {
 // ── Message ──────────────────────────────────────────────────────────────────
 
 function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
+  const otherLang = uiLang === 'ja' ? 'en' : 'ja';
   const [translation, setTranslation] = useState(null);
-  const [translating, setTranslating] = useState(false);
 
-  const handleTranslate = useCallback(async () => {
-    if (translation) { setTranslation(null); return; }
-    setTranslating(true);
-    try {
-      const result = await translateMessage(msg.content, uiLang === 'ja' ? 'en' : 'ja');
-      setTranslation(result);
-    } catch {
-      setTranslation(uiLang === 'ja' ? '翻訳に失敗しました。' : 'Translation failed — check API key.');
-    } finally {
-      setTranslating(false);
-    }
-  }, [msg.content, translation, uiLang]);
+  useEffect(() => {
+    let cancelled = false;
+    translate(msg.content, otherLang).then(t => { if (!cancelled) setTranslation(t); });
+    return () => { cancelled = true; };
+  }, [msg.content, otherLang]);
 
   const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
 
@@ -86,16 +67,9 @@ function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
           <span className={styles.time}>{time}</span>
         </div>
         <p className={styles.content}>{renderContent(msg.content)}</p>
-        <button className={styles.translateBtn} onClick={handleTranslate} disabled={translating}>
-          {translating
-            ? (uiLang === 'ja' ? '翻訳中...' : 'Translating…')
-            : translation
-              ? (uiLang === 'ja' ? '翻訳を隠す' : 'Hide translation')
-              : (uiLang === 'ja' ? '翻訳' : 'Translate')}
-        </button>
-        {translation && (
+        {translation && translation !== msg.content && (
           <div className={styles.translation}>
-            <span className={styles.translationLabel}>{uiLang === 'ja' ? '翻訳:' : 'Translation:'}</span>
+            <span className={styles.translationLabel}>{otherLang === 'ja' ? '日本語:' : 'EN:'}</span>
             {translation}
           </div>
         )}
