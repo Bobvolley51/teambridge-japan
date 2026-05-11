@@ -14,6 +14,10 @@ create table if not exists player_bodyweight (
 
 alter table player_bodyweight enable row level security;
 
+drop policy if exists "insert own weight" on player_bodyweight;
+drop policy if exists "upsert own weight" on player_bodyweight;
+drop policy if exists "read all weights"  on player_bodyweight;
+
 create policy "insert own weight"  on player_bodyweight for insert with check (true);
 create policy "upsert own weight"  on player_bodyweight for update using (true);
 create policy "read all weights"   on player_bodyweight for select using (true);
