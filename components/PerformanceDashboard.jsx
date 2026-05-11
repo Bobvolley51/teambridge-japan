@@ -344,17 +344,17 @@ export default function PerformanceDashboard({ lang, profile }) {
           const sessSortFn = (a, b) => {
             const dir = sessSort.dir === 'asc' ? 1 : -1;
             const col = sessSort.col;
-            const av = col === 'date'    ? (a.rpe?.event_date || a.vert?.session_date ?? '')
-                     : col === 'player'  ? (a.rpe?.user_name || a.vert?.vert_name ?? '')
-                     : col === 'session' ? (a.rpe?.event_title || a.vert?.session_name ?? '')
+            const av = col === 'date'    ? (a.rpe?.event_date || (a.vert?.session_date ?? ''))
+                     : col === 'player'  ? (a.rpe?.user_name || (a.vert?.vert_name ?? ''))
+                     : col === 'session' ? (a.rpe?.event_title || (a.vert?.session_name ?? ''))
                      : col === 'rpe'     ? (a.rpe?.rpe ?? -1)
                      : col === 'load'    ? (a.rpe?.load_au ?? -1)
                      : col === 'jumps'   ? (a.vert?.jumps ?? -1)
                      : col === 'hijump'  ? (a.vert?.avg_hi_jump_cm ?? -1)
                      : 0;
-            const bv = col === 'date'    ? (b.rpe?.event_date || b.vert?.session_date ?? '')
-                     : col === 'player'  ? (b.rpe?.user_name || b.vert?.vert_name ?? '')
-                     : col === 'session' ? (b.rpe?.event_title || b.vert?.session_name ?? '')
+            const bv = col === 'date'    ? (b.rpe?.event_date || (b.vert?.session_date ?? ''))
+                     : col === 'player'  ? (b.rpe?.user_name || (b.vert?.vert_name ?? ''))
+                     : col === 'session' ? (b.rpe?.event_title || (b.vert?.session_name ?? ''))
                      : col === 'rpe'     ? (b.rpe?.rpe ?? -1)
                      : col === 'load'    ? (b.rpe?.load_au ?? -1)
                      : col === 'jumps'   ? (b.vert?.jumps ?? -1)
