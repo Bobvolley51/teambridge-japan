@@ -37,14 +37,37 @@ function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getM
 
 // ── Availability status card ──────────────────────────────────────────────────
 
-function AvailabilityCard({ player, lang, canEdit, onEdit }) {
+function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
   const cfg = STATUS_CFG[player.status] ?? STATUS_CFG.full;
+  const [saving, setSaving] = useState(false);
+
+  const quickSet = async (newStatus) => {
+    if (saving || newStatus === player.status) return;
+    setSaving(true);
+    await onQuickStatus(player, newStatus);
+    setSaving(false);
+  };
+
   return (
     <div className={styles.avCard} style={{ borderColor: cfg.border, background: cfg.bg }}>
       <div className={styles.avName}>{player.player_name}</div>
-      <span className={styles.avBadge} style={{ color: cfg.color, borderColor: cfg.border }}>
-        {lang === 'ja' ? cfg.ja : cfg.en}
-      </span>
+      {canEdit ? (
+        <div className={styles.avStatusRow}>
+          {Object.entries(STATUS_CFG).map(([key, c]) => (
+            <button key={key}
+              className={`${styles.avStatusChip} ${player.status === key ? styles.avStatusChipActive : ''}`}
+              style={player.status === key ? { background: c.color, color: '#fff', borderColor: c.color } : { borderColor: c.border, color: c.color }}
+              onClick={() => quickSet(key)}
+              disabled={saving}>
+              {lang === 'ja' ? c.ja : c.en}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className={styles.avBadge} style={{ color: cfg.color, borderColor: cfg.border }}>
+          {lang === 'ja' ? cfg.ja : cfg.en}
+        </span>
+      )}
       {player.reason && <div className={styles.avReason}>{player.reason}</div>}
       {player.updated_at && (
         <div className={styles.avMeta}>
@@ -54,7 +77,7 @@ function AvailabilityCard({ player, lang, canEdit, onEdit }) {
       )}
       {canEdit && (
         <button className={styles.avEditBtn} onClick={() => onEdit(player)}>
-          {lang === 'ja' ? '編集' : 'Edit'}
+          {lang === 'ja' ? '詳細編集' : 'Edit details'}
         </button>
       )}
     </div>
@@ -228,9 +251,9 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
 
 // ── Comm compose form ─────────────────────────────────────────────────────────
 
-function CommForm({ lang, currentUserName, onSave, onClose }) {
-  const [title,   setTitle]   = useState('');
-  const [content, setContent] = useState('');
+function CommForm({ lang, currentUserName, onSave, onClose, prefill }) {
+  const [title,   setTitle]   = useState(prefill?.title   ?? '');
+  const [content, setContent] = useState(prefill?.content ?? '');
   const [saving,  setSaving]  = useState(false);
 
   const submit = async (e) => {
@@ -289,6 +312,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   const [avModal,      setAvModal]      = useState(null);  // player obj
   const [recForm,      setRecForm]      = useState(null);  // record obj or 'new'
   const [commForm,     setCommForm]     = useState(false);
+  const [commPrefill,  setCommPrefill]  = useState(null);  // prefill obj from record push
 
   const [recFilter,    setRecFilter]    = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
 
@@ -331,6 +355,36 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   const filteredRecords = recFilter === 'all'
     ? records
     : records.filter(r => r.status === recFilter);
+
+  const quickSetStatus = async (player, newStatus) => {
+    await supabase.from('player_availability').upsert({
+      player_id:   player.player_id,
+      player_name: player.player_name,
+      status:      newStatus,
+      reason:      player.reason ?? null,
+      updated_by:  currentUserName,
+      updated_at:  new Date().toISOString(),
+    }, { onConflict: 'player_id' });
+    await load();
+    toast(lang === 'ja' ? '更新しました' : 'Status updated', 'success');
+  };
+
+  const pushRecordToCoaches = (r) => {
+    const cfg = REC_STATUS_CFG[r.status] ?? REC_STATUS_CFG.active;
+    const statusLabel = lang === 'ja' ? cfg.ja : cfg.en;
+    const lines = [
+      `${lang === 'ja' ? '選手' : 'Player'}: ${r.player_name}`,
+      r.body_part   ? `${lang === 'ja' ? '部位' : 'Body Part'}: ${r.body_part}`     : null,
+      r.injury_type ? `${lang === 'ja' ? '傷病' : 'Injury'}: ${r.injury_type}`      : null,
+      r.treatment   ? `${lang === 'ja' ? '処置' : 'Treatment'}: ${r.treatment}`     : null,
+      `${lang === 'ja' ? 'ステータス' : 'Status'}: ${statusLabel}`,
+    ].filter(Boolean);
+    setCommPrefill({
+      title:   `${r.player_name} — ${r.body_part || (lang === 'ja' ? 'メディカルアップデート' : 'medical update')}`,
+      content: lines.join('\n'),
+    });
+    setCommForm(true);
+  };
 
   const tabs = [
     { id: 'availability', en: 'Availability',    ja: '出場可否'          },
@@ -389,7 +443,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
               <div className={styles.avGrid}>
                 {availability.map(p => (
                   <AvailabilityCard key={p.player_id} player={p} lang={lang}
-                    canEdit={isTherapist} onEdit={setAvModal} />
+                    canEdit={isTherapist} onEdit={setAvModal} onQuickStatus={quickSetStatus} />
                 ))}
               </div>
 
@@ -427,8 +481,9 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
               }
               {commForm && (
                 <CommForm lang={lang} currentUserName={currentUserName}
+                  prefill={commPrefill}
                   onSave={() => { load(); toast(lang === 'ja' ? '送信しました' : 'Update sent', 'success'); }}
-                  onClose={() => setCommForm(false)} />
+                  onClose={() => { setCommForm(false); setCommPrefill(null); }} />
               )}
             </div>
 
@@ -483,8 +538,9 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                                   {lang === 'ja' ? cfg.ja : cfg.en}
                                 </span>
                               </td>
-                              <td className={styles.td}>
-                                <button className={styles.editBtn} onClick={() => setRecForm(r)}>✏️</button>
+                              <td className={styles.td} style={{ whiteSpace: 'nowrap' }}>
+                                <button className={styles.editBtn} onClick={() => setRecForm(r)} title={lang === 'ja' ? '編集' : 'Edit'}>✏️</button>
+                                <button className={styles.pushBtn} onClick={() => pushRecordToCoaches(r)} title={lang === 'ja' ? 'コーチに共有' : 'Push to coaches'}>📢</button>
                               </td>
                             </tr>
                           );
@@ -504,6 +560,12 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                   onSave={() => { load(); toast(lang === 'ja' ? '保存しました' : 'Record saved', 'success'); }}
                   onClose={() => setRecForm(null)}
                 />
+              )}
+              {commForm && (
+                <CommForm lang={lang} currentUserName={currentUserName}
+                  prefill={commPrefill}
+                  onSave={() => { load(); toast(lang === 'ja' ? '送信しました' : 'Update sent', 'success'); setTab('updates'); }}
+                  onClose={() => { setCommForm(false); setCommPrefill(null); }} />
               )}
             </div>
           ) : null

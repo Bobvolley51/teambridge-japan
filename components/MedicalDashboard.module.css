@@ -65,6 +65,22 @@
 }
 .avReason { font-size: 11px; color: var(--tb-fg-muted); margin-top: 2px; line-height: 1.4; }
 .avMeta { font-size: 10px; color: var(--tb-fg-subtle); margin-top: 2px; }
+.avStatusRow { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.avStatusChip {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 8px;
+  border: 1.5px solid;
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+  opacity: 0.7;
+}
+.avStatusChip:hover { opacity: 1; }
+.avStatusChipActive { opacity: 1 !important; }
+.avStatusChip:disabled { cursor: default; opacity: 0.5; }
+
 .avEditBtn {
   margin-top: 6px;
   align-self: flex-end;
@@ -144,6 +160,8 @@
 .recStatusBadge { font-size: 11px; font-weight: 600; }
 .editBtn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
 .editBtn:hover { background: var(--tb-surface-2); }
+.pushBtn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; margin-left: 2px; }
+.pushBtn:hover { background: #fef3c7; }
 
 /* Modal */
 .overlay {
