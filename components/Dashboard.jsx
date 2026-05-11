@@ -118,6 +118,7 @@ export default function Dashboard({
       { data: rpeData },
       { data: calChangeData },
       { data: avData },
+      { data: playerProfiles },
     ] = await Promise.all([
       currentUserId
         ? supabase.from('event_participants')
@@ -165,6 +166,9 @@ export default function Dashboard({
         : Promise.resolve({ data: [] }),
       canSeeAvailability
         ? supabase.from('player_availability').select('*').order('player_name')
+        : Promise.resolve({ data: [] }),
+      canSeeAvailability
+        ? supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name')
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -227,7 +231,12 @@ export default function Dashboard({
       setAcwrAlerts(alerts);
     }
 
-    setAvailability(avData ?? []);
+    // Merge all players with their availability row (default to 'full' if no row yet)
+    const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
+    const mergedAv = (playerProfiles ?? []).map(p => avMap[p.id] ?? {
+      player_id: p.id, player_name: p.display_name, status: 'full', reason: null, updated_at: null,
+    });
+    setAvailability(mergedAv);
     setLoading(false);
   }
 

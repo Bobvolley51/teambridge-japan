@@ -83,11 +83,19 @@ export default function Home() {
 
   // Auth listener
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error || !data.session) {
+        supabase.auth.signOut({ scope: 'local' });
+        setSession(null);
+      } else {
+        setSession(data.session);
+      }
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, s) => {
-        if (event === 'TOKEN_REFRESHED' && !s) {
-          supabase.auth.signOut();
+        if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') && !s) {
+          supabase.auth.signOut({ scope: 'local' });
+          setSession(null);
           return;
         }
         setSession(s ?? null);
