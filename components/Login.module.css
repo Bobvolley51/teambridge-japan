@@ -46,17 +46,10 @@
 .langBtnActive { background: #7e0027; color: #fff; border-color: #7e0027; }
 
 .logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1, #7e0027);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 6px;
+  width: 120px;
+  height: auto;
+  margin-bottom: 10px;
+  object-fit: contain;
 }
 
 .title {

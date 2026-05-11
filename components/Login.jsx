@@ -134,7 +134,7 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
           <button className={`${styles.langBtn} ${lang === 'en' ? styles.langBtnActive : ''}`} onClick={() => handleLangChange('en')}>EN</button>
           <button className={`${styles.langBtn} ${lang === 'ja' ? styles.langBtnActive : ''}`} onClick={() => handleLangChange('ja')}>日本語</button>
         </div>
-        <div className={styles.logo}>TB</div>
+        <img src="/logo-red.png" alt="Tridents Shinshu Matsumoto" className={styles.logo} />
         <h1 className={styles.title}>{t.title}</h1>
 
         {mode === 'request' ? (

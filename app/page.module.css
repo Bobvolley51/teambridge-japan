@@ -245,6 +245,7 @@
 }
 
 .logoText { }
+.logoImg { height: 32px; width: auto; object-fit: contain; display: block; }
 
 /* ── Mobile bottom nav ───────────────────────────── */
 

@@ -340,8 +340,7 @@ export default function Home() {
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.logo}>
-          <div className={styles.logoDot} />
-          <span className={styles.logoText}>Teambridge Tridents</span>
+          <img src="/logo-white.png" alt="Tridents" className={styles.logoImg} />
         </div>
         <div className={styles.headerRight}>
           <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
