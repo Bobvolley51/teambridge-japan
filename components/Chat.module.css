@@ -10,8 +10,8 @@
 .sidebar {
   width: 170px;
   flex-shrink: 0;
-  background: #f9fafb;
-  border-right: 1px solid #e5e7eb;
+  background: #1c1c1e;
+  border-right: 1px solid #2a2a2e;
   padding: 10px 6px;
   display: flex;
   flex-direction: column;
@@ -28,7 +28,7 @@
 .sectionLabel {
   font-size: 10px;
   font-weight: 600;
-  color: #9ca3af;
+  color: #8e8e93;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 4px 4px 6px;
@@ -38,7 +38,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: #8e8e93;
   font-size: 14px;
   padding: 2px 4px;
   border-radius: 4px;
@@ -46,7 +46,7 @@
   transition: color 0.1s, background 0.1s;
   flex-shrink: 0;
 }
-.manageBtn:hover { color: #4b5563; background: #e5e7eb; }
+.manageBtn:hover { color: #e4e4e7; background: rgba(255,255,255,0.1); }
 
 .channelItem {
   display: flex;
@@ -54,7 +54,7 @@
   gap: 5px;
   padding: 6px 8px;
   font-size: 13px;
-  color: #6b7280;
+  color: #a1a1aa;
   background: none;
   border: none;
   border-radius: 6px;
@@ -65,35 +65,36 @@
   transition: background 0.1s, color 0.1s;
 }
 
-.channelItem:hover { background: #f3f4f6; color: #374151; }
+.channelItem:hover { background: rgba(255,255,255,0.08); color: #e4e4e7; }
 
 .channelActive {
-  background: #fdf2f4;
-  color: #7e0027;
-  font-weight: 500;
+  background: var(--tb-accent, #7e0027);
+  color: #ffffff;
+  font-weight: 600;
 }
+.channelActive:hover { background: #9b0030; color: #ffffff; }
 
 .hash {
   font-size: 13px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .sidebarDivider {
   height: 1px;
-  background: #e5e7eb;
+  background: #2a2a2e;
   margin: 8px 0;
 }
 
 .dmDot {
   font-size: 7px;
-  color: #9ca3af;
+  color: #6b7280;
   margin-right: 6px;
   flex-shrink: 0;
 }
 
 .dmEmpty {
   font-size: 11px;
-  color: #9ca3af;
+  color: #6b7280;
   padding: 4px 12px;
   margin: 0;
 }
@@ -771,8 +772,8 @@
     bottom: 60px;
     width: 220px;
     z-index: 50;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
-    background: #f9fafb;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+    background: #1c1c1e;
   }
 
   .sidebarMobileOpen {

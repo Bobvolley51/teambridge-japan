@@ -468,25 +468,27 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     async function loadDMs() {
       const { data } = await supabase
         .from('messages')
-        .select('channel')
+        .select('channel, created_at')
         .like('channel', 'dm:%')
+        .order('created_at', { ascending: false })
         .limit(500);
       if (!data) return;
-      const seen = new Set();
-      const convs = [];
+      const seen = new Map(); // channelId → latestAt
       for (const row of data) {
-        const ch = row.channel;
-        if (seen.has(ch)) continue;
-        const inner = ch.slice(3); // remove "dm:"
+        if (!seen.has(row.channel)) seen.set(row.channel, row.created_at);
+      }
+      const convs = [];
+      for (const [ch, latestAt] of seen) {
+        const inner = ch.slice(3);
         const sep = inner.indexOf('_');
         if (sep === -1) continue;
         const a = inner.slice(0, sep);
         const b = inner.slice(sep + 1);
         const otherId = a === myId ? b : b === myId ? a : null;
         if (!otherId) continue;
-        seen.add(ch);
-        convs.push({ channelId: ch, otherId });
+        convs.push({ channelId: ch, otherId, latestAt });
       }
+      convs.sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
       if (convs.length > 0) {
         setDmConversations(convs);
         localStorage.setItem(storageKey, JSON.stringify(convs));
@@ -554,6 +556,12 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           }
           return { ...prev, [activeChannel]: [...existing, newMsg] };
         });
+        if (isDM(activeChannel)) {
+          setDmConversations(prev => {
+            const updated = prev.map(d => d.channelId === activeChannel ? { ...d, latestAt: newMsg.created_at } : d);
+            return [...updated].sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
+          });
+        }
       })
       .subscribe();
     subscriptionRef.current = channel;
@@ -608,6 +616,15 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       content:       text,
       sender_id:     currentUser.id,
     });
+
+    // Bump DM to top of list
+    if (isDM(activeChannel)) {
+      const now = new Date().toISOString();
+      setDmConversations(prev => {
+        const updated = prev.map(d => d.channelId === activeChannel ? { ...d, latestAt: now } : d);
+        return [...updated].sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
+      });
+    }
 
     // Send notification to recipient for DMs
     if (!insertError && isDM(activeChannel)) {
