@@ -1,25 +1,64 @@
-/* app/globals.css — Tridents Red brand tokens */
+/* app/globals.css — Direction B (Court) design tokens */
 
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Type scale */
+  --tb-font-sans:    "Inter", "Helvetica Neue", Helvetica, system-ui, "Noto Sans JP", sans-serif;
+  --tb-font-display: "Inter Tight", "Inter", "Helvetica Neue", system-ui, sans-serif;
+  --tb-font-mono:    "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  --tb-font-jp:      "Noto Sans JP", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
 
-  /* Tridents Red brand palette */
-  --tridents-red:        #7e0027;
-  --tridents-red-deep:   #5c001a;
-  --tridents-red-bright: #9b0030;
-  --tridents-red-soft:   #fdf2f4;
-  --tridents-red-tint:   #fce8ed;
-  --tridents-red-line:   #f5c2ce;
+  /* Surfaces & ink */
+  --tb-fg:           #0a0a0a;
+  --tb-fg-muted:     #52525b;
+  --tb-fg-subtle:    #a1a1aa;
+  --tb-bg:           #f5f4f0;
+  --tb-surface:      #ffffff;
+  --tb-surface-2:    #faf9f5;
+  --tb-line:         #e5e3dc;
+  --tb-line-strong:  #d4d2c8;
+
+  /* Brand accent — Tridents Red */
+  --tb-accent:       #7e0027;
+  --tb-accent-deep:  #5c001a;
+  --tb-accent-bright:#9b0030;
+  --tb-accent-soft:  #fdf2f4;
+  --tb-accent-tint:  #fce8ed;
+  --tb-accent-line:  #f5c2ce;
+  --tb-accent-ink:   #ffffff;
+
+  /* Zone colours */
+  --tb-zone-good:      #16a34a;
+  --tb-zone-good-soft: #dcfce7;
+  --tb-zone-warn:      #d97706;
+  --tb-zone-warn-soft: #fef3c7;
+  --tb-zone-risk:      #dc2626;
+  --tb-zone-risk-soft: #fee2e2;
+  --tb-zone-low:       #2563eb;
+  --tb-zone-low-soft:  #dbeafe;
+
+  /* Elevation */
+  --tb-shadow-card: 0 1px 0 rgba(0,0,0,0.03), 0 8px 20px -12px rgba(0,0,0,0.12);
+
+  /* Tailwind compat */
+  --background: var(--tb-bg);
+  --foreground: var(--tb-fg);
+
+  /* Legacy aliases used by existing CSS Modules */
+  --tridents-red:        var(--tb-accent);
+  --tridents-red-deep:   var(--tb-accent-deep);
+  --tridents-red-bright: var(--tb-accent-bright);
+  --tridents-red-soft:   var(--tb-accent-soft);
+  --tridents-red-tint:   var(--tb-accent-tint);
+  --tridents-red-line:   var(--tb-accent-line);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--tb-font-sans);
+  --font-mono: var(--tb-font-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,30 +71,32 @@
 html { height: -webkit-fill-available; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--tb-bg);
+  color: var(--tb-fg);
+  font-family: var(--tb-font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   min-height: -webkit-fill-available;
 }
 
+*, *::before, *::after { box-sizing: border-box; }
 * { -webkit-tap-highlight-color: transparent; }
 
-input, textarea, select, button {
-  font-family: inherit;
-}
+input, textarea, select, button { font-family: inherit; }
 
 input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid var(--tridents-red);
+  outline: 2px solid var(--tb-accent);
   outline-offset: 1px;
 }
 
-::placeholder {
-  color: #6b7280;
-  opacity: 1;
-}
+::placeholder { color: var(--tb-fg-muted); opacity: 1; }
+::selection   { background: var(--tb-accent); color: #fff; }
 
-::selection {
-  background: var(--tridents-red);
-  color: #fff;
+.tb-mono { font-family: var(--tb-font-mono); font-feature-settings: "tnum"; }
+.tb-num  { font-variant-numeric: tabular-nums; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--tb-accent); }
+  50%       { box-shadow: 0 0 0 6px rgba(126,0,39,0.3); }
 }

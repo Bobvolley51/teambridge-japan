@@ -1,13 +1,15 @@
-/* app/page.module.css — Tridents Red structural pass */
+/* app/page.module.css — Direction B (Court) shell */
 
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f5f4f0;
+  font-family: var(--tb-font-sans);
+  background: var(--tb-bg);
 }
+
+/* ── Header ──────────────────────────────────────── */
 
 .header {
   display: flex;
@@ -15,9 +17,8 @@
   justify-content: space-between;
   padding: 0 20px;
   height: 52px;
-  background: #7e0027;
-  background-image: linear-gradient(90deg, #8a0030 0%, #6b0021 100%);
-  border-bottom: 3px solid #5c001a;
+  background: #0a0a0a;
+  border-bottom: 1px solid #1a1a1a;
   flex-shrink: 0;
   z-index: 10;
 }
@@ -33,16 +34,16 @@
 }
 
 .logoDot {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  background: #ffffff;
-  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--tb-accent);
   display: grid;
   place-items: center;
-  color: #7e0027;
-  font-size: 10px;
+  color: #ffffff;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0;
 }
 
 .headerRight {
@@ -57,36 +58,30 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 8px;
-  background: rgba(0,0,0,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.06);
   cursor: pointer;
-  font-size: 14px;
+  color: #a1a1aa;
   transition: background 0.1s, border-color 0.1s;
-  color: rgba(255,255,255,0.85);
 }
-
-.searchBtn:hover {
-  background: rgba(0,0,0,0.28);
-  border-color: rgba(255,255,255,0.4);
-}
+.searchBtn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.22); color: #fff; }
 
 .langBtn {
   font-size: 11px;
   padding: 3px 10px;
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
   background: transparent;
-  color: rgba(255,255,255,0.75);
+  color: #a1a1aa;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
 }
-
 .langActive {
-  background: #ffffff;
-  color: #7e0027;
-  border-color: #ffffff;
+  background: var(--tb-accent);
+  color: #ffffff;
+  border-color: var(--tb-accent);
   font-weight: 700;
 }
 
@@ -94,10 +89,10 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #ffffff;
-  color: #7e0027;
+  background: linear-gradient(135deg, #52525b, #27272a);
+  color: #fafafa;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,20 +102,21 @@
 .signOutBtn {
   font-size: 11px;
   padding: 3px 10px;
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
   background: transparent;
-  color: rgba(255,255,255,0.75);
+  color: #a1a1aa;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
 }
-
 .signOutBtn:hover {
-  background: rgba(0,0,0,0.2);
-  border-color: rgba(255,255,255,0.4);
-  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.22);
+  color: #fff;
 }
+
+/* ── Body layout ─────────────────────────────────── */
 
 .body {
   display: flex;
@@ -129,108 +125,129 @@
   min-height: 0;
 }
 
+/* ── Sidebar — Direction B narrow rail ───────────── */
+
 .sidebar {
-  width: 200px;
+  width: 72px;
   flex-shrink: 0;
-  background: #5c001a;
-  background-image: linear-gradient(180deg, #6b0021 0%, #4a0015 100%);
-  border-right: none;
+  background: #0a0a0a;
   padding: 14px 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.navGroup {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #52525b;
+  text-align: center;
+  padding: 10px 0 4px;
+  text-transform: uppercase;
 }
 
 .navItem {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  font-size: 13px;
-  color: rgba(255,255,255,0.82);
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 4px 8px;
+  font-size: 9px;
+  font-weight: 500;
+  color: #a1a1aa;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
-  text-align: left;
+  text-align: center;
   width: 100%;
+  line-height: 1.2;
   transition: background 0.1s, color 0.1s;
+  position: relative;
 }
-
-.navItem:hover {
-  background: rgba(0,0,0,0.18);
-  color: #ffffff;
-}
+.navItem:hover { background: rgba(255,255,255,0.06); color: #e4e4e7; }
 
 .navActive {
-  background: rgba(0,0,0,0.32);
+  background: var(--tb-accent);
   color: #ffffff;
-  font-weight: 600;
-  box-shadow: inset 3px 0 0 #ffffff;
+  font-weight: 700;
 }
+.navActive:hover { background: var(--tb-accent-bright); color: #ffffff; }
 
+/* Sub-items (calendar children) */
 .navSubItem {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 9px;
-  padding: 6px 12px 6px 30px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.65);
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 4px 6px;
+  font-size: 9px;
+  font-weight: 500;
+  color: #71717a;
   background: none;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
-  text-align: left;
+  text-align: center;
   width: 100%;
   transition: background 0.1s, color 0.1s;
 }
-.navSubItem:hover { background: rgba(0,0,0,0.18); color: #ffffff; }
+.navSubItem:hover { background: rgba(255,255,255,0.06); color: #e4e4e7; }
 
 .navCaret {
-  margin-left: auto;
-  font-size: 10px;
-  opacity: 0.6;
+  font-size: 8px;
+  opacity: 0.5;
+  margin-top: 1px;
 }
 
 .navIcon {
-  width: 16px;
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
+
+.navBadge {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  background: var(--tb-accent);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* ── Main content ─────────────────────────────────── */
 
 .main {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--tb-surface);
   min-width: 0;
 }
 
 .logoText { }
 
-/* ── Nav badge ──────────────────────── */
-.navBadge {
-  margin-left: auto;
-  background: #ffffff;
-  color: #7e0027;
-  font-size: 9px;
-  font-weight: 800;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-}
+/* ── Mobile bottom nav ───────────────────────────── */
 
-/* ── Mobile bottom nav ────────────────────────────── */
 .mobileNav { display: none; }
 
 .mobileNavItem {
@@ -253,20 +270,24 @@
   transition: color 0.1s;
   position: relative;
 }
-.mobileNavItem:active { background: #fdf2f4; }
-.mobileNavActive { color: #7e0027; font-weight: 700; }
+.mobileNavItem:active { background: var(--tb-accent-soft); }
+.mobileNavActive { color: var(--tb-accent); font-weight: 700; }
 
 .mobileNavIconWrap {
   position: relative;
   line-height: 1;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .mobileNavBadge {
   position: absolute;
   top: -4px;
   right: -7px;
-  background: #7e0027;
+  background: var(--tb-accent);
   color: #fff;
   font-size: 8px;
   font-weight: 800;
@@ -279,15 +300,11 @@
   padding: 0 3px;
 }
 
-/* ── Mobile media query ─────────────────────────── */
+/* ── Mobile media query ──────────────────────────── */
+
 @media (max-width: 768px) {
-  .header {
-    padding: 0 12px;
-    height: 48px;
-  }
-
+  .header { padding: 0 12px; height: 48px; }
   .logoText { display: none; }
-
   .sidebar { display: none; }
 
   .main {
@@ -301,7 +318,7 @@
     left: 0;
     right: 0;
     background: #ffffff;
-    border-top: 2px solid #7e0027;
+    border-top: 2px solid var(--tb-accent);
     padding-bottom: env(safe-area-inset-bottom);
     z-index: 100;
     overflow-x: auto;

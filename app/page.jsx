@@ -26,24 +26,28 @@ import Travel                from '@/components/Travel';
 import PlayerStats           from '@/components/PlayerStats';
 import GlobalSearch          from '@/components/GlobalSearch';
 import styles                from './page.module.css';
+import {
+  IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
+  IconMega, IconPlane, IconUsers, IconHeart, IconChart, IconStats, IconSearch,
+} from '@/components/icons';
 
 const NAV_BASE = [
-  { id: 'dashboard', icon: '🏠', label: { en: 'Dashboard', ja: 'ダッシュボード' } },
-  { id: 'calendar',  icon: '📅', label: { en: 'Calendar',  ja: 'カレンダー'    } },
-  { id: 'chat',      icon: '💬', label: { en: 'Chat',      ja: 'チャット'      } },
-  { id: 'tactics',   icon: '🎯', label: { en: 'Tactics',   ja: '戦術'          } },
+  { id: 'dashboard', Icon: IconHome,     label: { en: 'Dashboard', ja: 'ダッシュ' } },
+  { id: 'calendar',  Icon: IconCalendar, label: { en: 'Calendar',  ja: 'カレン'   } },
+  { id: 'chat',      Icon: IconChat,     label: { en: 'Chat',      ja: 'チャット'  } },
+  { id: 'tactics',   Icon: IconTactics,  label: { en: 'Tactics',   ja: '戦術'     } },
 ];
 
 const NAV_CAL_SUBS = [
-  { id: 'tasks',  icon: '✅', label: { en: 'Tasks',         ja: 'タスク'   } },
-  { id: 'feed',   icon: '📢', label: { en: 'Announcements', ja: 'お知らせ' } },
-  { id: 'travel', icon: '✈️', label: { en: 'Travel',        ja: '旅程'     } },
+  { id: 'tasks',  Icon: IconCheck, label: { en: 'Tasks',  ja: 'タスク'   } },
+  { id: 'feed',   Icon: IconMega,  label: { en: 'News',   ja: 'お知らせ' } },
+  { id: 'travel', Icon: IconPlane, label: { en: 'Travel', ja: '旅程'     } },
 ];
 
-const NAV_ADMIN       = { id: 'admin',       icon: '👥', label: { en: 'Users',       ja: 'ユーザー管理'   } };
-const NAV_WELLNESS    = { id: 'wellness',    icon: '💪', label: { en: 'Wellness',    ja: 'ウェルネス'     } };
-const NAV_PERFORMANCE = { id: 'performance', icon: '📊', label: { en: 'Performance', ja: 'パフォーマンス' } };
-const NAV_MYSTATS     = { id: 'mystats',     icon: '📈', label: { en: 'My Stats',    ja: 'マイデータ'     } };
+const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,  label: { en: 'Users',  ja: 'ユーザー'   } };
+const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Health', ja: '健康'       } };
+const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,  label: { en: 'Load',   ja: '負荷'       } };
+const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Stats',  ja: 'データ'     } };
 
 // Roles that can view the wellness dashboard
 const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist'];
@@ -336,7 +340,7 @@ export default function Home() {
         </div>
         <div className={styles.headerRight}>
           <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
-            🔍
+            <IconSearch size={15} />
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
@@ -350,6 +354,7 @@ export default function Home() {
           {nav_items.map(item => {
             const isCalGroup = item.id === 'calendar';
             const calActive  = isCalGroup && (['calendar', ...NAV_CAL_SUBS.map(s => s.id)].includes(nav));
+            const ItemIcon   = item.Icon;
             return (
               <div key={item.id}>
                 <button
@@ -359,9 +364,8 @@ export default function Home() {
                     if (item.id === 'chat') setUnreadChat(0);
                     if (isCalGroup) setCalGroupOpen(o => !o);
                   }}>
-                  <span className={styles.navIcon}>{item.icon}</span>
+                  <span className={styles.navIcon}><ItemIcon size={18} /></span>
                   {item.label[lang]}
-                  {isCalGroup && <span className={styles.navCaret}>{calGroupOpen ? '▾' : '▸'}</span>}
                   {item.id === 'performance' && perfAlertCount > 0 && (
                     <span className={styles.navBadge}>{perfAlertCount}</span>
                   )}
@@ -369,14 +373,17 @@ export default function Home() {
                     <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
                   )}
                 </button>
-                {isCalGroup && calGroupOpen && NAV_CAL_SUBS.map(sub => (
-                  <button key={sub.id}
-                    className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
-                    onClick={() => navigate(sub.id)}>
-                    <span className={styles.navIcon}>{sub.icon}</span>
-                    {sub.label[lang]}
-                  </button>
-                ))}
+                {isCalGroup && calGroupOpen && NAV_CAL_SUBS.map(sub => {
+                  const SubIcon = sub.Icon;
+                  return (
+                    <button key={sub.id}
+                      className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
+                      onClick={() => navigate(sub.id)}>
+                      <span className={styles.navIcon}><SubIcon size={16} /></span>
+                      {sub.label[lang]}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
@@ -398,12 +405,14 @@ export default function Home() {
 
       {/* Mobile bottom navigation */}
       <nav className={styles.mobileNav}>
-        {[...nav_items, ...NAV_CAL_SUBS].map(item => (
+        {[...nav_items, ...NAV_CAL_SUBS].map(item => {
+          const MIcon = item.Icon;
+          return (
           <button key={item.id}
             className={`${styles.mobileNavItem} ${nav===item.id?styles.mobileNavActive:''}`}
             onClick={() => { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
             <span className={styles.mobileNavIconWrap}>
-              {item.icon}
+              <MIcon size={20} />
               {item.id === 'performance' && perfAlertCount > 0 && (
                 <span className={styles.mobileNavBadge}>{perfAlertCount}</span>
               )}
@@ -413,7 +422,8 @@ export default function Home() {
             </span>
             {item.label[lang]}
           </button>
-        ))}
+          );
+        })}
       </nav>
 
       {showSearch && (
