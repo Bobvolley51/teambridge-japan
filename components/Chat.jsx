@@ -47,14 +47,21 @@ function Avatar({ initials, isMe, avatarUrl }) {
 // ── Message ──────────────────────────────────────────────────────────────────
 
 function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
-  const otherLang = uiLang === 'ja' ? 'en' : 'ja';
-  const [translation, setTranslation] = useState(null);
+  const [jaText, setJaText] = useState(null);
+  const [enText, setEnText] = useState(null);
+  const [showTranslations, setShowTranslations] = useState(false);
 
   useEffect(() => {
+    if (!showTranslations) return;
     let cancelled = false;
-    translate(msg.content, otherLang).then(t => { if (!cancelled) setTranslation(t); });
+    Promise.all([
+      translate(msg.content, 'ja'),
+      translate(msg.content, 'en'),
+    ]).then(([ja, en]) => {
+      if (!cancelled) { setJaText(ja); setEnText(en); }
+    });
     return () => { cancelled = true; };
-  }, [msg.content, otherLang]);
+  }, [msg.content, showTranslations]);
 
   const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
 
@@ -67,10 +74,28 @@ function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
           <span className={styles.time}>{time}</span>
         </div>
         <p className={styles.content}>{renderContent(msg.content)}</p>
-        {translation && translation !== msg.content && (
-          <div className={styles.translation}>
-            <span className={styles.translationLabel}>{otherLang === 'ja' ? '日本語:' : 'EN:'}</span>
-            {translation}
+        <button
+          className={styles.translateBtn}
+          onClick={() => setShowTranslations(v => !v)}
+        >
+          {showTranslations
+            ? (uiLang === 'ja' ? '翻訳を隠す' : 'Hide translations')
+            : (uiLang === 'ja' ? '翻訳' : 'Translate')}
+        </button>
+        {showTranslations && (
+          <div className={styles.translations}>
+            {enText && enText !== msg.content && (
+              <div className={styles.translation}>
+                <span className={styles.translationLabel}>EN:</span>
+                {enText}
+              </div>
+            )}
+            {jaText && jaText !== msg.content && (
+              <div className={styles.translation}>
+                <span className={styles.translationLabel}>日本語:</span>
+                {jaText}
+              </div>
+            )}
           </div>
         )}
       </div>
