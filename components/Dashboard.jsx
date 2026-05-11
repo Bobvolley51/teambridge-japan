@@ -394,8 +394,8 @@ export default function Dashboard({
         </div>
       ) : (
         <>
-          {/* ── Top row: Schedule + Wellness ── */}
-          <div className={`${styles.topRow} ${!canSeeWellness ? styles.topRowFull : ''}`}>
+          {/* ── Top row: Schedule | Availability | Health+Performance ── */}
+          <div className={`${styles.topRow} ${canSeeAvailability && canSeeWellness ? styles.topRowThree : !canSeeWellness ? styles.topRowFull : ''}`}>
 
             {/* Today's Schedule */}
             <div className={styles.card}>
@@ -471,6 +471,62 @@ export default function Dashboard({
                 </button>
               </div>
             </div>
+
+            {/* Player Availability */}
+            {canSeeAvailability && (
+              <div className={styles.card}>
+                <div className={styles.cardHead}>
+                  <span className={styles.cardTitle}>
+                    🩺 {lang === 'ja' ? '選手の状態' : 'Player Availability'}
+                    {avIssues.length > 0 && <span className={styles.countBadge}>{avIssues.length}</span>}
+                  </span>
+                </div>
+                <div className={styles.cardBody}>
+                  {/* Count row */}
+                  <div className={styles.avCountRow}>
+                    {[
+                      { status: 'full',    count: avFull,                                            color: '#16a34a', bg: '#dcfce7', en: 'Full',    ja: '全体練習可' },
+                      { status: 'limited', count: avIssues.filter(p => p.status === 'limited').length, color: '#d97706', bg: '#fef3c7', en: 'Limited', ja: '制限あり'  },
+                      { status: 'out',     count: avIssues.filter(p => p.status === 'out').length,     color: '#dc2626', bg: '#fee2e2', en: 'Out',     ja: '練習不可'  },
+                    ].map(s => (
+                      <div key={s.status} className={styles.avCountBox} style={{ background: s.bg }}>
+                        <span className={styles.avCountNum} style={{ color: s.color }}>{s.count}</span>
+                        <span className={styles.avCountLabel} style={{ color: s.color }}>{lang === 'ja' ? s.ja : s.en}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Alert list */}
+                  {avIssues.length === 0 ? (
+                    <EmptyState>✓ {lang === 'ja' ? '全員が練習可' : 'All players available'}</EmptyState>
+                  ) : (
+                    <div className={styles.alertSection}>
+                      <SectionLabel>⚠️ {lang === 'ja' ? '要注意' : 'Alerts'}</SectionLabel>
+                      {avIssues.map(p => {
+                        const isOut = p.status === 'out';
+                        const color = isOut ? '#dc2626' : '#d97706';
+                        const bg    = isOut ? '#fee2e2' : '#fef3c7';
+                        const label = isOut ? (lang === 'ja' ? '練習不可' : 'Out') : (lang === 'ja' ? '制限あり' : 'Limited');
+                        return (
+                          <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical')} style={{ cursor: 'pointer' }}>
+                            <span className={styles.alertDot} style={{ background: color }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className={styles.alertText}>{p.player_name}</div>
+                              {p.reason && <div className={styles.alertSub}>{p.reason}</div>}
+                            </div>
+                            <span className={styles.avStatusPill} style={{ color, background: bg }}>{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className={styles.cardFoot}>
+                  <button className={styles.footBtn} onClick={() => onNavigate('medical')}>
+                    {lang === 'ja' ? 'メディカルを開く →' : 'Open Medical →'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Wellness & Performance Alerts (role-gated) */}
             {canSeeWellness && (
@@ -662,62 +718,6 @@ export default function Dashboard({
                 </button>
               </div>
             </div>
-
-            {/* Player Availability (coaching staff) */}
-            {canSeeAvailability && (
-              <div className={styles.card}>
-                <div className={styles.cardHead}>
-                  <span className={styles.cardTitle}>
-                    🩺 {lang === 'ja' ? '選手の状態' : 'Player Availability'}
-                    {avIssues.length > 0 && <span className={styles.countBadge}>{avIssues.length}</span>}
-                  </span>
-                </div>
-                <div className={styles.cardBody}>
-                  {availability.length === 0 ? (
-                    <EmptyState>{lang === 'ja' ? 'データなし' : 'No data yet'}</EmptyState>
-                  ) : avIssues.length === 0 ? (
-                    <EmptyState>✓ {lang === 'ja' ? `全${avFull}名 — 全体練習可` : `All ${avFull} players available`}</EmptyState>
-                  ) : (
-                    <>
-                      {['out', 'limited'].map(st => {
-                        const group = avIssues.filter(p => p.status === st);
-                        if (!group.length) return null;
-                        const cfg = { out: { color: '#dc2626', bg: '#fee2e2', border: '#fca5a5', en: 'Out', ja: '練習不可' }, limited: { color: '#d97706', bg: '#fef3c7', border: '#fcd34d', en: 'Limited', ja: '制限あり' } }[st];
-                        return (
-                          <div key={st} className={styles.alertSection}>
-                            <SectionLabel>
-                              {st === 'out' ? '🔴' : '🟡'} {lang === 'ja' ? cfg.ja : cfg.en}
-                            </SectionLabel>
-                            {group.map(p => (
-                              <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical')} style={{ cursor: 'pointer' }}>
-                                <span className={styles.alertDot} style={{ background: cfg.color }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div className={styles.alertText}>{p.player_name}</div>
-                                  {p.reason && <div className={styles.alertSub}>{p.reason}</div>}
-                                </div>
-                                <span className={styles.avStatusPill} style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
-                                  {lang === 'ja' ? cfg.ja : cfg.en}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                      {avFull > 0 && (
-                        <div className={styles.avFullLine}>
-                          ✓ {avFull} {lang === 'ja' ? '名が全体練習可' : `player${avFull > 1 ? 's' : ''} full training`}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className={styles.cardFoot}>
-                  <button className={styles.footBtn} onClick={() => onNavigate('medical')}>
-                    {lang === 'ja' ? 'メディカルを開く →' : 'Open Medical →'}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Announcements */}
             <div className={styles.card}>
