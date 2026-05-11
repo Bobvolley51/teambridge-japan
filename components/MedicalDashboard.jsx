@@ -1,0 +1,514 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/lib/toast';
+import styles from './MedicalDashboard.module.css';
+
+const STATUS_CFG = {
+  full:      { en: 'Full Training', ja: '全体練習可',  color: '#16a34a', bg: '#dcfce7', border: '#86efac' },
+  limited:   { en: 'Limited',       ja: '制限あり',    color: '#d97706', bg: '#fef3c7', border: '#fcd34d' },
+  out:       { en: 'Out',           ja: '練習不可',    color: '#dc2626', bg: '#fee2e2', border: '#fca5a5' },
+};
+
+const REC_STATUS_CFG = {
+  active:     { en: 'Active',     ja: '治療中',    color: '#dc2626' },
+  monitoring: { en: 'Monitoring', ja: '経過観察',  color: '#d97706' },
+  cleared:    { en: 'Cleared',    ja: '復帰済み',  color: '#16a34a' },
+};
+
+const BODY_PARTS = [
+  'Shoulder L', 'Shoulder R', 'Elbow L', 'Elbow R', 'Wrist L', 'Wrist R',
+  'Lower Back', 'Hip L', 'Hip R', 'Knee L', 'Knee R', 'Ankle L', 'Ankle R',
+  'Quad L', 'Quad R', 'Hamstring L', 'Hamstring R', 'Calf L', 'Calf R', 'Other',
+];
+
+const INJURY_TYPES = [
+  'Sprain', 'Strain', 'Tendinopathy', 'Contusion', 'Fracture',
+  'Overuse', 'Post-surgery', 'Illness', 'Fatigue', 'Other',
+];
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(ds) {
+  const d = new Date(ds + 'T00:00:00');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+// ── Availability status card ──────────────────────────────────────────────────
+
+function AvailabilityCard({ player, lang, canEdit, onEdit }) {
+  const cfg = STATUS_CFG[player.status] ?? STATUS_CFG.full;
+  return (
+    <div className={styles.avCard} style={{ borderColor: cfg.border, background: cfg.bg }}>
+      <div className={styles.avName}>{player.player_name}</div>
+      <span className={styles.avBadge} style={{ color: cfg.color, borderColor: cfg.border }}>
+        {lang === 'ja' ? cfg.ja : cfg.en}
+      </span>
+      {player.reason && <div className={styles.avReason}>{player.reason}</div>}
+      {player.updated_at && (
+        <div className={styles.avMeta}>
+          {lang === 'ja' ? '更新：' : 'Updated: '}
+          {new Date(player.updated_at).toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-GB', { month: 'short', day: 'numeric' })}
+        </div>
+      )}
+      {canEdit && (
+        <button className={styles.avEditBtn} onClick={() => onEdit(player)}>
+          {lang === 'ja' ? '編集' : 'Edit'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Availability edit modal ───────────────────────────────────────────────────
+
+function AvailabilityModal({ player, lang, currentUserName, onSave, onClose }) {
+  const [status,  setStatus]  = useState(player.status ?? 'full');
+  const [reason,  setReason]  = useState(player.reason ?? '');
+  const [saving,  setSaving]  = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    await supabase.from('player_availability').upsert({
+      player_id:   player.player_id,
+      player_name: player.player_name,
+      status,
+      reason:      reason.trim() || null,
+      updated_by:  currentUserName,
+      updated_at:  new Date().toISOString(),
+    }, { onConflict: 'player_id' });
+    setSaving(false);
+    onSave();
+    onClose();
+  };
+
+  return (
+    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHead}>
+          <span>{player.player_name}</span>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={submit} className={styles.form}>
+          <label className={styles.label}>{lang === 'ja' ? 'ステータス' : 'Status'}</label>
+          <div className={styles.statusGrid}>
+            {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+              <button key={key} type="button"
+                className={`${styles.statusBtn} ${status === key ? styles.statusBtnActive : ''}`}
+                style={status === key ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color } : {}}
+                onClick={() => setStatus(key)}>
+                {lang === 'ja' ? cfg.ja : cfg.en}
+              </button>
+            ))}
+          </div>
+          <label className={styles.label}>{lang === 'ja' ? '理由・メモ（コーチに表示）' : 'Reason / note (visible to coaches)'}</label>
+          <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)}
+            rows={2} placeholder={lang === 'ja' ? '例：右膝の痛みのため' : 'e.g. Right knee pain — no jumping'} />
+          <div className={styles.modalFoot}>
+            <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Treatment record form ─────────────────────────────────────────────────────
+
+function RecordForm({ record, players, lang, currentUserName, onSave, onClose }) {
+  const [playerName,    setPlayerName]    = useState(record?.player_name ?? '');
+  const [playerId,      setPlayerId]      = useState(record?.player_id   ?? '');
+  const [date,          setDate]          = useState(record?.record_date  ?? today());
+  const [bodyPart,      setBodyPart]      = useState(record?.body_part    ?? '');
+  const [injuryType,    setInjuryType]    = useState(record?.injury_type  ?? '');
+  const [treatment,     setTreatment]     = useState(record?.treatment     ?? '');
+  const [recStatus,     setRecStatus]     = useState(record?.status        ?? 'active');
+  const [privateNotes,  setPrivateNotes]  = useState(record?.private_notes ?? '');
+  const [saving,        setSaving]        = useState(false);
+
+  const handlePlayerChange = (e) => {
+    const p = players.find(pl => pl.id === e.target.value);
+    setPlayerId(e.target.value);
+    setPlayerName(p?.display_name ?? e.target.value);
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!playerName.trim()) return;
+    setSaving(true);
+    const payload = {
+      player_id: playerId || null, player_name: playerName.trim(),
+      record_date: date, body_part: bodyPart || null, injury_type: injuryType || null,
+      treatment: treatment.trim() || null, status: recStatus,
+      private_notes: privateNotes.trim() || null, created_by: currentUserName,
+    };
+    if (record?.id) {
+      await supabase.from('medical_records').update(payload).eq('id', record.id);
+    } else {
+      await supabase.from('medical_records').insert(payload);
+    }
+    setSaving(false);
+    onSave();
+    onClose();
+  };
+
+  return (
+    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHead}>
+          <span>{record ? (lang === 'ja' ? '記録を編集' : 'Edit Record') : (lang === 'ja' ? '新規記録' : 'New Record')}</span>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={submit} className={styles.form}>
+          <label className={styles.label}>{lang === 'ja' ? '選手 *' : 'Player *'}</label>
+          {players.length > 0
+            ? <select className={styles.input} value={playerId} onChange={handlePlayerChange} required>
+                <option value="">{lang === 'ja' ? '選択してください' : 'Select player'}</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+              </select>
+            : <input className={styles.input} value={playerName} onChange={e => setPlayerName(e.target.value)}
+                required placeholder="Player name" />
+          }
+
+          <div className={styles.row}>
+            <div className={styles.col}>
+              <label className={styles.label}>{lang === 'ja' ? '日付' : 'Date'}</label>
+              <input className={styles.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div className={styles.col}>
+              <label className={styles.label}>{lang === 'ja' ? 'ステータス' : 'Status'}</label>
+              <select className={styles.input} value={recStatus} onChange={e => setRecStatus(e.target.value)}>
+                {Object.entries(REC_STATUS_CFG).map(([k, v]) => (
+                  <option key={k} value={k}>{lang === 'ja' ? v.ja : v.en}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.row}>
+            <div className={styles.col}>
+              <label className={styles.label}>{lang === 'ja' ? '部位' : 'Body Part'}</label>
+              <select className={styles.input} value={bodyPart} onChange={e => setBodyPart(e.target.value)}>
+                <option value="">—</option>
+                {BODY_PARTS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div className={styles.col}>
+              <label className={styles.label}>{lang === 'ja' ? '傷病種別' : 'Injury Type'}</label>
+              <select className={styles.input} value={injuryType} onChange={e => setInjuryType(e.target.value)}>
+                <option value="">—</option>
+                {INJURY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <label className={styles.label}>{lang === 'ja' ? '処置内容' : 'Treatment'}</label>
+          <textarea className={styles.textarea} value={treatment} onChange={e => setTreatment(e.target.value)}
+            rows={3} placeholder={lang === 'ja' ? '実施した処置を記入' : 'Describe treatment given…'} />
+
+          <label className={styles.label} style={{ color: '#7c3aed' }}>
+            🔒 {lang === 'ja' ? 'プライベートメモ（セラピストのみ）' : 'Private notes (therapist only)'}
+          </label>
+          <textarea className={styles.textarea} style={{ borderColor: '#c4b5fd' }}
+            value={privateNotes} onChange={e => setPrivateNotes(e.target.value)}
+            rows={2} placeholder={lang === 'ja' ? '内部メモ' : 'Internal notes…'} />
+
+          <div className={styles.modalFoot}>
+            <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Comm compose form ─────────────────────────────────────────────────────────
+
+function CommForm({ lang, currentUserName, onSave, onClose }) {
+  const [title,   setTitle]   = useState('');
+  const [content, setContent] = useState('');
+  const [saving,  setSaving]  = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim()) return;
+    setSaving(true);
+    await supabase.from('medical_comms').insert({
+      title: title.trim(), content: content.trim(), created_by: currentUserName,
+    });
+    setSaving(false);
+    onSave();
+    onClose();
+  };
+
+  return (
+    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHead}>
+          <span>{lang === 'ja' ? 'コーチングスタッフへの連絡' : 'Update to Coaching Staff'}</span>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={submit} className={styles.form}>
+          <label className={styles.label}>{lang === 'ja' ? '件名 *' : 'Subject *'}</label>
+          <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)}
+            required autoFocus placeholder={lang === 'ja' ? '例：週次メディカルアップデート' : 'e.g. Weekly medical update'} />
+          <label className={styles.label}>{lang === 'ja' ? '内容 *' : 'Content *'}</label>
+          <textarea className={styles.textarea} value={content} onChange={e => setContent(e.target.value)}
+            required rows={6} placeholder={lang === 'ja' ? 'コーチへの情報を記入…' : 'Write your update for the coaching staff…'} />
+          <div className={styles.modalFoot}>
+            <button type="button" className={styles.btnCancel} onClick={onClose}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? '…' : (lang === 'ja' ? '送信' : 'Send')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+const THERAPIST_ROLES = ['Therapist'];
+const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic', 'GM', 'Staff/Orga'];
+
+export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '' }) {
+  const toast        = useToast();
+  const isTherapist  = THERAPIST_ROLES.includes(profile?.role);
+  const canViewShared = SHARED_ROLES.includes(profile?.role);
+
+  const [tab,          setTab]          = useState('availability');
+  const [players,      setPlayers]      = useState([]);
+  const [availability, setAvailability] = useState([]);
+  const [records,      setRecords]      = useState([]);
+  const [comms,        setComms]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+
+  const [avModal,      setAvModal]      = useState(null);  // player obj
+  const [recForm,      setRecForm]      = useState(null);  // record obj or 'new'
+  const [commForm,     setCommForm]     = useState(false);
+
+  const [recFilter,    setRecFilter]    = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [{ data: profData }, { data: avData }, { data: commData }] = await Promise.all([
+      supabase.from('profiles').select('id, display_name, role').eq('role', 'Player').order('display_name'),
+      supabase.from('player_availability').select('*').order('player_name'),
+      supabase.from('medical_comms').select('*').order('created_at', { ascending: false }).limit(30),
+    ]);
+    setPlayers(profData ?? []);
+
+    // Merge players with availability — show every player even if no row yet
+    const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
+    const merged = (profData ?? []).map(p => avMap[p.id] ?? {
+      player_id: p.id, player_name: p.display_name, status: 'full', reason: null, updated_at: null,
+    });
+    setAvailability(merged);
+    setComms(commData ?? []);
+
+    if (isTherapist) {
+      const { data: recData } = await supabase
+        .from('medical_records')
+        .select('*')
+        .order('record_date', { ascending: false })
+        .limit(200);
+      setRecords(recData ?? []);
+    }
+    setLoading(false);
+  }, [isTherapist]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (!canViewShared) return (
+    <div style={{ padding: 32, color: '#6b7280' }}>
+      {lang === 'ja' ? 'アクセス権がありません。' : 'Access restricted.'}
+    </div>
+  );
+
+  const filteredRecords = recFilter === 'all'
+    ? records
+    : records.filter(r => r.status === recFilter);
+
+  const tabs = [
+    { id: 'availability', en: 'Availability',    ja: '出場可否'          },
+    { id: 'updates',      en: 'Coach Updates',   ja: 'コーチへの連絡'    },
+    ...(isTherapist ? [{ id: 'records', en: 'Treatment Log', ja: '治療記録' }] : []),
+  ];
+
+  return (
+    <div className={styles.wrapper}>
+
+      {/* Header */}
+      <div className={styles.topBar}>
+        <div className={styles.heading}>
+          🩺 {lang === 'ja' ? 'メディカル' : 'Medical'}
+        </div>
+        <div className={styles.tabs}>
+          {tabs.map(t => (
+            <button key={t.id}
+              className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
+              onClick={() => setTab(t.id)}>
+              {lang === 'ja' ? t.ja : t.en}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.content}>
+        {loading ? (
+          <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
+        ) : (
+
+          /* ── AVAILABILITY ── */
+          tab === 'availability' ? (
+            <div>
+              <div className={styles.sectionMeta}>
+                <span className={styles.sectionNote}>
+                  {lang === 'ja'
+                    ? '選手のトレーニング参加可否。コーチングスタッフ全員が閲覧できます。'
+                    : 'Training availability visible to all coaching staff.'}
+                </span>
+              </div>
+
+              {/* Summary chips */}
+              <div className={styles.summaryRow}>
+                {Object.entries(STATUS_CFG).map(([key, cfg]) => {
+                  const count = availability.filter(a => a.status === key).length;
+                  return (
+                    <span key={key} className={styles.summaryChip}
+                      style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
+                      {lang === 'ja' ? cfg.ja : cfg.en}: <strong>{count}</strong>
+                    </span>
+                  );
+                })}
+              </div>
+
+              <div className={styles.avGrid}>
+                {availability.map(p => (
+                  <AvailabilityCard key={p.player_id} player={p} lang={lang}
+                    canEdit={isTherapist} onEdit={setAvModal} />
+                ))}
+              </div>
+
+              {avModal && (
+                <AvailabilityModal player={avModal} lang={lang} currentUserName={currentUserName}
+                  onSave={() => { load(); toast(lang === 'ja' ? '更新しました' : 'Availability updated', 'success'); }}
+                  onClose={() => setAvModal(null)} />
+              )}
+            </div>
+
+          /* ── COACH UPDATES ── */
+          ) : tab === 'updates' ? (
+            <div>
+              {isTherapist && (
+                <div className={styles.addBar}>
+                  <button className={styles.btnAdd} onClick={() => setCommForm(true)}>
+                    + {lang === 'ja' ? 'コーチへの連絡を作成' : 'New update for coaches'}
+                  </button>
+                </div>
+              )}
+              {comms.length === 0
+                ? <div className={styles.empty}>{lang === 'ja' ? 'まだ連絡はありません。' : 'No updates yet.'}</div>
+                : comms.map(c => (
+                    <div key={c.id} className={styles.commCard}>
+                      <div className={styles.commTitle}>{c.title}</div>
+                      <div className={styles.commContent}>{c.content}</div>
+                      <div className={styles.commMeta}>
+                        {c.created_by} · {new Date(c.created_at).toLocaleDateString(
+                          lang === 'ja' ? 'ja-JP' : 'en-GB',
+                          { weekday: 'short', month: 'short', day: 'numeric' }
+                        )}
+                      </div>
+                    </div>
+                  ))
+              }
+              {commForm && (
+                <CommForm lang={lang} currentUserName={currentUserName}
+                  onSave={() => { load(); toast(lang === 'ja' ? '送信しました' : 'Update sent', 'success'); }}
+                  onClose={() => setCommForm(false)} />
+              )}
+            </div>
+
+          /* ── TREATMENT LOG (therapist only) ── */
+          ) : tab === 'records' && isTherapist ? (
+            <div>
+              <div className={styles.addBar}>
+                <button className={styles.btnAdd} onClick={() => setRecForm('new')}>
+                  + {lang === 'ja' ? '新規記録' : 'New record'}
+                </button>
+                <div className={styles.filterRow}>
+                  {['all', 'active', 'monitoring', 'cleared'].map(f => (
+                    <button key={f}
+                      className={`${styles.filterBtn} ${recFilter === f ? styles.filterBtnActive : ''}`}
+                      onClick={() => setRecFilter(f)}>
+                      {f === 'all'
+                        ? (lang === 'ja' ? 'すべて' : 'All')
+                        : (lang === 'ja' ? REC_STATUS_CFG[f].ja : REC_STATUS_CFG[f].en)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filteredRecords.length === 0
+                ? <div className={styles.empty}>{lang === 'ja' ? '記録はありません。' : 'No records.'}</div>
+                : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th className={styles.th}>{lang === 'ja' ? '日付' : 'Date'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '部位' : 'Body Part'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '傷病種別' : 'Injury Type'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '処置' : 'Treatment'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? 'ステータス' : 'Status'}</th>
+                          <th className={styles.th}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRecords.map(r => {
+                          const cfg = REC_STATUS_CFG[r.status] ?? REC_STATUS_CFG.active;
+                          return (
+                            <tr key={r.id} className={styles.tr}>
+                              <td className={styles.td}>{r.record_date}</td>
+                              <td className={styles.td}><strong>{r.player_name}</strong></td>
+                              <td className={styles.td}>{r.body_part || '—'}</td>
+                              <td className={styles.td}>{r.injury_type || '—'}</td>
+                              <td className={styles.tdWide}>{r.treatment || '—'}</td>
+                              <td className={styles.td}>
+                                <span className={styles.recStatusBadge} style={{ color: cfg.color }}>
+                                  {lang === 'ja' ? cfg.ja : cfg.en}
+                                </span>
+                              </td>
+                              <td className={styles.td}>
+                                <button className={styles.editBtn} onClick={() => setRecForm(r)}>✏️</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              }
+
+              {recForm && (
+                <RecordForm
+                  record={recForm === 'new' ? null : recForm}
+                  players={players}
+                  lang={lang}
+                  currentUserName={currentUserName}
+                  onSave={() => { load(); toast(lang === 'ja' ? '保存しました' : 'Record saved', 'success'); }}
+                  onClose={() => setRecForm(null)}
+                />
+              )}
+            </div>
+          ) : null
+        )}
+      </div>
+    </div>
+  );
+}

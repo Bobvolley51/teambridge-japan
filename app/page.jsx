@@ -18,6 +18,7 @@ import WellnessDashboard     from '@/components/WellnessDashboard';
 import SessionRPE            from '@/components/SessionRPE';
 import BodyWeightCheck       from '@/components/BodyWeightCheck';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
+import MedicalDashboard      from '@/components/MedicalDashboard';
 import NotificationBell      from '@/components/NotificationBell';
 import PrivacyNotice, { PRIVACY_VERSION } from '@/components/PrivacyNotice';
 import { ToastProvider } from '@/lib/toast';
@@ -28,7 +29,7 @@ import GlobalSearch          from '@/components/GlobalSearch';
 import styles                from './page.module.css';
 import {
   IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
-  IconMega, IconPlane, IconUsers, IconHeart, IconChart, IconStats, IconSearch,
+  IconMega, IconPlane, IconUsers, IconHeart, IconChart, IconStats, IconSearch, IconPin,
 } from '@/components/icons';
 
 const NAV_BASE = [
@@ -44,14 +45,16 @@ const NAV_CAL_SUBS = [
   { id: 'travel', Icon: IconPlane, label: { en: 'Travel', ja: '旅程'     } },
 ];
 
-const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,  label: { en: 'Users',  ja: 'ユーザー'   } };
-const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Health', ja: '健康'       } };
-const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,  label: { en: 'Load',   ja: '負荷'       } };
-const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Stats',  ja: 'データ'     } };
+const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,  label: { en: 'Users',   ja: 'ユーザー'   } };
+const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Health',  ja: '健康'       } };
+const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,  label: { en: 'Load',    ja: '負荷'       } };
+const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Stats',   ja: 'データ'     } };
+const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Medical', ja: 'メディカル' } };
 
 // Roles that can view the wellness dashboard
 const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist'];
 const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
+const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic', 'GM'];
 
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
@@ -319,6 +322,7 @@ export default function Home() {
   const isAdmin        = ['GM', 'Headcoach'].includes(profile?.role);
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
   const canPerformance = PERFORMANCE_VIEWERS.includes(profile?.role);
+  const canMedical     = MEDICAL_VIEWERS.includes(profile?.role);
 
   const isPlayer = profile?.role === 'Player';
 
@@ -327,6 +331,7 @@ export default function Home() {
     ...(isPlayer       ? [NAV_MYSTATS]     : []),
     ...(canWellness    ? [NAV_WELLNESS]    : []),
     ...(canPerformance ? [NAV_PERFORMANCE] : []),
+    ...(canMedical     ? [NAV_MEDICAL]     : []),
     ...(isAdmin        ? [NAV_ADMIN]       : []),
   ];
 
@@ -399,6 +404,7 @@ export default function Home() {
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}
           {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} profile={profile} />}
+          {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} />}
         </main>
       </div>
