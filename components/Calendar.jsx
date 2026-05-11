@@ -877,7 +877,9 @@ function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
 export default function Calendar({ lang = 'en', currentUserName = '', role = 'Player', currentUserId = null }) {
   const toast = useToast();
   const today = new Date();
-  const [view,      setView]      = useState('month');
+  const [view,      setView]      = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'month'
+  );
   const [current,   setCurrent]   = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
   const [events,    setEvents]    = useState([]);
   const [profiles,  setProfiles]  = useState([]);
@@ -989,6 +991,29 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
         {view === 'day' && (
           <DayView date={current} events={events} lang={lang} today={today}
             onSlotClick={handleSlotClick} onEventClick={setDetailEv} />
+        )}
+
+        {/* Mobile-only compact upcoming strip */}
+        {!loading && upcomingEvents.length > 0 && (
+          <div className={styles.mobileUpcoming}>
+            <div className={styles.mobileUpHead}>{lang === 'ja' ? '今後の予定' : 'Upcoming'}</div>
+            <div className={styles.mobileUpList}>
+              {upcomingEvents.slice(0, 3).map(ev => {
+                const d   = new Date(ev.start_time);
+                const c   = catColor(ev.category);
+                return (
+                  <div key={ev._key ?? ev.id} className={styles.mobileUpItem} onClick={() => setDetailEv(ev)}>
+                    <span className={styles.mobileUpDot} style={{ background: c.solid }} />
+                    <span className={styles.mobileUpTitle}>{ev.title}</span>
+                    <span className={styles.mobileUpDate}>
+                      {pad(d.getDate())}/{pad(d.getMonth() + 1)}
+                      {!ev.all_day && ` ${pad(d.getHours())}:${pad(d.getMinutes())}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
 
