@@ -78,7 +78,13 @@ export default function Home() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, s) => setSession(s ?? null)
+      (event, s) => {
+        if (event === 'TOKEN_REFRESHED' && !s) {
+          supabase.auth.signOut();
+          return;
+        }
+        setSession(s ?? null);
+      }
     );
     return () => subscription.unsubscribe();
   }, []);
