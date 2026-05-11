@@ -73,56 +73,68 @@ function prevWeekStartOf(dateStr) {
   return getWeekStart(toDateStr(d));
 }
 
-// ── SVG Bar Chart ─────────────────────────────────────────────
+// ── Player Heatmap ────────────────────────────────────────────
 
-function BarChart({ data }) {
-  const W = 560, H = 130;
-  const P = { t: 22, b: 22, l: 20, r: 8 };
-  const cW = W - P.l - P.r;
-  const cH = H - P.t - P.b;
-  const slotW = cW / data.length;
-  const barW = Math.max(slotW * 0.55, 10);
-
+function PlayerHeatmap({ players, dates, playerDayMap, weekRows, lang }) {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className={styles.svg}>
-      {/* Horizontal grid lines */}
-      {[2, 4, 6, 8, 10].map(v => {
-        const y = P.t + cH - (v / 10) * cH;
-        return (
-          <g key={v}>
-            <line x1={P.l} y1={y} x2={W - P.r} y2={y} stroke="#f3f4f6" strokeWidth={1} />
-            <text x={P.l - 3} y={y + 3} textAnchor="end" fontSize={8} fill="#d1d5db">{v}</text>
-          </g>
-        );
-      })}
-
-      {/* Threshold line at 5 */}
-      <line x1={P.l} y1={P.t + cH - (5 / 10) * cH} x2={W - P.r} y2={P.t + cH - (5 / 10) * cH}
-        stroke="#fecaca" strokeWidth={1} strokeDasharray="4 3" />
-
-      {/* Bars */}
-      {data.map((d, i) => {
-        const cx  = P.l + i * slotW + slotW / 2;
-        const bx  = cx - barW / 2;
-        const val = d.value ?? 0;
-        const bh  = Math.max((val / 10) * cH, d.value != null ? 3 : 0);
-        const by  = P.t + cH - bh;
-        const fill = colorOf(d.value);
-
-        return (
-          <g key={i}>
-            <rect x={bx} y={by} width={barW} height={bh} fill={fill} rx={3}
-              opacity={d.value == null ? 0.2 : 1} />
-            {d.value != null && (
-              <text x={cx} y={by - 4} textAnchor="middle" fontSize={9} fontWeight="700" fill={fill}>
-                {d.value}
-              </text>
-            )}
-            <text x={cx} y={H - 5} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.label}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div className={styles.hmWrap}>
+      <table className={styles.hmTable}>
+        <thead>
+          <tr>
+            <th className={styles.hmNameHead}>{lang === 'ja' ? '選手' : 'Player'}</th>
+            {dates.map(ds => {
+              const d   = new Date(ds + 'T00:00:00');
+              const dow = (d.getDay() + 6) % 7;
+              return (
+                <th key={ds} className={styles.hmDateHead}>
+                  <div className={styles.hmDow}>{DAY_LABELS[lang][dow]}</div>
+                  <div className={styles.hmDd}>{`${d.getMonth()+1}/${d.getDate()}`}</div>
+                </th>
+              );
+            })}
+            <th className={styles.hmAvgHead}>{lang === 'ja' ? '平均' : 'Avg'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {players.map(name => {
+            const dayScores = dates.map(ds => {
+              const scores = playerDayMap[name]?.[ds] ?? [];
+              return scores.length ? avg(scores) : null;
+            });
+            const playerAvg = avg(dayScores.filter(s => s != null));
+            return (
+              <tr key={name} className={styles.hmRow}>
+                <td className={styles.hmNameCell}>{name}</td>
+                {dayScores.map((score, i) => (
+                  <td key={dates[i]} className={styles.hmCell}
+                    style={{ background: score != null ? colorOf(score) : '#f3f4f6', color: score != null ? '#fff' : '#d1d5db' }}>
+                    {score != null ? score : '·'}
+                  </td>
+                ))}
+                <td className={styles.hmAvgCell} style={{ color: playerAvg != null ? colorOf(playerAvg) : '#9ca3af' }}>
+                  <strong>{playerAvg ?? '—'}</strong>
+                </td>
+              </tr>
+            );
+          })}
+          {/* Team row */}
+          <tr className={styles.hmTeamRow}>
+            <td className={styles.hmNameCell}><em>{lang === 'ja' ? 'チーム' : 'Team'}</em></td>
+            {dates.map(ds => {
+              const dayRows = weekRows.filter(r => r.response_date === ds);
+              const score   = dayRows.length ? avg(dayRows.map(r => r.score)) : null;
+              return (
+                <td key={ds} className={styles.hmCell}
+                  style={{ background: score != null ? colorOf(score) : '#f3f4f6', color: score != null ? '#fff' : '#d1d5db' }}>
+                  {score != null ? score : '·'}
+                </td>
+              );
+            })}
+            <td className={styles.hmAvgCell} />
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -227,18 +239,19 @@ export default function WellnessDashboard({ lang }) {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
-  const dailyAvg = weekDates.map(ds => {
-    const dayRows = weekRows.filter(r => r.response_date === ds);
-    return { label: dayLabel(ds), value: dayRows.length ? avg(dayRows.map(r => r.score)) : null };
+  // Build player-day map for heatmap: { playerName: { dateStr: [scores] } }
+  const playerDayMap = {};
+  for (const r of weekRows) {
+    if (!playerDayMap[r.user_name]) playerDayMap[r.user_name] = {};
+    if (!playerDayMap[r.user_name][r.response_date]) playerDayMap[r.user_name][r.response_date] = [];
+    playerDayMap[r.user_name][r.response_date].push(r.score);
+  }
+  // Sort players: worst overall average first (most concerning at top)
+  const heatmapPlayers = Object.keys(playerDayMap).sort((a, b) => {
+    const aAvg = avg(Object.values(playerDayMap[a]).flat()) ?? 10;
+    const bAvg = avg(Object.values(playerDayMap[b]).flat()) ?? 10;
+    return aAvg - bAvg;
   });
-
-  const questionDailyAvg = QUESTIONS.map(q => ({
-    ...q,
-    days: weekDates.map(ds => {
-      const qRows = weekRows.filter(r => r.response_date === ds && r.question_key === q.key);
-      return { label: dayLabel(ds), value: qRows.length ? avg(qRows.map(r => r.score)) : null };
-    }),
-  }));
 
   const weekPlayers = {};
   for (const r of weekRows) {
@@ -439,33 +452,28 @@ export default function WellnessDashboard({ lang }) {
               : (
                 <div className={styles.weekContent}>
 
-                  {/* Overall daily average chart */}
+                  {/* Player heatmap */}
                   <div className={styles.chartCard}>
                     <div className={styles.chartTitle}>
-                      {lang === 'ja' ? 'チーム全体 — 日別平均' : 'Team Overall — Daily Average'}
+                      {lang === 'ja' ? '選手別 ウェルネス ヒートマップ' : 'Player Wellness Heatmap'}
+                      <span className={styles.hmSubtitle}>
+                        {lang === 'ja' ? '（1日の全質問の平均スコア）' : '(daily avg across all questions)'}
+                      </span>
                     </div>
-                    <BarChart data={dailyAvg} />
+                    <PlayerHeatmap
+                      players={heatmapPlayers}
+                      dates={weekDates}
+                      playerDayMap={playerDayMap}
+                      weekRows={weekRows}
+                      lang={lang}
+                    />
                     <div className={styles.chartLegend}>
                       <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 7–10' : 'Good 7–10'}</span>
                       <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 5–6' : 'Moderate 5–6'}</span>
                       <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <5 ⚠️' : 'Alert <5 ⚠️'}</span>
-                      <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：1（低）→ 10（高）' : 'Scale: 1 (low) → 10 (high)'}</span>
+                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#d1d5db' }} />{lang === 'ja' ? '未回答' : 'No data'}</span>
+                      <span className={styles.legendScale}>{lang === 'ja' ? '最悪スコアの選手が上位' : 'Lowest avg shown first'}</span>
                     </div>
-                  </div>
-
-                  {/* Per-question charts */}
-                  <div className={styles.qGrid}>
-                    {questionDailyAvg.map(q => (
-                      <div key={q.key} className={styles.qChartCard}>
-                        <div className={styles.qChartTitle}>{lang === 'ja' ? q.ja : q.en}</div>
-                        <BarChart data={q.days} />
-                        <div className={styles.chartLegend}>
-                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />7–10</span>
-                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />5–6</span>
-                          <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />&lt;5</span>
-                        </div>
-                      </div>
-                    ))}
                   </div>
 
                   {/* Weekly player summary table */}
