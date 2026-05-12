@@ -212,6 +212,7 @@ export default function NutritionDashboard({ lang, profile }) {
   const [saving,       setSaving]       = useState({});
   const [uploading,    setUploading]    = useState({});
   const [lightbox,     setLightbox]     = useState(null);
+  const [uploadError,  setUploadError]  = useState(null);
 
   // Load player list for trainer dropdown
   useEffect(() => {
@@ -283,11 +284,16 @@ export default function NutritionDashboard({ lang, profile }) {
   async function ensureEntry(mealType) {
     const existing = entries[mealType];
     if (existing?.id) return existing.id;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('nutrition_entries')
       .insert({ user_id: viewUserId, user_name: viewUserName, meal_date: selectedDay, meal_type: mealType, notes: '' })
       .select('id')
       .single();
+    if (error) {
+      console.error('nutrition_entries insert failed:', error);
+      setUploadError(`DB error: ${error.message}`);
+      return null;
+    }
     if (data) {
       setEntries(e => ({ ...e, [mealType]: { ...emptyEntry(), id: data.id } }));
       return data.id;
@@ -321,11 +327,17 @@ export default function NutritionDashboard({ lang, profile }) {
 
     const blob = await compressImage(file);
     const path = `${viewUserId}/${selectedDay}/${mealType}/${Date.now()}.jpg`;
-    const { error } = await supabase.storage.from('nutrition-photos').upload(path, blob, { contentType: 'image/jpeg' });
-    if (!error) {
-      const { data: phData } = await supabase.from('nutrition_photos').insert({ entry_id: id, storage_path: path }).select('id').single();
-      const url = supabase.storage.from('nutrition-photos').getPublicUrl(path).data.publicUrl;
-      if (phData) {
+    const { error: storageError } = await supabase.storage.from('nutrition-photos').upload(path, blob, { contentType: 'image/jpeg' });
+    if (storageError) {
+      console.error('Storage upload failed:', storageError);
+      setUploadError(`Storage error: ${storageError.message}`);
+    } else {
+      const { data: phData, error: dbError } = await supabase.from('nutrition_photos').insert({ entry_id: id, storage_path: path }).select('id').single();
+      if (dbError) {
+        console.error('nutrition_photos insert failed:', dbError);
+        setUploadError(`DB error: ${dbError.message}`);
+      } else if (phData) {
+        const url = supabase.storage.from('nutrition-photos').getPublicUrl(path).data.publicUrl;
         setEntries(e => ({
           ...e,
           [mealType]: { ...(e[mealType] ?? emptyEntry()), id, photos: [...(e[mealType]?.photos ?? []), { id: phData.id, url, path }] },
@@ -398,6 +410,14 @@ export default function NutritionDashboard({ lang, profile }) {
               ❗ {reviewRequests} {lang === 'ja' ? '件のフィードバック依頼' : `meal${reviewRequests > 1 ? 's' : ''} waiting for your feedback`}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Upload error banner */}
+      {uploadError && (
+        <div style={{ background: '#fee2e2', borderBottom: '1px solid #fca5a5', padding: '8px 16px', fontSize: 13, color: '#7e0027', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          ⚠️ {uploadError}
+          <button onClick={() => setUploadError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7e0027', fontSize: 16 }}>✕</button>
         </div>
       )}
 

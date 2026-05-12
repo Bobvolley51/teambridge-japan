@@ -23,9 +23,9 @@ drop policy if exists "nutr_entries_update" on nutrition_entries;
 drop policy if exists "nutr_entries_delete" on nutrition_entries;
 
 create policy "nutr_entries_select" on nutrition_entries for select using (true);
-create policy "nutr_entries_insert" on nutrition_entries for insert with check (auth.uid() = user_id);
+create policy "nutr_entries_insert" on nutrition_entries for insert with check (true);
 create policy "nutr_entries_update" on nutrition_entries for update using (true);
-create policy "nutr_entries_delete" on nutrition_entries for delete using (auth.uid() = user_id);
+create policy "nutr_entries_delete" on nutrition_entries for delete using (true);
 
 create index if not exists nutr_entries_user_date on nutrition_entries (user_id, meal_date desc);
 create index if not exists nutr_entries_date      on nutrition_entries (meal_date desc);
