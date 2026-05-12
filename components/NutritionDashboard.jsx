@@ -225,7 +225,7 @@ export default function NutritionDashboard({ lang, profile }) {
   const isTrainer = TRAINER_ROLES.includes(profile?.role);
   const DAYS = getLast14Days();
 
-  const [view,         setView]         = useState('diary'); // 'diary' | 'stats'
+  const [view,         setView]         = useState(isTrainer ? 'stats' : 'diary');
   const [selectedDay,  setSelectedDay]  = useState(DAYS[DAYS.length - 1]);
   const [players,      setPlayers]      = useState([]);
   const [viewUserId,   setViewUserId]   = useState(profile?.id ?? '');
