@@ -206,7 +206,7 @@ export default function NutritionDashboard({ lang, profile }) {
   const [selectedDay,  setSelectedDay]  = useState(DAYS[DAYS.length - 1]);
   const [players,      setPlayers]      = useState([]);
   const [viewUserId,   setViewUserId]   = useState(profile?.id ?? '');
-  const [viewUserName, setViewUserName] = useState(profile?.name ?? '');
+  const [viewUserName, setViewUserName] = useState(profile?.display_name ?? '');
   const [entries,      setEntries]      = useState({});
   const [loading,      setLoading]      = useState(false);
   const [saving,       setSaving]       = useState({});
@@ -217,7 +217,7 @@ export default function NutritionDashboard({ lang, profile }) {
   // Load player list for trainer dropdown
   useEffect(() => {
     if (!isTrainer) return;
-    supabase.from('profiles').select('id, name').order('name').then(({ data }) => {
+    supabase.from('profiles').select('id, display_name').order('display_name').then(({ data }) => {
       setPlayers(data ?? []);
     });
   }, [isTrainer]);
@@ -401,9 +401,9 @@ export default function NutritionDashboard({ lang, profile }) {
             onChange={ev => {
               const p = players.find(p => p.id === ev.target.value);
               setViewUserId(ev.target.value);
-              setViewUserName(p?.name ?? '');
+              setViewUserName(p?.display_name ?? '');
             }}>
-            {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
           </select>
           {reviewRequests > 0 && (
             <span className={styles.reviewBanner}>
