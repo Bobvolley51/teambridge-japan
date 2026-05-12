@@ -36,9 +36,6 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [vertRecords, setVertRecords] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [showLegend,  setShowLegend]  = useState(false);
-  const [attRows,     setAttRows]     = useState([]);
-  const [attLoading,  setAttLoading]  = useState(false);
-  const [attRange,    setAttRange]    = useState(60);
   const [sessSort,    setSessSort]    = useState({ col: 'date', dir: 'desc' });
 
   const load = useCallback(async () => {
@@ -53,46 +50,7 @@ export default function PerformanceDashboard({ lang, profile }) {
     setLoading(false);
   }, []);
 
-  const loadAttendance = useCallback(async () => {
-    setAttLoading(true);
-    const since = daysAgo(attRange).toISOString();
-    const now   = new Date().toISOString();
-    const { data: evs } = await supabase
-      .from('events')
-      .select('id, category')
-      .in('category', ['Ball-Practice', 'Weightlifting', 'Medical', 'Game'])
-      .gte('start_time', since)
-      .lte('start_time', now);
-    if (!evs?.length) { setAttRows([]); setAttLoading(false); return; }
-    const { data: parts } = await supabase
-      .from('event_participants')
-      .select('event_id, profile_id, status, profiles(display_name, first_name, last_name, position)')
-      .in('event_id', evs.map(e => e.id));
-    const catMap = Object.fromEntries(evs.map(e => [e.id, e.category]));
-    const playerMap = {};
-    const seenParts = new Set();
-    for (const p of parts ?? []) {
-      const dedupKey = `${p.event_id}::${p.profile_id}`;
-      if (seenParts.has(dedupKey)) continue;
-      seenParts.add(dedupKey);
-      const name = p.profiles?.display_name
-        || (p.profiles?.first_name && p.profiles?.last_name ? `${p.profiles.first_name} ${p.profiles.last_name}` : null)
-        || p.profile_id;
-      const pos = p.profiles?.position ?? '';
-      if (!playerMap[p.profile_id]) playerMap[p.profile_id] = { name, pos, bp: [0, 0], wt: [0, 0], physio: [0, 0], game: [0, 0] };
-      const cat = catMap[p.event_id];
-      const confirmed = (p.status ?? 'in') !== 'out';
-      if (cat === 'Ball-Practice') { playerMap[p.profile_id].bp[0]     += confirmed ? 1 : 0; playerMap[p.profile_id].bp[1]++;     }
-      if (cat === 'Weightlifting') { playerMap[p.profile_id].wt[0]     += confirmed ? 1 : 0; playerMap[p.profile_id].wt[1]++;     }
-      if (cat === 'Medical')       { playerMap[p.profile_id].physio[0] += confirmed ? 1 : 0; playerMap[p.profile_id].physio[1]++; }
-      if (cat === 'Game')          { playerMap[p.profile_id].game[0]   += confirmed ? 1 : 0; playerMap[p.profile_id].game[1]++;   }
-    }
-    setAttRows(Object.values(playerMap).sort((a, b) => a.name.localeCompare(b.name)));
-    setAttLoading(false);
-  }, [attRange]);
-
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (tab === 'attendance') loadAttendance(); }, [tab, loadAttendance]);
 
   // Build ACWR rows
   const day7  = daysAgo(7);
@@ -135,7 +93,6 @@ export default function PerformanceDashboard({ lang, profile }) {
             { id: 'acwr',       en: 'ACWR Overview', ja: 'ACWR 概要'      },
             { id: 'vert',       en: 'VERT Jumps',    ja: 'VERT ジャンプ'  },
             { id: 'sessions',   en: 'Sessions',      ja: 'セッション'     },
-            { id: 'attendance', en: 'Attendance',    ja: '出席状況'       },
           ].map(t => (
             <button key={t.id}
               className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
@@ -435,67 +392,6 @@ export default function PerformanceDashboard({ lang, profile }) {
         <VertDashboard lang={lang} profile={profile} />
       )}
 
-      {tab === 'attendance' && (
-        <div className={styles.content}>
-          <div className={styles.attControls}>
-            <span className={styles.attLabel}>{lang === 'ja' ? '期間：' : 'Period:'}</span>
-            {[30, 60, 90].map(d => (
-              <button key={d}
-                className={`${styles.attRangeBtn} ${attRange === d ? styles.attRangeBtnActive : ''}`}
-                onClick={() => setAttRange(d)}>
-                {d} {lang === 'ja' ? '日' : 'd'}
-              </button>
-            ))}
-          </div>
-          {attLoading
-            ? <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
-            : attRows.length === 0
-              ? <div className={styles.empty}>{lang === 'ja' ? 'この期間にデータがありません' : 'No events in this period'}</div>
-              : (
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? 'ポジション' : 'Position'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? 'ボール練習' : 'Ball Practice'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? 'ウェイト' : 'Weights'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? '試合' : 'Games'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? 'フィジオ' : 'Physio'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? '合計 %' : 'Overall %'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attRows.map(r => {
-                        const totalIn  = r.bp[0] + r.wt[0] + r.game[0] + r.physio[0];
-                        const totalAll = r.bp[1] + r.wt[1] + r.game[1] + r.physio[1];
-                        const pct      = totalAll > 0 ? Math.round(totalIn / totalAll * 100) : null;
-                        const attFrac = ([confirmed, total]) => total > 0
-                          ? <span className={styles.attFrac}>{confirmed}<span className={styles.attTotal}>/{total}</span></span>
-                          : <span className={styles.attNone}>—</span>;
-                        return (
-                          <tr key={r.name} className={styles.attRow}>
-                            <td className={styles.tdName}>{r.name}</td>
-                            <td className={styles.td}><span className={styles.posChip}>{r.pos || '—'}</span></td>
-                            <td className={styles.td}>{attFrac(r.bp)}</td>
-                            <td className={styles.td}>{attFrac(r.wt)}</td>
-                            <td className={styles.td}>{attFrac(r.game)}</td>
-                            <td className={styles.td}>{attFrac(r.physio)}</td>
-                            <td className={styles.td}>
-                              {pct !== null
-                                ? <span className={styles.attPct} style={{ color: pct >= 80 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444' }}>{pct}%</span>
-                                : <span className={styles.attNone}>—</span>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )
-          }
-        </div>
-      )}
 
     </div>
   );
