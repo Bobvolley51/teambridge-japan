@@ -26,6 +26,7 @@ import Tactics               from '@/components/Tactics';
 import Travel                from '@/components/Travel';
 import PlayerStats           from '@/components/PlayerStats';
 import GlobalSearch          from '@/components/GlobalSearch';
+import NutritionDashboard   from '@/components/NutritionDashboard';
 import styles                from './page.module.css';
 import {
   IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
@@ -46,7 +47,8 @@ const NAV_CAL_SUBS = [
 ];
 
 const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,  label: { en: 'Users',   ja: 'ユーザー'   } };
-const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Health',  ja: '健康'       } };
+const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Wellness',   ja: '健康'  } };
+const NAV_NUTRITION   = { id: 'nutrition',  Icon: IconCheck,  label: { en: 'Nutrition',  ja: '栄養'  } };
 const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,  label: { en: 'Load',    ja: '負荷'       } };
 const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Stats',   ja: 'データ'     } };
 const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Medical', ja: 'メディカル' } };
@@ -328,6 +330,7 @@ export default function Home() {
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
   const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role);
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
+  const canNutrition   = isPlayer || canWellness;
   const canPerformance = PERFORMANCE_VIEWERS.includes(profile?.role);
   const canMedical     = MEDICAL_VIEWERS.includes(profile?.role);
   const canTactics     = TACTICS_VIEWERS.includes(profile?.role);
@@ -339,6 +342,7 @@ export default function Home() {
     ...(canTactics     ? [NAV_TACTICS]     : []),
     ...(isPlayer       ? [NAV_MYSTATS]     : []),
     ...(canWellness    ? [NAV_WELLNESS]    : []),
+    ...(canNutrition   ? [NAV_NUTRITION]   : []),
     ...(canPerformance ? [NAV_PERFORMANCE] : []),
     ...(canMedical     ? [NAV_MEDICAL]     : []),
     ...(isAdmin        ? [NAV_ADMIN]       : []),
@@ -410,7 +414,8 @@ export default function Home() {
           {nav==='feed'      && <Announcements     lang={lang} currentUserName={user.email} />}
           {nav==='travel'    && <Travel            lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}
-          {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} />}
+          {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} profile={profile} />}
+          {nav==='nutrition'    && canNutrition   && <NutritionDashboard   lang={lang} profile={profile} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} profile={profile} />}
           {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} />}

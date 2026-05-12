@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './PerformanceDashboard.module.css';
 import VertDashboard from './VertDashboard';
-import NutritionDashboard from './NutritionDashboard';
 
 const ZONES = [
   { id: 'low',      min: 0,   max: 0.8,  en: 'Low',       ja: '低負荷',    color: '#3b82f6', bg: '#eff6ff' },
@@ -94,7 +93,6 @@ export default function PerformanceDashboard({ lang, profile }) {
             { id: 'acwr',       en: 'ACWR Overview', ja: 'ACWR 概要'      },
             { id: 'vert',       en: 'VERT Jumps',    ja: 'VERT ジャンプ'  },
             { id: 'sessions',   en: 'Sessions',      ja: 'セッション'     },
-            { id: 'nutrition',  en: 'Nutrition',     ja: '栄養'           },
           ].map(t => (
             <button key={t.id}
               className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
@@ -145,7 +143,7 @@ export default function PerformanceDashboard({ lang, profile }) {
         );
       })()}
 
-      {tab !== 'vert' && tab !== 'nutrition' && <div className={styles.content}>
+      {tab !== 'vert' && <div className={styles.content}>
         {loading ? (
           <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
 
@@ -394,9 +392,6 @@ export default function PerformanceDashboard({ lang, profile }) {
         <VertDashboard lang={lang} profile={profile} />
       )}
 
-      {tab === 'nutrition' && (
-        <NutritionDashboard lang={lang} profile={profile} />
-      )}
 
 
     </div>

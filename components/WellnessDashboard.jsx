@@ -152,7 +152,7 @@ function ScoreBadge({ score, alarm }) {
 
 // ── Main Component ────────────────────────────────────────────
 
-export default function WellnessDashboard({ lang }) {
+export default function WellnessDashboard({ lang, profile }) {
   const todayStr = toDateStr(new Date());
 
   const [tab,        setTab]        = useState('today');
@@ -574,6 +574,7 @@ export default function WellnessDashboard({ lang }) {
           }
         </div>
       )}
+
     </div>
   );
 }
