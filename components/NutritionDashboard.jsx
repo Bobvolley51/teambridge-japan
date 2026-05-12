@@ -307,18 +307,31 @@ export default function NutritionDashboard({ lang, profile }) {
   async function ensureEntry(mealType) {
     const existing = entries[mealType];
     if (existing?.id) return existing.id;
+
+    // Insert if not exists, skip if already exists (ignoreDuplicates won't overwrite notes)
+    await supabase
+      .from('nutrition_entries')
+      .upsert(
+        { user_id: viewUserId, user_name: viewUserName, meal_date: selectedDay, meal_type: mealType, notes: '' },
+        { onConflict: 'user_id,meal_date,meal_type', ignoreDuplicates: true }
+      );
+
+    // Always fetch the id — works whether row was just created or already existed
     const { data, error } = await supabase
       .from('nutrition_entries')
-      .insert({ user_id: viewUserId, user_name: viewUserName, meal_date: selectedDay, meal_type: mealType, notes: '' })
       .select('id')
+      .eq('user_id', viewUserId)
+      .eq('meal_date', selectedDay)
+      .eq('meal_type', mealType)
       .single();
+
     if (error) {
-      console.error('nutrition_entries insert failed:', error);
+      console.error('ensureEntry fetch failed:', error);
       setUploadError(`DB error: ${error.message}`);
       return null;
     }
     if (data) {
-      setEntries(e => ({ ...e, [mealType]: { ...emptyEntry(), id: data.id } }));
+      setEntries(e => ({ ...e, [mealType]: { ...(e[mealType] ?? emptyEntry()), id: data.id } }));
       return data.id;
     }
     return null;
