@@ -119,6 +119,12 @@
   white-space: nowrap;
   margin-left: 2px;
 }
+.myStatPct {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 400;
+  margin-left: 2px;
+}
 
 /* ── Stats overview (trainers) ───────────────────────────── */
 .statsContent {
@@ -166,6 +172,46 @@
   letter-spacing: 0.05em;
   border-bottom: 2px solid #7e0027;
   white-space: nowrap;
+}
+.statsThBar {
+  text-align: left;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #7e0027;
+  min-width: 120px;
+}
+.statsTdBar {
+  padding: 8px 8px;
+  min-width: 120px;
+}
+.ratingBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ratingBar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #f3f4f6;
+  display: flex;
+}
+.ratingBarGreen   { background: #16a34a; height: 100%; }
+.ratingBarYellow  { background: #d97706; height: 100%; }
+.ratingBarRed     { background: #dc2626; height: 100%; }
+.ratingBarUnrated { background: #e5e7eb; height: 100%; }
+.ratedPct {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+  min-width: 32px;
+  text-align: right;
 }
 .statsTr { border-top: 1px solid #f3f4f6; }
 .statsTr:hover { background: #fdf2f4; }

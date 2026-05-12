@@ -515,15 +515,19 @@ export default function NutritionDashboard({ lang, profile }) {
           )}
         </div>
         {/* Player mini-stats (14-day) */}
-        {!isTrainer && myStats && (
+        {!isTrainer && myStats && (() => {
+          const rated = myStats.green + myStats.yellow + myStats.red;
+          const pct = (n) => rated > 0 ? Math.round(n / rated * 100) : 0;
+          return (
           <div className={styles.myStats}>
             <span className={styles.myStatsLabel}>{lang === 'ja' ? '直近14日' : 'Last 14d'}</span>
-            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#16a34a' }} />{myStats.green}</span>
-            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#d97706' }} />{myStats.yellow}</span>
-            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#dc2626' }} />{myStats.red}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#16a34a' }} />{myStats.green}{rated > 0 && <span className={styles.myStatPct}>{pct(myStats.green)}%</span>}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#d97706' }} />{myStats.yellow}{rated > 0 && <span className={styles.myStatPct}>{pct(myStats.yellow)}%</span>}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#dc2626' }} />{myStats.red}{rated > 0 && <span className={styles.myStatPct}>{pct(myStats.red)}%</span>}</span>
             <span className={styles.myStatTotal}>{myStats.total} {lang === 'ja' ? '食' : 'meals'}</span>
           </div>
-        )}
+          );
+        })()}
         {isTrainer && view === 'diary' && (
           <div className={styles.trainerControls}>
             <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
@@ -569,6 +573,7 @@ export default function NutritionDashboard({ lang, profile }) {
                   <tr>
                     <th className={styles.statsThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
                     <th className={styles.statsTh}>{lang === 'ja' ? `提出 / ${MAX_MEALS}` : `Logged / ${MAX_MEALS}`}</th>
+                    <th className={styles.statsThBar}>{lang === 'ja' ? '評価の内訳' : 'Rating breakdown'}</th>
                     <th className={styles.statsTh}>🟢</th>
                     <th className={styles.statsTh}>🟡</th>
                     <th className={styles.statsTh}>🔴</th>
@@ -576,29 +581,51 @@ export default function NutritionDashboard({ lang, profile }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {statsRows.map((r, i) => (
-                    <tr key={i} className={styles.statsTr}>
-                      <td className={styles.statsTdName}>{r.name}</td>
-                      <td className={styles.statsTd}>
-                        <span className={`${styles.totalCell} ${r.total === 0 ? styles.totalZero : ''}`}>
-                          <strong>{r.total}</strong>
-                          <span className={styles.totalMax}>/{MAX_MEALS}</span>
-                        </span>
-                      </td>
-                      <td className={styles.statsTd}>
-                        {r.green > 0 ? <span className={styles.statsBadge} style={{ background: '#16a34a' }}>{r.green}</span> : <span className={styles.statsZero}>—</span>}
-                      </td>
-                      <td className={styles.statsTd}>
-                        {r.yellow > 0 ? <span className={styles.statsBadge} style={{ background: '#d97706' }}>{r.yellow}</span> : <span className={styles.statsZero}>—</span>}
-                      </td>
-                      <td className={styles.statsTd}>
-                        {r.red > 0 ? <span className={styles.statsBadge} style={{ background: '#dc2626' }}>{r.red}</span> : <span className={styles.statsZero}>—</span>}
-                      </td>
-                      <td className={styles.statsTd}>
-                        {r.unrated > 0 ? <span className={styles.statsUnrated}>{r.unrated}</span> : <span className={styles.statsZero}>—</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {statsRows.map((r, i) => {
+                    const rated = r.green + r.yellow + r.red;
+                    const ratedPct = r.total > 0 ? Math.round(rated / r.total * 100) : 0;
+                    const gPct = rated > 0 ? r.green / rated * 100 : 0;
+                    const yPct = rated > 0 ? r.yellow / rated * 100 : 0;
+                    const rPct = rated > 0 ? r.red / rated * 100 : 0;
+                    return (
+                      <tr key={i} className={styles.statsTr}>
+                        <td className={styles.statsTdName}>{r.name}</td>
+                        <td className={styles.statsTd}>
+                          <span className={`${styles.totalCell} ${r.total === 0 ? styles.totalZero : ''}`}>
+                            <strong>{r.total}</strong>
+                            <span className={styles.totalMax}>/{MAX_MEALS}</span>
+                          </span>
+                        </td>
+                        <td className={styles.statsTdBar}>
+                          {r.total === 0 ? (
+                            <span className={styles.statsZero}>—</span>
+                          ) : (
+                            <div className={styles.ratingBarWrap}>
+                              <div className={styles.ratingBar}>
+                                {gPct > 0 && <div className={styles.ratingBarGreen}  style={{ width: `${gPct}%` }} />}
+                                {yPct > 0 && <div className={styles.ratingBarYellow} style={{ width: `${yPct}%` }} />}
+                                {rPct > 0 && <div className={styles.ratingBarRed}    style={{ width: `${rPct}%` }} />}
+                                {ratedPct < 100 && <div className={styles.ratingBarUnrated} style={{ width: `${100 - ratedPct}%` }} />}
+                              </div>
+                              <span className={styles.ratedPct}>{ratedPct}%</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className={styles.statsTd}>
+                          {r.green > 0 ? <span className={styles.statsBadge} style={{ background: '#16a34a' }}>{r.green}</span> : <span className={styles.statsZero}>—</span>}
+                        </td>
+                        <td className={styles.statsTd}>
+                          {r.yellow > 0 ? <span className={styles.statsBadge} style={{ background: '#d97706' }}>{r.yellow}</span> : <span className={styles.statsZero}>—</span>}
+                        </td>
+                        <td className={styles.statsTd}>
+                          {r.red > 0 ? <span className={styles.statsBadge} style={{ background: '#dc2626' }}>{r.red}</span> : <span className={styles.statsZero}>—</span>}
+                        </td>
+                        <td className={styles.statsTd}>
+                          {r.unrated > 0 ? <span className={styles.statsUnrated}>{r.unrated}</span> : <span className={styles.statsZero}>—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
