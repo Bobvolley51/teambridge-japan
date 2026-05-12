@@ -214,6 +214,20 @@
 }
 .addPhotoBtn:hover { border-color: #7e0027; color: #7e0027; background: #fdf2f4; }
 .addPhotoBtn:disabled { opacity: 0.5; cursor: default; }
+.photoLimitNote {
+  width: 66px;
+  height: 66px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
 /* ── Notes ───────────────────────────────────────────────── */
 .notesArea {

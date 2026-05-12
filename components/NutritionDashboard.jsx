@@ -365,11 +365,14 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, saving, onNo
             )}
           </div>
         ))}
-        {isOwn && !isTrainer && (
+        {isOwn && !isTrainer && entry.photos.length < 3 && (
           <button className={styles.addPhotoBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? '…' : '+'}
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
           </button>
+        )}
+        {isOwn && !isTrainer && entry.photos.length >= 3 && (
+          <div className={styles.photoLimitNote}>3 / 3</div>
         )}
       </div>
 
