@@ -880,3 +880,153 @@
   margin-left: 4px;
 }
 
+/* ── Trend sub-tabs ── */
+.trendSubTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 3px;
+  align-self: flex-start;
+}
+.trendSubTab {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.trendSubTab:hover { background: #e5e7eb; color: #111827; }
+.trendSubTabActive { background: #fff !important; color: #111827 !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+.trendPosBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* ── Volume (weekly jump quota) ── */
+.volWrap { display: flex; flex-direction: column; gap: 10px; }
+.volHint { font-size: 12px; color: #9ca3af; margin: 0; }
+.volTableWrap { border: 1px solid #e5e7eb; border-radius: 10px; overflow: auto; }
+.volTable { border-collapse: collapse; font-size: 13px; min-width: 300px; }
+.volThPlayer {
+  text-align: left; padding: 9px 14px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+  background: #f9fafb; position: sticky; left: 0;
+}
+.volTh, .volThTotal {
+  text-align: center; padding: 9px 10px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+  background: #f9fafb;
+}
+.volTr { border-bottom: 1px solid #f3f4f6; }
+.volTr:last-child { border-bottom: none; }
+.volTr:hover td { background-color: #fafafa !important; }
+.volTdPlayer {
+  padding: 9px 14px; font-weight: 600; color: #111827;
+  white-space: nowrap; position: sticky; left: 0; background: #fff;
+  border-right: 1px solid #f3f4f6;
+}
+.volTd {
+  padding: 9px 10px; text-align: center; color: #9ca3af; font-size: 13px;
+  transition: background 0.1s;
+}
+.volTdTotal {
+  padding: 9px 14px; text-align: center; font-weight: 700; color: #111827;
+  font-size: 13px; border-left: 1px solid #e5e7eb;
+}
+
+/* ── Benchmark (position comparison) ── */
+.benchWrap { display: flex; flex-direction: column; gap: 16px; }
+.benchSection { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff; }
+.benchPosHeader {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+}
+.benchPosName { font-size: 14px; font-weight: 700; color: #111827; }
+.benchPosCount { font-size: 11px; color: #6b7280; background: #f3f4f6; border-radius: 10px; padding: 2px 8px; }
+.benchTableWrap { overflow-x: auto; }
+.benchTable { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 320px; }
+.benchThPlayer {
+  text-align: left; padding: 8px 14px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb;
+}
+.benchTh {
+  text-align: center; padding: 8px 10px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+}
+.benchAvgRow { background: #fafafa; border-bottom: 2px solid #e5e7eb; }
+.benchTdAvgLabel { padding: 8px 14px; font-size: 12px; font-weight: 700; color: #9ca3af; font-style: italic; }
+.benchTdAvg { padding: 8px 10px; text-align: center; font-size: 13px; font-weight: 700; color: #374151; }
+.benchTr { border-bottom: 1px solid #f3f4f6; }
+.benchTr:last-child { border-bottom: none; }
+.benchTr:hover { background: #fafafa; }
+.benchTdPlayer { padding: 9px 14px; font-weight: 600; color: #111827; white-space: nowrap; }
+.benchTd { padding: 9px 10px; text-align: center; }
+.benchVal { font-size: 13px; font-weight: 700; }
+.benchDelta { font-size: 11px; font-weight: 700; margin-left: 4px; }
+
+/* ── Landing load ── */
+.landWrap { display: flex; flex-direction: column; gap: 16px; }
+.landHint { font-size: 12px; color: #9ca3af; margin: 0; }
+
+/* ── In-Game ── */
+.ingameWrap { display: flex; flex-direction: column; gap: 16px; }
+.ingameHint { font-size: 12px; color: #9ca3af; margin: 0; }
+.ingameCard { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff; }
+.ingameDateHeader {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+}
+.ingameDate { font-size: 14px; font-weight: 700; color: #111827; }
+.ingameSessNames { font-size: 12px; color: #6b7280; }
+.ingameTable { border-collapse: collapse; font-size: 12px; min-width: 400px; }
+.ingameThPlayer {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+  background: #f9fafb; position: sticky; left: 0;
+}
+.ingameThSession {
+  text-align: center; padding: 8px 10px;
+  font-size: 11px; font-weight: 700; color: #dc2626;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb; border-left: 2px solid #e5e7eb;
+  background: #fff5f5; white-space: nowrap;
+}
+.ingameThSub {
+  text-align: center; padding: 6px 8px;
+  font-size: 10px; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.03em;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+}
+.ingameTr { border-bottom: 1px solid #f3f4f6; }
+.ingameTr:last-child { border-bottom: none; }
+.ingameTr:hover { background: #fafafa; }
+.ingameTdPlayer {
+  padding: 9px 12px; font-weight: 600; color: #111827; white-space: nowrap;
+  position: sticky; left: 0; background: #fff; border-right: 1px solid #f3f4f6;
+}
+.ingameTd { padding: 9px 8px; text-align: center; font-size: 12px; }
+

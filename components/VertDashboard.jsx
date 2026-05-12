@@ -75,6 +75,7 @@ export default function VertDashboard({ lang, profile }) {
   const [sortCol,     setSortCol]     = useState('name');
   const [sortDir,     setSortDir]     = useState('asc');
   const [playerFilter,setPlayerFilter]= useState('');
+  const [trendsTab,   setTrendsTab]   = useState('progress');
 
   // Upload flow state
   // sessions: [{ sessionName, sessionDate, rows, fileName }]
@@ -91,7 +92,7 @@ export default function VertDashboard({ lang, profile }) {
   const canUpload = ['Headcoach', 'Athletic Trainer', 'Coaching Staff', 'GM'].includes(profile?.role);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name')
+    supabase.from('profiles').select('id, display_name, position')
       .eq('role', 'Player').order('display_name')
       .then(({ data }) => setPlayers(data || []));
     loadSessions();
@@ -296,8 +297,9 @@ export default function VertDashboard({ lang, profile }) {
   const avgRows = Object.values(byPlayer).map(p => {
     const player = players.find(pl => pl.id === p.user_id);
     return {
-      name:  player?.display_name || p.vert_name || '—',
-      count: p.rows.length,
+      name:     player?.display_name || p.vert_name || '—',
+      position: player?.position || '',
+      count:    p.rows.length,
       ...Object.fromEntries(NUMERIC_FIELDS.map(f => [f, avgField(p.rows, f)])),
     };
   });
@@ -534,19 +536,26 @@ export default function VertDashboard({ lang, profile }) {
 
       {/* ── TRENDS ─────────────────────────────────────────── */}
       {view === 'trends' && (() => {
-        // Group filtered sessions by player, oldest→newest
+        function isoWeekStart(dateStr) {
+          const d = new Date(dateStr + 'T00:00:00');
+          const day = d.getDay();
+          d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+          return d.toISOString().slice(0, 10);
+        }
+
+        // Shared: per-player sessions oldest→newest
         const trendMap = {};
         for (const s of [...filtered].sort((a, b) => a.session_date.localeCompare(b.session_date))) {
           const key = s.user_id || s.vert_name;
           if (!trendMap[key]) {
             const pl = players.find(p => p.id === s.user_id);
-            trendMap[key] = { name: pl?.display_name || s.vert_name || '—', sessions: [] };
+            trendMap[key] = { name: pl?.display_name || s.vert_name || '—', position: pl?.position || '', sessions: [] };
           }
           trendMap[key].sessions.push(s);
         }
         const trendPlayers = Object.values(trendMap).sort((a, b) => a.name.localeCompare(b.name));
 
-        function delta(prev, curr, field, inv) {
+        function delta(prev, curr, inv) {
           if (prev == null || curr == null) return null;
           const d = curr - prev;
           if (Math.abs(d) < 0.5) return { arrow: '→', color: '#9ca3af', d };
@@ -555,82 +564,160 @@ export default function VertDashboard({ lang, profile }) {
         }
 
         const TREND_COLS = [
-          { key: 'avg_hi_jump_cm',  label: isJa ? 'Hi Jump' : 'Hi Jump', unit: ' cm', inv: false },
-          { key: 'elevated_pct',    label: isJa ? 'Elevated%' : 'Elevated%', unit: '%', inv: true  },
-          { key: 'intensity',       label: isJa ? 'Intensity' : 'Intensity', unit: '',  inv: false },
+          { key: 'avg_hi_jump_cm', label: 'Hi Jump',   unit: ' cm', inv: false },
+          { key: 'elevated_pct',   label: 'Elevated%', unit: '%',   inv: true  },
+          { key: 'intensity',      label: 'Intensity',  unit: '',    inv: false },
         ];
 
-        if (trendPlayers.length === 0) return (
-          <div className={styles.trendWrap}>
-            <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>
+        const SUB_TABS = [
+          ['progress',  isJa ? '推移'       : 'Progress'],
+          ['volume',    isJa ? '週別量'      : 'Volume'],
+          ['benchmark', isJa ? 'Benchmark'  : 'Benchmark'],
+          ['landing',   isJa ? '着地負荷'   : 'Landing'],
+          ['ingame',    isJa ? 'ゲーム内'   : 'In-Game'],
+        ];
+
+        const timeControls = (
+          <div className={styles.trendControls}>
+            <span className={styles.trendHint}>{isJa ? '期間:' : 'Range:'}</span>
+            {[['last', isJa ? '最新' : 'Last'], ['7d', '7d'], ['14d', '14d'], ['all', isJa ? '全期間' : 'All']].map(([k, label]) => (
+              <button key={k} className={`${styles.rangeBtn} ${timeRange === k ? styles.rangeBtnActive : ''}`} onClick={() => setTimeRange(k)}>
+                {label}
+              </button>
+            ))}
           </div>
         );
 
         return (
           <div className={styles.trendWrap}>
-            {/* Time range selector reused */}
-            <div className={styles.trendControls}>
-              <span className={styles.trendHint}>{isJa ? '期間:' : 'Range:'}</span>
-              {[['last', isJa ? '最新' : 'Last'], ['7d', '7d'], ['14d', '14d'], ['all', isJa ? '全期間' : 'All']].map(([k, label]) => (
-                <button key={k} className={`${styles.rangeBtn} ${timeRange === k ? styles.rangeBtnActive : ''}`} onClick={() => setTimeRange(k)}>
+            {/* Sub-tab nav */}
+            <div className={styles.trendSubTabs}>
+              {SUB_TABS.map(([k, label]) => (
+                <button key={k}
+                  className={`${styles.trendSubTab} ${trendsTab === k ? styles.trendSubTabActive : ''}`}
+                  onClick={() => setTrendsTab(k)}>
                   {label}
                 </button>
               ))}
             </div>
+            {timeControls}
 
-            {trendPlayers.map(p => {
-              const first = p.sessions[0];
-              const last  = p.sessions[p.sessions.length - 1];
-              return (
-                <div key={p.name} className={styles.trendCard}>
-                  <div className={styles.trendCardHeader}>
-                    <span className={styles.trendPlayerName}>{p.name}</span>
-                    <span className={styles.trendSessCount}>{p.sessions.length} {isJa ? 'セッション' : 'sessions'}</span>
-                    {p.sessions.length > 1 && (
-                      <div className={styles.trendSummary}>
-                        {TREND_COLS.map(col => {
-                          const d = delta(first[col.key], last[col.key], col.key, col.inv);
-                          if (!d) return null;
-                          return (
-                            <span key={col.key} className={styles.trendSumItem} style={{ color: d.color }}>
-                              {col.label} {d.arrow} {d.d > 0 ? '+' : ''}{d.d.toFixed(col.key === 'intensity' ? 0 : 1)}{col.unit}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
+            {/* ── PROGRESS: session-by-session per player ── */}
+            {trendsTab === 'progress' && (trendPlayers.length === 0
+              ? <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>
+              : trendPlayers.map(p => {
+                const first = p.sessions[0];
+                const last  = p.sessions[p.sessions.length - 1];
+                return (
+                  <div key={p.name} className={styles.trendCard}>
+                    <div className={styles.trendCardHeader}>
+                      <span className={styles.trendPlayerName}>{p.name}</span>
+                      {p.position && <span className={styles.trendPosBadge}>{p.position}</span>}
+                      <span className={styles.trendSessCount}>{p.sessions.length} {isJa ? 'セッション' : 'sessions'}</span>
+                      {p.sessions.length > 1 && (
+                        <div className={styles.trendSummary}>
+                          {TREND_COLS.map(col => {
+                            const d = delta(first[col.key], last[col.key], col.inv);
+                            if (!d) return null;
+                            return (
+                              <span key={col.key} className={styles.trendSumItem} style={{ color: d.color }}>
+                                {col.label} {d.arrow} {d.d > 0 ? '+' : ''}{d.d.toFixed(col.key === 'intensity' ? 0 : 1)}{col.unit}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.trendTableWrap}>
+                      <table className={styles.trendTable}>
+                        <thead>
+                          <tr>
+                            <th className={styles.trendThDate}>{isJa ? '日付' : 'Date'}</th>
+                            <th className={styles.trendThSess}>{isJa ? 'セッション' : 'Session'}</th>
+                            {TREND_COLS.map(col => <th key={col.key} className={styles.trendTh}>{col.label}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {p.sessions.map((s, i) => {
+                            const prev = p.sessions[i - 1];
+                            return (
+                              <tr key={i} className={styles.trendTr}>
+                                <td className={styles.trendTdDate}>{s.session_date}</td>
+                                <td className={styles.trendTdSess}>{s.session_name || '—'}</td>
+                                {TREND_COLS.map(col => {
+                                  const val = s[col.key];
+                                  const d   = prev ? delta(prev[col.key], val, col.inv) : null;
+                                  const clr = cellColor(col.key, val);
+                                  return (
+                                    <td key={col.key} className={styles.trendTdVal}>
+                                      <span className={styles.trendVal} style={{ color: clr || '#111827' }}>
+                                        {val != null ? `${parseFloat(val).toFixed(col.key === 'intensity' ? 0 : 1)}${col.unit}` : '—'}
+                                      </span>
+                                      {d && <span className={styles.trendArrow} style={{ color: d.color }}>{d.arrow}</span>}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div className={styles.trendTableWrap}>
-                    <table className={styles.trendTable}>
+                );
+              })
+            )}
+
+            {/* ── VOLUME: weekly jump quota grid ── */}
+            {trendsTab === 'volume' && (() => {
+              const weekSet = new Set();
+              const playerWeeks = {};
+              for (const s of filtered) {
+                if (!s.user_id) continue;
+                const week = isoWeekStart(s.session_date);
+                weekSet.add(week);
+                if (!playerWeeks[s.user_id]) {
+                  const pl = players.find(p => p.id === s.user_id);
+                  playerWeeks[s.user_id] = { name: pl?.display_name || s.vert_name || '—', data: {} };
+                }
+                playerWeeks[s.user_id].data[week] = (playerWeeks[s.user_id].data[week] || 0) + (s.jumps || 0);
+              }
+              const weeks = [...weekSet].sort();
+              const volRows = Object.values(playerWeeks).sort((a, b) => a.name.localeCompare(b.name));
+              const allVals = volRows.flatMap(r => weeks.map(w => r.data[w] || 0)).filter(v => v > 0);
+              const maxJumps = allVals.length ? Math.max(...allVals) : 1;
+
+              if (!volRows.length) return <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>;
+
+              return (
+                <div className={styles.volWrap}>
+                  <p className={styles.volHint}>{isJa ? '週ごとの総ジャンプ数（深い色ほど多い）' : 'Total jumps per week — darker = more volume'}</p>
+                  <div className={styles.volTableWrap}>
+                    <table className={styles.volTable}>
                       <thead>
                         <tr>
-                          <th className={styles.trendThDate}>{isJa ? '日付' : 'Date'}</th>
-                          <th className={styles.trendThSess}>{isJa ? 'セッション' : 'Session'}</th>
-                          {TREND_COLS.map(col => (
-                            <th key={col.key} className={styles.trendTh}>{col.label}</th>
-                          ))}
+                          <th className={styles.volThPlayer}>{isJa ? '選手' : 'Player'}</th>
+                          {weeks.map(w => <th key={w} className={styles.volTh}>{w.slice(5)}</th>)}
+                          <th className={styles.volThTotal}>{isJa ? '合計' : 'Total'}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {p.sessions.map((s, i) => {
-                          const prev = p.sessions[i - 1];
+                        {volRows.map(row => {
+                          const total = weeks.reduce((sum, w) => sum + (row.data[w] || 0), 0);
                           return (
-                            <tr key={i} className={styles.trendTr}>
-                              <td className={styles.trendTdDate}>{s.session_date}</td>
-                              <td className={styles.trendTdSess}>{s.session_name || '—'}</td>
-                              {TREND_COLS.map(col => {
-                                const val = s[col.key];
-                                const d   = prev ? delta(prev[col.key], val, col.key, col.inv) : null;
-                                const color = cellColor(col.key, val);
+                            <tr key={row.name} className={styles.volTr}>
+                              <td className={styles.volTdPlayer}>{row.name}</td>
+                              {weeks.map(w => {
+                                const v = row.data[w];
+                                const opacity = v ? 0.15 + 0.85 * (v / maxJumps) : 0;
                                 return (
-                                  <td key={col.key} className={styles.trendTdVal}>
-                                    <span className={styles.trendVal} style={{ color: color || '#111827' }}>
-                                      {val != null ? `${parseFloat(val).toFixed(col.key === 'intensity' ? 0 : 1)}${col.unit}` : '—'}
-                                    </span>
-                                    {d && <span className={styles.trendArrow} style={{ color: d.color }}>{d.arrow}</span>}
+                                  <td key={w} className={styles.volTd}
+                                      style={v ? { background: `rgba(220,38,38,${opacity.toFixed(2)})`, color: opacity > 0.5 ? '#fff' : '#111827', fontWeight: 700 } : {}}>
+                                    {v || '—'}
                                   </td>
                                 );
                               })}
+                              <td className={styles.volTdTotal}>{total}</td>
                             </tr>
                           );
                         })}
@@ -639,7 +726,266 @@ export default function VertDashboard({ lang, profile }) {
                   </div>
                 </div>
               );
-            })}
+            })()}
+
+            {/* ── BENCHMARK: position comparison ── */}
+            {trendsTab === 'benchmark' && (() => {
+              const BENCH_COLS = [
+                { key: 'avg_hi_jump_cm',  label: 'Hi Jump',  unit: ' cm', inv: false },
+                { key: 'jumps',           label: 'Jumps',    unit: '',    inv: false },
+                { key: 'elevated_pct',    label: 'Elevated%',unit: '%',   inv: true  },
+                { key: 'intensity',       label: 'Intensity',unit: '',    inv: false },
+              ];
+              const POS_ORDER = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Other'];
+              const byPos = {};
+              for (const row of avgRows) {
+                const pos = row.position || 'Other';
+                if (!byPos[pos]) byPos[pos] = [];
+                byPos[pos].push(row);
+              }
+              const posGroups = [...POS_ORDER, ...Object.keys(byPos).filter(p => !POS_ORDER.includes(p))]
+                .filter(p => byPos[p]?.length)
+                .map(pos => {
+                  const members = byPos[pos];
+                  const avg = {};
+                  for (const col of BENCH_COLS) {
+                    const vals = members.map(m => m[col.key]).filter(v => v != null);
+                    avg[col.key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                  }
+                  return { pos, members, avg };
+                });
+
+              if (!posGroups.length) return (
+                <div className={styles.trendEmpty}>
+                  {isJa ? 'ポジションデータなし。選手プロフィールにポジションを設定してください。' : 'No position data. Ensure player profiles include a position.'}
+                </div>
+              );
+
+              return (
+                <div className={styles.benchWrap}>
+                  {posGroups.map(({ pos, members, avg }) => (
+                    <div key={pos} className={styles.benchSection}>
+                      <div className={styles.benchPosHeader}>
+                        <span className={styles.benchPosName}>{pos}</span>
+                        <span className={styles.benchPosCount}>{members.length} {isJa ? '名' : 'players'}</span>
+                      </div>
+                      <div className={styles.benchTableWrap}>
+                        <table className={styles.benchTable}>
+                          <thead>
+                            <tr>
+                              <th className={styles.benchThPlayer}>{isJa ? '選手' : 'Player'}</th>
+                              {BENCH_COLS.map(col => <th key={col.key} className={styles.benchTh}>{col.label}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className={styles.benchAvgRow}>
+                              <td className={styles.benchTdAvgLabel}>{isJa ? '平均' : 'Pos. avg'}</td>
+                              {BENCH_COLS.map(col => {
+                                const v = avg[col.key];
+                                return (
+                                  <td key={col.key} className={styles.benchTdAvg}>
+                                    {v != null ? `${v.toFixed(col.key === 'jumps' ? 0 : 1)}${col.unit}` : '—'}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            {[...members].sort((a, b) => a.name.localeCompare(b.name)).map(player => (
+                              <tr key={player.name} className={styles.benchTr}>
+                                <td className={styles.benchTdPlayer}>{player.name}</td>
+                                {BENCH_COLS.map(col => {
+                                  const v = player[col.key];
+                                  const posAvg = avg[col.key];
+                                  const clr = v != null ? cellColor(col.key, v) : '';
+                                  const diff = v != null && posAvg != null ? v - posAvg : null;
+                                  const diffStr = diff != null
+                                    ? `${diff >= 0 ? '+' : ''}${diff.toFixed(col.key === 'jumps' ? 0 : 1)}${col.unit}`
+                                    : '';
+                                  const diffColor = diff == null ? '#9ca3af'
+                                    : (col.inv ? diff < 0 : diff > 0) ? '#059669' : '#dc2626';
+                                  return (
+                                    <td key={col.key} className={styles.benchTd}>
+                                      <span className={styles.benchVal} style={clr ? { color: clr } : {}}>
+                                        {v != null ? `${v.toFixed(col.key === 'jumps' ? 0 : 1)}${col.unit}` : '—'}
+                                      </span>
+                                      {diffStr && <span className={styles.benchDelta} style={{ color: diffColor }}>{diffStr}</span>}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── LANDING: landing load monitoring ── */}
+            {trendsTab === 'landing' && (() => {
+              const LAND_COLS = [
+                { key: 'elevated_pct',    label: 'Elevated%',  unit: '%', inv: true },
+                { key: 'alert_impact_pct',label: 'Alert%',     unit: '%', inv: true },
+                { key: 'high_impact_pct', label: 'Hi Impact%', unit: '%', inv: true },
+              ];
+              if (!trendPlayers.length) return <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>;
+              return (
+                <div className={styles.landWrap}>
+                  <p className={styles.landHint}>{isJa ? '着地衝撃指標の推移。上昇トレンドに注意（逆スケール）。' : 'Landing impact over time. Higher = more stress. Watch for upward trends.'}</p>
+                  {trendPlayers.map(p => (
+                    <div key={p.name} className={styles.trendCard}>
+                      <div className={styles.trendCardHeader}>
+                        <span className={styles.trendPlayerName}>{p.name}</span>
+                        {p.position && <span className={styles.trendPosBadge}>{p.position}</span>}
+                        <span className={styles.trendSessCount}>{p.sessions.length} {isJa ? 'セッション' : 'sessions'}</span>
+                      </div>
+                      <div className={styles.trendTableWrap}>
+                        <table className={styles.trendTable}>
+                          <thead>
+                            <tr>
+                              <th className={styles.trendThDate}>{isJa ? '日付' : 'Date'}</th>
+                              <th className={styles.trendThSess}>{isJa ? 'セッション' : 'Session'}</th>
+                              {LAND_COLS.map(col => <th key={col.key} className={styles.trendTh}>{col.label}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {p.sessions.map((s, i) => {
+                              const prev = p.sessions[i - 1];
+                              return (
+                                <tr key={i} className={styles.trendTr}>
+                                  <td className={styles.trendTdDate}>{s.session_date}</td>
+                                  <td className={styles.trendTdSess}>{s.session_name || '—'}</td>
+                                  {LAND_COLS.map(col => {
+                                    const val = s[col.key];
+                                    const d   = prev ? delta(prev[col.key], val, col.inv) : null;
+                                    const clr = cellColor(col.key, val);
+                                    return (
+                                      <td key={col.key} className={styles.trendTdVal}>
+                                        <span className={styles.trendVal} style={clr ? { color: clr } : {}}>
+                                          {val != null ? `${val}${col.unit}` : '—'}
+                                        </span>
+                                        {d && <span className={styles.trendArrow} style={{ color: d.color }}>{d.arrow}</span>}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── IN-GAME: metric drift across sets/halves ── */}
+            {trendsTab === 'ingame' && (() => {
+              const byDate = {};
+              for (const s of filtered) {
+                if (!byDate[s.session_date]) byDate[s.session_date] = {};
+                const sName = s.session_name || 'Session';
+                if (!byDate[s.session_date][sName]) byDate[s.session_date][sName] = [];
+                byDate[s.session_date][sName].push(s);
+              }
+              const gameDays = Object.entries(byDate)
+                .filter(([, sm]) => Object.keys(sm).length >= 2)
+                .sort(([a], [b]) => b.localeCompare(a));
+
+              const GAME_COLS = [
+                { key: 'avg_hi_jump_cm', label: 'Hi Jump',  unit: ' cm', inv: false },
+                { key: 'intensity',      label: 'Intensity', unit: '',    inv: false },
+                { key: 'elevated_pct',   label: 'Elevated%', unit: '%',   inv: true  },
+                { key: 'jumps',          label: 'Jumps',     unit: '',    inv: false },
+              ];
+
+              if (!gameDays.length) return (
+                <div className={styles.trendEmpty}>
+                  {isJa
+                    ? '同日に複数セッションが見つかりません。セット/ハーフ別PDFをまとめてアップロードしてください。'
+                    : 'No same-day multi-session data found. Upload multiple PDFs for the same date (e.g. Set 1, Set 2).'}
+                </div>
+              );
+
+              return (
+                <div className={styles.ingameWrap}>
+                  <p className={styles.ingameHint}>{isJa ? '同日複数セッション間の指標変化（セット/ハーフ別）' : 'Metric drift across sessions on the same day (e.g. by set or half)'}</p>
+                  {gameDays.map(([date, sessMap]) => {
+                    const sessNames = Object.keys(sessMap).sort();
+                    const playerSet = new Set();
+                    for (const rows of Object.values(sessMap)) {
+                      for (const r of rows) if (r.user_id) playerSet.add(r.user_id);
+                    }
+                    const gamePlayers = [...playerSet].map(uid => {
+                      const pl = players.find(p => p.id === uid);
+                      return { uid, name: pl?.display_name || uid };
+                    }).sort((a, b) => a.name.localeCompare(b.name));
+
+                    return (
+                      <div key={date} className={styles.ingameCard}>
+                        <div className={styles.ingameDateHeader}>
+                          <span className={styles.ingameDate}>{date}</span>
+                          <span className={styles.ingameSessNames}>{sessNames.join(' → ')}</span>
+                        </div>
+                        <div className={styles.trendTableWrap}>
+                          <table className={styles.ingameTable}>
+                            <thead>
+                              <tr>
+                                <th className={styles.ingameThPlayer}>{isJa ? '選手' : 'Player'}</th>
+                                {sessNames.map(sn => (
+                                  <th key={sn} colSpan={GAME_COLS.length} className={styles.ingameThSession}>{sn}</th>
+                                ))}
+                              </tr>
+                              <tr>
+                                <th className={styles.ingameThSub} />
+                                {sessNames.flatMap(sn =>
+                                  GAME_COLS.map(col => (
+                                    <th key={`${sn}-${col.key}`} className={styles.ingameThSub}>{col.label}</th>
+                                  ))
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gamePlayers.map(({ uid, name }) => (
+                                <tr key={uid} className={styles.ingameTr}>
+                                  <td className={styles.ingameTdPlayer}>{name}</td>
+                                  {sessNames.flatMap((sn, si) => {
+                                    const prevRows = si > 0 ? (sessMap[sessNames[si - 1]] || []) : [];
+                                    const currRows = sessMap[sn] || [];
+                                    const curr = currRows.find(r => r.user_id === uid);
+                                    const prev = prevRows.find(r => r.user_id === uid);
+                                    return GAME_COLS.map(col => {
+                                      const val = curr?.[col.key];
+                                      const prevVal = prev?.[col.key];
+                                      const d = si > 0 && prevVal != null ? delta(prevVal, val, col.inv) : null;
+                                      const clr = cellColor(col.key, val);
+                                      return (
+                                        <td key={`${sn}-${col.key}`} className={styles.ingameTd}>
+                                          {val != null ? (
+                                            <>
+                                              <span style={clr ? { color: clr, fontWeight: 700 } : {}}>
+                                                {col.key === 'avg_hi_jump_cm' ? parseFloat(val).toFixed(1) : Math.round(val)}{col.unit}
+                                              </span>
+                                              {d && <span style={{ color: d.color, fontSize: 10, marginLeft: 2 }}>{d.arrow}</span>}
+                                            </>
+                                          ) : <span style={{ color: '#d1d5db' }}>—</span>}
+                                        </td>
+                                      );
+                                    });
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
