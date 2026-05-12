@@ -127,12 +127,12 @@ export default function Dashboard({
             .eq('profile_id', currentUserId)
             .neq('status', 'out')
         : Promise.resolve({ data: [] }),
-      // For coaching/admin roles: also fetch all team events (not just own participation)
+      // For coaching/admin roles: fetch all team events today (not just own participation)
       ['GM', 'Headcoach', 'Coaching Staff'].includes(profile?.role)
         ? supabase.from('events')
             .select('id, title, start_time, end_time, all_day, category, location')
             .gte('start_time', todayStart.toISOString())
-            .lte('start_time', weekEnd.toISOString())
+            .lte('start_time', new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate(), 23, 59, 59, 999).toISOString())
             .order('start_time')
         : Promise.resolve({ data: [] }),
       supabase.from('messages')
@@ -264,7 +264,6 @@ export default function Dashboard({
   const yesterdayDateStr = yest.toISOString().slice(0, 10);
 
   const todayEvents  = events.filter(ev => new Date(ev.start_time) <= todayEnd);
-  const soonEvents   = events.filter(ev => new Date(ev.start_time) > todayEnd);
 
   const wellnessDoneToday = typeof window !== 'undefined'
     ? !!localStorage.getItem(`wellness_done_${currentUserId}_${todayDateStr}`)
@@ -441,55 +440,30 @@ export default function Dashboard({
                 )}
               </div>
               <div className={styles.cardBody}>
-                {todayEvents.length === 0 && soonEvents.length === 0 ? (
+                {todayEvents.length === 0 ? (
                   <EmptyState>{lang === 'ja' ? '今日の予定はありません。' : 'Nothing scheduled today.'}</EmptyState>
                 ) : (
-                  <>
-                    {todayEvents.length > 0 && (
-                      <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '本日' : 'Today'}</SectionLabel>
-                        {todayEvents.map(ev => {
-                          const rsvp = ev._myStatus ? (RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in) : null;
-                          return (
-                            <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
-                              <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div className={styles.alertText}>{ev.title}</div>
-                                <div className={styles.alertSub}>
-                                  {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
-                                </div>
-                              </div>
-                              {rsvp && (
-                                <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
-                                  {lang === 'ja' ? rsvp.ja : rsvp.en}
-                                </span>
-                              )}
+                  <div className={styles.alertSection}>
+                    {todayEvents.map(ev => {
+                      const rsvp = ev._myStatus ? (RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in) : null;
+                      return (
+                        <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
+                          <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className={styles.alertText}>{ev.title}</div>
+                            <div className={styles.alertSub}>
+                              {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {soonEvents.length > 0 && profile?.role !== 'Player' && (
-                      <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '今週' : 'This week'}</SectionLabel>
-                        {soonEvents.slice(0, 6).map(ev => {
-                          const d = new Date(ev.start_time);
-                          return (
-                            <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
-                              <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
-                              <div>
-                                <div className={styles.alertText}>{ev.title}</div>
-                                <div className={styles.alertSub}>
-                                  {d.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                  {!ev.all_day && ` · ${pad(d.getHours())}:${pad(d.getMinutes())}`}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
+                          </div>
+                          {rsvp && (
+                            <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
+                              {lang === 'ja' ? rsvp.ja : rsvp.en}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
               <div className={styles.cardFoot}>
