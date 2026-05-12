@@ -225,6 +225,7 @@ export default function NutritionDashboard({ lang, profile }) {
   const isTrainer = TRAINER_ROLES.includes(profile?.role);
   const DAYS = getLast14Days();
 
+  const [view,         setView]         = useState('diary'); // 'diary' | 'stats'
   const [selectedDay,  setSelectedDay]  = useState(DAYS[DAYS.length - 1]);
   const [players,      setPlayers]      = useState([]);
   const [viewUserId,   setViewUserId]   = useState(profile?.id ?? '');
@@ -235,6 +236,8 @@ export default function NutritionDashboard({ lang, profile }) {
   const [uploading,    setUploading]    = useState({});
   const [lightbox,     setLightbox]     = useState(null);
   const [uploadError,  setUploadError]  = useState(null);
+  const [statsRows,    setStatsRows]    = useState(null); // null = not loaded yet
+  const [myStats,      setMyStats]      = useState(null); // player's own 14-day summary
 
   // Load player list for trainer dropdown
   useEffect(() => {
@@ -243,6 +246,47 @@ export default function NutritionDashboard({ lang, profile }) {
       setPlayers(data ?? []);
     });
   }, [isTrainer]);
+
+  // Load stats overview (trainers: all players; players: own summary)
+  const loadStats = useCallback(async () => {
+    const since = DAYS[0];
+    if (isTrainer) {
+      const { data } = await supabase
+        .from('nutrition_entries')
+        .select('user_id, user_name, player_rating')
+        .gte('meal_date', since);
+      if (!data) return;
+      const map = {};
+      for (const e of data) {
+        if (!map[e.user_id]) map[e.user_id] = { name: e.user_name, total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
+        const r = map[e.user_id];
+        r.total++;
+        if (e.player_rating === 'green')  r.green++;
+        else if (e.player_rating === 'yellow') r.yellow++;
+        else if (e.player_rating === 'red')    r.red++;
+        else r.unrated++;
+      }
+      setStatsRows(Object.values(map).sort((a, b) => a.name.localeCompare(b.name)));
+    } else {
+      // Player: load own summary
+      const { data } = await supabase
+        .from('nutrition_entries')
+        .select('player_rating')
+        .eq('user_id', profile?.id)
+        .gte('meal_date', since);
+      if (!data) return;
+      const s = { total: data.length, green: 0, yellow: 0, red: 0, unrated: 0 };
+      for (const e of data) {
+        if (e.player_rating === 'green')  s.green++;
+        else if (e.player_rating === 'yellow') s.yellow++;
+        else if (e.player_rating === 'red')    s.red++;
+        else s.unrated++;
+      }
+      setMyStats(s);
+    }
+  }, [isTrainer, profile?.id, DAYS]);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const loadDay = useCallback(async () => {
     if (!viewUserId) return;
@@ -450,27 +494,52 @@ export default function NutritionDashboard({ lang, profile }) {
   return (
     <div className={styles.wrapper}>
 
-      {/* Trainer player selector */}
-      {isTrainer && (
-        <div className={styles.trainerBar}>
-          <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
-          <select
-            className={styles.playerSelect}
-            value={viewUserId}
-            onChange={ev => {
-              const p = players.find(p => p.id === ev.target.value);
-              setViewUserId(ev.target.value);
-              setViewUserName(p?.display_name ?? '');
-            }}>
-            {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-          </select>
-          {reviewRequests > 0 && (
-            <span className={styles.reviewBanner}>
-              ❗ {reviewRequests} {lang === 'ja' ? '件のフィードバック依頼' : `meal${reviewRequests > 1 ? 's' : ''} waiting for your feedback`}
-            </span>
+      {/* Top bar: tabs + trainer controls */}
+      <div className={styles.topBar}>
+        <div className={styles.topBarLeft}>
+          <span className={styles.heading}>{lang === 'ja' ? '栄養ダイアリー' : 'Nutrition Diary'}</span>
+          {isTrainer && (
+            <div className={styles.viewTabs}>
+              <button className={`${styles.viewTab} ${view === 'diary'  ? styles.viewTabActive : ''}`} onClick={() => setView('diary')}>
+                {lang === 'ja' ? '日記' : 'Diary'}
+              </button>
+              <button className={`${styles.viewTab} ${view === 'stats' ? styles.viewTabActive : ''}`} onClick={() => setView('stats')}>
+                {lang === 'ja' ? '概要' : 'Overview'}
+              </button>
+            </div>
           )}
         </div>
-      )}
+        {/* Player mini-stats (14-day) */}
+        {!isTrainer && myStats && (
+          <div className={styles.myStats}>
+            <span className={styles.myStatsLabel}>{lang === 'ja' ? '直近14日' : 'Last 14d'}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#16a34a' }} />{myStats.green}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#d97706' }} />{myStats.yellow}</span>
+            <span className={styles.myStatItem}><span className={styles.myStatDot} style={{ background: '#dc2626' }} />{myStats.red}</span>
+            <span className={styles.myStatTotal}>{myStats.total} {lang === 'ja' ? '食' : 'meals'}</span>
+          </div>
+        )}
+        {isTrainer && view === 'diary' && (
+          <div className={styles.trainerControls}>
+            <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
+            <select
+              className={styles.playerSelect}
+              value={viewUserId}
+              onChange={ev => {
+                const p = players.find(p => p.id === ev.target.value);
+                setViewUserId(ev.target.value);
+                setViewUserName(p?.display_name ?? '');
+              }}>
+              {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+            </select>
+            {reviewRequests > 0 && (
+              <span className={styles.reviewBanner}>
+                ❗ {reviewRequests} {lang === 'ja' ? '件のフィードバック依頼' : `meal${reviewRequests > 1 ? 's' : ''} awaiting feedback`}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Upload error banner */}
       {uploadError && (
@@ -480,56 +549,112 @@ export default function NutritionDashboard({ lang, profile }) {
         </div>
       )}
 
-      {/* 14-day strip */}
-      <div className={styles.dayStrip}>
-        {DAYS.map(d => {
-          const date = new Date(d + 'T00:00:00');
-          const isToday = d === DAYS[DAYS.length - 1];
-          return (
-            <button
-              key={d}
-              className={`${styles.dayPill} ${d === selectedDay ? styles.dayPillActive : ''}`}
-              onClick={() => setSelectedDay(d)}>
-              <span className={styles.dayName}>
-                {date.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'short' })}
-              </span>
-              <span className={styles.dayNum}>{date.getDate()}</span>
-              {isToday && <span className={styles.todayDot} />}
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Stats Overview (trainers only) ── */}
+      {view === 'stats' && isTrainer && (
+        <div className={styles.statsContent}>
+          <div className={styles.statsHeader}>{lang === 'ja' ? '直近14日間の栄養記録' : 'Last 14 Days — Nutrition Submissions'}</div>
+          {!statsRows ? (
+            <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
+          ) : statsRows.length === 0 ? (
+            <div className={styles.empty}>{lang === 'ja' ? 'データなし' : 'No data yet'}</div>
+          ) : (
+            <div className={styles.statsTableWrap}>
+              <table className={styles.statsTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.statsThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                    <th className={styles.statsTh}>{lang === 'ja' ? '合計' : 'Total'}</th>
+                    <th className={styles.statsTh}>🟢</th>
+                    <th className={styles.statsTh}>🟡</th>
+                    <th className={styles.statsTh}>🔴</th>
+                    <th className={styles.statsTh}>{lang === 'ja' ? '未評価' : 'Unrated'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsRows.map((r, i) => (
+                    <tr key={i} className={styles.statsTr}>
+                      <td className={styles.statsTdName}>{r.name}</td>
+                      <td className={styles.statsTd}><strong>{r.total}</strong></td>
+                      <td className={styles.statsTd}>
+                        {r.green > 0 && <span className={styles.statsBadge} style={{ background: '#16a34a' }}>{r.green}</span>}
+                        {r.green === 0 && <span className={styles.statsZero}>—</span>}
+                      </td>
+                      <td className={styles.statsTd}>
+                        {r.yellow > 0 && <span className={styles.statsBadge} style={{ background: '#d97706' }}>{r.yellow}</span>}
+                        {r.yellow === 0 && <span className={styles.statsZero}>—</span>}
+                      </td>
+                      <td className={styles.statsTd}>
+                        {r.red > 0 && <span className={styles.statsBadge} style={{ background: '#dc2626' }}>{r.red}</span>}
+                        {r.red === 0 && <span className={styles.statsZero}>—</span>}
+                      </td>
+                      <td className={styles.statsTd}>
+                        {r.unrated > 0 && <span className={styles.statsUnrated}>{r.unrated}</span>}
+                        {r.unrated === 0 && <span className={styles.statsZero}>—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Meal cards */}
-      <div className={styles.mealsGrid}>
-        {loading ? (
-          <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
-        ) : (
-          MEALS.map(meal => {
-            const entry = entries[meal.id] ?? emptyEntry();
-            const isOwn = viewUserId === profile?.id;
-            return (
-              <MealCard
-                key={meal.id}
-                meal={meal}
-                entry={entry}
-                lang={lang}
-                isTrainer={isTrainer}
-                isOwn={isOwn}
-                uploading={!!uploading[meal.id]}
-                saving={!!saving[meal.id]}
-                onNotesChange={notes => saveNotes(meal.id, notes)}
-                onAskCoach={() => toggleAskCoach(meal.id)}
-                onPlayerRating={r => savePlayerRating(meal.id, r)}
-                onPhotoUpload={file => uploadPhoto(meal.id, file)}
-                onPhotoDelete={(id, path) => deletePhoto(meal.id, id, path)}
-                onSaveComment={(comment, rating) => saveComment(meal.id, comment, rating)}
-                onPhotoClick={url => setLightbox(url)}
-              />
-            );
-          })
-        )}
-      </div>
+      {/* ── Diary view ── */}
+      {view === 'diary' && (
+        <>
+          {/* 14-day strip */}
+          <div className={styles.dayStrip}>
+            {DAYS.map(d => {
+              const date = new Date(d + 'T00:00:00');
+              const isToday = d === DAYS[DAYS.length - 1];
+              return (
+                <button
+                  key={d}
+                  className={`${styles.dayPill} ${d === selectedDay ? styles.dayPillActive : ''}`}
+                  onClick={() => setSelectedDay(d)}>
+                  <span className={styles.dayName}>
+                    {date.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'short' })}
+                  </span>
+                  <span className={styles.dayNum}>{date.getDate()}</span>
+                  {isToday && <span className={styles.todayDot} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Meal cards */}
+          <div className={styles.mealsGrid}>
+            {loading ? (
+              <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
+            ) : (
+              MEALS.map(meal => {
+                const entry = entries[meal.id] ?? emptyEntry();
+                const isOwn = viewUserId === profile?.id;
+                return (
+                  <MealCard
+                    key={meal.id}
+                    meal={meal}
+                    entry={entry}
+                    lang={lang}
+                    isTrainer={isTrainer}
+                    isOwn={isOwn}
+                    uploading={!!uploading[meal.id]}
+                    saving={!!saving[meal.id]}
+                    onNotesChange={notes => saveNotes(meal.id, notes)}
+                    onAskCoach={() => toggleAskCoach(meal.id)}
+                    onPlayerRating={r => savePlayerRating(meal.id, r)}
+                    onPhotoUpload={file => uploadPhoto(meal.id, file)}
+                    onPhotoDelete={(id, path) => deletePhoto(meal.id, id, path)}
+                    onSaveComment={(comment, rating) => saveComment(meal.id, comment, rating)}
+                    onPhotoClick={url => setLightbox(url)}
+                  />
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
 
       {/* Lightbox */}
       {lightbox && (

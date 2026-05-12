@@ -6,13 +6,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './RoleManager.module.css';
 
-const ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
+const ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
 const POSITIONS = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero'];
 
 const ROLE_COLORS = {
   GM:                   styles.roleGM,
   Headcoach:            styles.roleHeadcoach,
-  Athletic:             styles.roleAthletic,
+  'Athletic Trainer':   styles.roleAthletic,
   Therapist:            styles.roleTherapist,
   'Coaching Staff':     styles.roleCoachingStaff,
   'Organisation Staff': styles.roleOrgStaff,
@@ -22,7 +22,7 @@ const ROLE_COLORS = {
 const ROLE_DOT_COLORS = {
   GM:                   styles.dotGM,
   Headcoach:            styles.dotHeadcoach,
-  Athletic:             styles.dotAthletic,
+  'Athletic Trainer':   styles.dotAthletic,
   Therapist:            styles.dotTherapist,
   'Coaching Staff':     styles.dotCoachingStaff,
   'Organisation Staff': styles.dotOrgStaff,

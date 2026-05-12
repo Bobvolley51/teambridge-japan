@@ -143,7 +143,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       const { data: recipients } = await supabase
         .from('profiles')
         .select('id')
-        .in('role', ['Athletic', 'Therapist']);
+        .in('role', ['Athletic Trainer', 'Therapist']);
 
       if (recipients?.length) {
         await supabase.from('notifications').insert(

@@ -295,7 +295,7 @@ function CommForm({ lang, currentUserName, onSave, onClose, prefill }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 const THERAPIST_ROLES = ['Therapist'];
-const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic', 'GM', 'Coaching Staff'];
+const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
 
 export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '' }) {
   const toast        = useToast();

@@ -9,15 +9,54 @@
   background: #fff;
 }
 
-/* ── Trainer bar ─────────────────────────────────────────── */
-.trainerBar {
+/* ── Top bar ─────────────────────────────────────────────── */
+.topBar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 10px 20px;
   background: #fdf2f4;
-  border-bottom: 1px solid #f5c2ce;
+  border-bottom: 2px solid #7e0027;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #5c001a;
+}
+.viewTabs {
+  display: flex;
+  border: 1px solid #7e0027;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.viewTab {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff;
+  border: none;
+  color: #7e0027;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
+}
+.viewTab + .viewTab { border-left: 1px solid #7e0027; }
+.viewTab:hover { background: #fdf2f4; }
+.viewTabActive { background: #7e0027 !important; color: #fff !important; }
+
+.trainerControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .playerLabel {
@@ -28,7 +67,7 @@
 }
 .playerSelect {
   flex: 1;
-  max-width: 240px;
+  max-width: 200px;
   font-size: 13px;
   font-family: inherit;
   padding: 5px 10px;
@@ -45,6 +84,118 @@
   border: 1px solid #fca5a5;
   border-radius: 8px;
   padding: 4px 10px;
+}
+
+/* ── Player personal stats (top-right) ──────────────────── */
+.myStats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.myStatsLabel {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.myStatItem {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+.myStatDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.myStatTotal {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+/* ── Stats overview (trainers) ───────────────────────────── */
+.statsContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.statsHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.statsTableWrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: auto;
+}
+.statsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.statsTable thead { position: sticky; top: 0; background: #fdf2f4; z-index: 1; }
+.statsThName {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #7e0027;
+  white-space: nowrap;
+}
+.statsTh {
+  text-align: center;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #7e0027;
+  white-space: nowrap;
+}
+.statsTr { border-top: 1px solid #f3f4f6; }
+.statsTr:hover { background: #fdf2f4; }
+.statsTdName {
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+.statsTd { padding: 8px 6px; text-align: center; }
+.statsBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+}
+.statsUnrated {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+.statsZero {
+  font-size: 13px;
+  color: #e5e7eb;
 }
 
 /* ── 14-day strip ────────────────────────────────────────── */

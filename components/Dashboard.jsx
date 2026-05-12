@@ -95,8 +95,8 @@ function countdown(startTime, lang) {
   return lang === 'ja' ? `${h}時間${m}分後` : `in ${h}h ${m}m`;
 }
 
-const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athletic', 'Therapist'];
-const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
+const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athletic Trainer', 'Therapist'];
+const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
 const QUESTION_LABELS = {
   fatigue:     { en: 'Fatigue',     ja: '疲労' },

@@ -54,9 +54,9 @@ const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Sta
 const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Medical', ja: 'メディカル' } };
 
 // Roles that can view the wellness dashboard
-const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
-const PERFORMANCE_VIEWERS = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
-const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic', 'GM', 'Coaching Staff'];
+const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
+const PERFORMANCE_VIEWERS = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
+const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
 const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff', 'Player'];
 
 export default function Home() {
