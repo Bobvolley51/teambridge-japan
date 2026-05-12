@@ -733,30 +733,6 @@ export default function Dashboard({
                   </div>
                 )}
 
-                {/* #7: This week collapsible */}
-                {upcomingEvents.length > 0 && (
-                  <div className={styles.weekSection}>
-                    <button className={styles.weekToggle} onClick={() => setWeekOpen(v => !v)}>
-                      <span>{lang === 'ja' ? '今週の予定' : 'This week'}</span>
-                      <span className={styles.weekToggleCount}>{upcomingEvents.length}</span>
-                      <span>{weekOpen ? '▲' : '▼'}</span>
-                    </button>
-                    {weekOpen && Object.entries(upcomingByDate).map(([date, evs]) => (
-                      <div key={date} className={styles.weekGroup}>
-                        <div className={styles.weekDateLabel}>{date}</div>
-                        {evs.map(ev => (
-                          <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
-                            <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
-                            <div>
-                              <div className={styles.alertText}>{ev.title}</div>
-                              <div className={styles.alertSub}>{fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className={styles.cardFoot}>
                 <button className={styles.footBtn} onClick={() => onNavigate('calendar')}>
