@@ -329,13 +329,12 @@ export default function Home() {
     || user.email;
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
   const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role);
+  const isPlayer       = profile?.role === 'Player';
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
   const canNutrition   = isPlayer || canWellness;
   const canPerformance = PERFORMANCE_VIEWERS.includes(profile?.role);
   const canMedical     = MEDICAL_VIEWERS.includes(profile?.role);
   const canTactics     = TACTICS_VIEWERS.includes(profile?.role);
-
-  const isPlayer = profile?.role === 'Player';
 
   const nav_items = [
     ...NAV_BASE,

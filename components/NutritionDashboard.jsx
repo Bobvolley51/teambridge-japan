@@ -12,8 +12,8 @@ const MEALS = [
 ];
 
 const RATINGS = [
-  { v: 'green',  e: '🟢', en: 'Good',    ja: '良好'  },
-  { v: 'yellow', e: '🟡', en: 'Fair',    ja: '普通'  },
+  { v: 'green',  e: '🟢', en: 'Good',    ja: '良好'   },
+  { v: 'yellow', e: '🟡', en: 'Fair',    ja: '普通'   },
   { v: 'red',    e: '🔴', en: 'Improve', ja: '要改善' },
 ];
 
@@ -54,19 +54,164 @@ function emptyEntry() {
   return { id: null, notes: '', coach_review_requested: false, photos: [], rating: null, comment: '', commentId: null, allComments: [] };
 }
 
+// ── MealCard defined before NutritionDashboard to avoid TDZ ──────────────
+function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChange, onAskCoach, onPhotoUpload, onPhotoDelete, onSaveComment, onPhotoClick }) {
+  const [notes,   setNotes]   = useState(entry.notes);
+  const [comment, setComment] = useState(entry.comment);
+  const [rating,  setRating]  = useState(entry.rating);
+  const fileRef = useRef();
+
+  useEffect(() => { setNotes(entry.notes);     }, [entry.notes]);
+  useEffect(() => { setComment(entry.comment); }, [entry.comment]);
+  useEffect(() => { setRating(entry.rating);   }, [entry.rating]);
+
+  const handleBlur = () => { if (notes !== entry.notes) onNotesChange(notes); };
+
+  const handleFile = e => {
+    const f = e.target.files[0];
+    if (f) onPhotoUpload(f);
+    e.target.value = '';
+  };
+
+  const handleSaveComment = () => {
+    if (comment !== entry.comment || rating !== entry.rating) onSaveComment(comment, rating);
+  };
+
+  const topRating = entry.allComments?.find(c => c.rating)?.rating;
+
+  return (
+    <div className={`${styles.mealCard} ${entry.coach_review_requested && isTrainer ? styles.mealCardReview : ''}`}>
+      <div className={styles.mealHeader}>
+        <span className={styles.mealIcon}>{meal.icon}</span>
+        <span className={styles.mealTitle}>{lang === 'ja' ? meal.ja : meal.en}</span>
+        {topRating && <span className={styles.mealRating}>{RATINGS.find(r => r.v === topRating)?.e}</span>}
+        {entry.coach_review_requested && (
+          <span className={styles.reviewFlag}>
+            {isTrainer
+              ? (lang === 'ja' ? '❗ フィードバック依頼' : '❗ Feedback requested')
+              : (lang === 'ja' ? '⏳ コーチ待ち' : '⏳ Waiting for coach')}
+          </span>
+        )}
+      </div>
+
+      {/* Photos */}
+      <div className={styles.photoGrid}>
+        {entry.photos.map(p => (
+          <div key={p.id} className={styles.photoThumb}>
+            <img src={p.url} className={styles.thumbImg} onClick={() => onPhotoClick(p.url)} alt="" />
+            {isOwn && !isTrainer && (
+              <button className={styles.thumbDel} onClick={() => onPhotoDelete(p.id, p.path)}>✕</button>
+            )}
+          </div>
+        ))}
+        {isOwn && !isTrainer && entry.photos.length < 3 && (
+          <button className={styles.addPhotoBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? '…' : '+'}
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+          </button>
+        )}
+        {isOwn && !isTrainer && entry.photos.length >= 3 && (
+          <div className={styles.photoLimitNote}>3 / 3</div>
+        )}
+      </div>
+
+      {/* Notes */}
+      {isOwn && !isTrainer ? (
+        <textarea
+          className={styles.notesArea}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          onBlur={handleBlur}
+          placeholder={lang === 'ja' ? 'メモを追加…' : 'Add a note…'}
+          rows={2}
+        />
+      ) : (
+        entry.notes
+          ? <div className={styles.notesRead}>{entry.notes}</div>
+          : !isTrainer ? <div className={styles.notesEmpty}>{lang === 'ja' ? 'メモなし' : 'No notes'}</div> : null
+      )}
+
+      {/* Ask Coach button (players only, own meals) */}
+      {isOwn && !isTrainer && (
+        <button
+          className={`${styles.askCoachBtn} ${entry.coach_review_requested ? styles.askCoachBtnActive : ''}`}
+          onClick={onAskCoach}>
+          {entry.coach_review_requested
+            ? (lang === 'ja' ? '⏳ コーチに聞いています…' : '⏳ Waiting for coach feedback…')
+            : (lang === 'ja' ? '❓ コーチに聞く' : '❓ Ask Coach')}
+        </button>
+      )}
+
+      {/* Trainer feedback section */}
+      {isTrainer && (
+        <div className={styles.trainerSection}>
+          <div className={styles.ratingRow}>
+            {RATINGS.map(r => (
+              <button
+                key={r.v}
+                className={`${styles.ratingBtn} ${rating === r.v ? styles.ratingBtnActive : ''}`}
+                onClick={() => setRating(v => v === r.v ? null : r.v)}>
+                {r.e} {lang === 'ja' ? r.ja : r.en}
+              </button>
+            ))}
+          </div>
+          <textarea
+            className={styles.commentArea}
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder={lang === 'ja' ? 'フィードバックを入力…' : 'Write feedback…'}
+            rows={2}
+          />
+          <button className={styles.commentSaveBtn} onClick={handleSaveComment}>
+            {lang === 'ja' ? '保存' : 'Save'}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer comments visible to the player */}
+      {!isTrainer && entry.allComments.length > 0 && (
+        <div className={styles.coachComments}>
+          <div className={styles.coachCommentsLabel}>{lang === 'ja' ? 'コーチから:' : 'From coach:'}</div>
+          {entry.allComments.map(c => (
+            <div key={c.id} className={styles.commentItem}>
+              <span className={styles.commentAuthor}>{c.author_name}</span>
+              {c.rating && <span className={styles.commentRating}>{RATINGS.find(r => r.v === c.rating)?.e}</span>}
+              {c.comment && <span className={styles.commentText}>{c.comment}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* All comments visible to trainer */}
+      {isTrainer && entry.allComments.length > 0 && (
+        <div className={styles.coachComments}>
+          {entry.allComments.map(c => (
+            <div key={c.id} className={styles.commentItem}>
+              <span className={styles.commentAuthor}>{c.author_name}</span>
+              {c.rating && <span className={styles.commentRating}>{RATINGS.find(r => r.v === c.rating)?.e}</span>}
+              {c.comment && <span className={styles.commentText}>{c.comment}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────
 export default function NutritionDashboard({ lang, profile }) {
   const isTrainer = TRAINER_ROLES.includes(profile?.role);
   const DAYS = getLast14Days();
 
-  const [selectedDay, setSelectedDay]   = useState(DAYS[DAYS.length - 1]);
-  const [players,     setPlayers]       = useState([]);
-  const [viewUserId,  setViewUserId]    = useState(profile?.id ?? '');
-  const [viewUserName,setViewUserName]  = useState(profile?.name ?? '');
-  const [entries,     setEntries]       = useState({});
-  const [loading,     setLoading]       = useState(false);
-  const [saving,      setSaving]        = useState({});
-  const [uploading,   setUploading]     = useState({});
-  const [lightbox,    setLightbox]      = useState(null);
+  const [selectedDay,  setSelectedDay]  = useState(DAYS[DAYS.length - 1]);
+  const [players,      setPlayers]      = useState([]);
+  const [viewUserId,   setViewUserId]   = useState(profile?.id ?? '');
+  const [viewUserName, setViewUserName] = useState(profile?.name ?? '');
+  const [entries,      setEntries]      = useState({});
+  const [loading,      setLoading]      = useState(false);
+  const [saving,       setSaving]       = useState({});
+  const [uploading,    setUploading]    = useState({});
+  const [lightbox,     setLightbox]     = useState(null);
 
   // Load player list for trainer dropdown
   useEffect(() => {
@@ -111,7 +256,7 @@ export default function NutritionDashboard({ lang, profile }) {
 
   useEffect(() => { loadDay(); }, [loadDay]);
 
-  // Delete photos older than 30 days (own entries only)
+  // Delete own photos older than 30 days on mount
   useEffect(() => {
     if (!profile?.id) return;
     const cutoff = new Date();
@@ -211,7 +356,6 @@ export default function NutritionDashboard({ lang, profile }) {
       const { data } = await supabase.from('nutrition_comments').insert(payload).select('id').single();
       commentId = data?.id ?? null;
     }
-    // Clear coach_review_requested after trainer responds
     await supabase.from('nutrition_entries').update({ coach_review_requested: false }).eq('id', entry.id);
 
     setEntries(e => ({
@@ -312,147 +456,6 @@ export default function NutritionDashboard({ lang, profile }) {
         <div className={styles.lightboxOverlay} onClick={() => setLightbox(null)}>
           <img src={lightbox} className={styles.lightboxImg} onClick={e => e.stopPropagation()} alt="" />
           <button className={styles.lightboxClose} onClick={() => setLightbox(null)}>✕</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, saving, onNotesChange, onAskCoach, onPhotoUpload, onPhotoDelete, onSaveComment, onPhotoClick }) {
-  const [notes,   setNotes]   = useState(entry.notes);
-  const [comment, setComment] = useState(entry.comment);
-  const [rating,  setRating]  = useState(entry.rating);
-  const fileRef = useRef();
-
-  useEffect(() => { setNotes(entry.notes);     }, [entry.notes]);
-  useEffect(() => { setComment(entry.comment); }, [entry.comment]);
-  useEffect(() => { setRating(entry.rating);   }, [entry.rating]);
-
-  const handleBlur = () => { if (notes !== entry.notes) onNotesChange(notes); };
-
-  const handleFile = e => {
-    const f = e.target.files[0];
-    if (f) onPhotoUpload(f);
-    e.target.value = '';
-  };
-
-  const handleSaveComment = () => {
-    if (comment !== entry.comment || rating !== entry.rating) onSaveComment(comment, rating);
-  };
-
-  const topRating = entry.allComments?.find(c => c.rating)?.rating;
-
-  return (
-    <div className={`${styles.mealCard} ${entry.coach_review_requested && isTrainer ? styles.mealCardReview : ''}`}>
-      <div className={styles.mealHeader}>
-        <span className={styles.mealIcon}>{meal.icon}</span>
-        <span className={styles.mealTitle}>{lang === 'ja' ? meal.ja : meal.en}</span>
-        {topRating && <span className={styles.mealRating}>{RATINGS.find(r => r.v === topRating)?.e}</span>}
-        {entry.coach_review_requested && (
-          <span className={styles.reviewFlag}>
-            {isTrainer ? (lang === 'ja' ? '❗ フィードバック依頼' : '❗ Feedback requested') : (lang === 'ja' ? '⏳ コーチ待ち' : '⏳ Waiting for coach')}
-          </span>
-        )}
-      </div>
-
-      {/* Photos */}
-      <div className={styles.photoGrid}>
-        {entry.photos.map(p => (
-          <div key={p.id} className={styles.photoThumb}>
-            <img src={p.url} className={styles.thumbImg} onClick={() => onPhotoClick(p.url)} alt="" />
-            {isOwn && !isTrainer && (
-              <button className={styles.thumbDel} onClick={() => onPhotoDelete(p.id, p.path)}>✕</button>
-            )}
-          </div>
-        ))}
-        {isOwn && !isTrainer && entry.photos.length < 3 && (
-          <button className={styles.addPhotoBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
-            {uploading ? '…' : '+'}
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-          </button>
-        )}
-        {isOwn && !isTrainer && entry.photos.length >= 3 && (
-          <div className={styles.photoLimitNote}>3 / 3</div>
-        )}
-      </div>
-
-      {/* Notes */}
-      {isOwn && !isTrainer ? (
-        <textarea
-          className={styles.notesArea}
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          onBlur={handleBlur}
-          placeholder={lang === 'ja' ? 'メモを追加…' : 'Add a note…'}
-          rows={2}
-        />
-      ) : (
-        entry.notes
-          ? <div className={styles.notesRead}>{entry.notes}</div>
-          : !isTrainer ? <div className={styles.notesEmpty}>{lang === 'ja' ? 'メモなし' : 'No notes'}</div> : null
-      )}
-
-      {/* Ask Coach button (players only, own meals) */}
-      {isOwn && !isTrainer && (
-        <button
-          className={`${styles.askCoachBtn} ${entry.coach_review_requested ? styles.askCoachBtnActive : ''}`}
-          onClick={onAskCoach}>
-          {entry.coach_review_requested
-            ? (lang === 'ja' ? '⏳ コーチに聞いています…' : '⏳ Waiting for coach feedback…')
-            : (lang === 'ja' ? '❓ コーチに聞く' : '❓ Ask Coach')}
-        </button>
-      )}
-
-      {/* Trainer feedback section */}
-      {isTrainer && (
-        <div className={styles.trainerSection}>
-          <div className={styles.ratingRow}>
-            {RATINGS.map(r => (
-              <button
-                key={r.v}
-                className={`${styles.ratingBtn} ${rating === r.v ? styles.ratingBtnActive : ''}`}
-                onClick={() => setRating(v => v === r.v ? null : r.v)}>
-                {r.e} {lang === 'ja' ? r.ja : r.en}
-              </button>
-            ))}
-          </div>
-          <textarea
-            className={styles.commentArea}
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-            placeholder={lang === 'ja' ? 'フィードバックを入力…' : 'Write feedback…'}
-            rows={2}
-          />
-          <button className={styles.commentSaveBtn} onClick={handleSaveComment}>
-            {lang === 'ja' ? '保存' : 'Save'}
-          </button>
-        </div>
-      )}
-
-      {/* Show trainer comments to the player */}
-      {!isTrainer && entry.allComments.length > 0 && (
-        <div className={styles.coachComments}>
-          <div className={styles.coachCommentsLabel}>{lang === 'ja' ? 'コーチから:' : 'From coach:'}</div>
-          {entry.allComments.map(c => (
-            <div key={c.id} className={styles.commentItem}>
-              <span className={styles.commentAuthor}>{c.author_name}</span>
-              {c.rating && <span className={styles.commentRating}>{RATINGS.find(r => r.v === c.rating)?.e}</span>}
-              {c.comment && <span className={styles.commentText}>{c.comment}</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Show all comments to trainer */}
-      {isTrainer && entry.allComments.filter(c => c.author_id !== entry.myAuthorId).length > 0 && (
-        <div className={styles.coachComments}>
-          {entry.allComments.map(c => (
-            <div key={c.id} className={styles.commentItem}>
-              <span className={styles.commentAuthor}>{c.author_name}</span>
-              {c.rating && <span className={styles.commentRating}>{RATINGS.find(r => r.v === c.rating)?.e}</span>}
-              {c.comment && <span className={styles.commentText}>{c.comment}</span>}
-            </div>
-          ))}
         </div>
       )}
     </div>
