@@ -178,6 +178,17 @@
 .painParts   { display: flex; flex-wrap: wrap; gap: 4px; }
 .painChip    { font-size: 11px; font-weight: 600; background: #fef2f2; border: 1px solid #fca5a5; color: #7e0027; border-radius: 6px; padding: 2px 8px; }
 
+.nutriSection { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+.nutriTitle   { font-size: 13px; font-weight: 700; color: #374151; padding: 10px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 6px; }
+.nutriPeriod  { font-size: 11px; font-weight: 400; color: #9ca3af; }
+.nutriTable   { width: 100%; border-collapse: collapse; font-size: 12px; }
+.nutriThName  { text-align: left; padding: 7px 12px; font-weight: 600; color: #6b7280; background: #f9fafb; }
+.nutriTh      { text-align: center; padding: 7px 8px; font-weight: 600; color: #6b7280; background: #f9fafb; }
+.nutriTr      { border-top: 1px solid #f3f4f6; }
+.nutriTr:hover { background: #fafafa; }
+.nutriTdName  { padding: 7px 12px; color: #111827; font-weight: 500; }
+.nutriTd      { padding: 7px 8px; text-align: center; font-weight: 600; }
+
 .freqChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .freqChip  { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 4px 10px; border: 1px solid; }
 .freqChipYellow { background: #fefce8; border-color: #fde047; color: #713f12; }

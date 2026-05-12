@@ -164,6 +164,7 @@ export default function WellnessDashboard({ lang, profile }) {
   const [todayPain,  setTodayPain]  = useState([]);
   const [weekPain,   setWeekPain]   = useState([]);
   const [bwRows,     setBwRows]     = useState([]);
+  const [nutriRows,  setNutriRows]  = useState([]);
   const [loading,    setLoading]    = useState(true);
 
   // ── Load today ──────────────────────────────────────────────
@@ -191,14 +192,16 @@ export default function WellnessDashboard({ lang, profile }) {
     });
     const curWeek  = getWeekStart(dates[0]);
     const prevWeek = prevWeekStartOf(dates[0]);
-    const [{ data }, { data: pain }, { data: bw }] = await Promise.all([
+    const [{ data }, { data: pain }, { data: bw }, { data: nutri }] = await Promise.all([
       supabase.from('wellness_responses').select('*').in('response_date', dates).order('user_name'),
       supabase.from('wellness_body_pain').select('user_name, body_part, response_date').in('response_date', dates),
       supabase.from('player_bodyweight').select('user_name, weight_kg, week_start').in('week_start', [curWeek, prevWeek]),
+      supabase.from('nutrition_entries').select('user_name, player_rating, meal_date').in('meal_date', dates),
     ]);
     setWeekRows(data ?? []);
     setWeekPain(pain ?? []);
     setBwRows(bw ?? []);
+    setNutriRows(nutri ?? []);
     setLoading(false);
   }, [weekOffset, weekDays]);
 
@@ -572,6 +575,52 @@ export default function WellnessDashboard({ lang, profile }) {
                 </div>
               )
           }
+
+          {/* ── Nutrition submissions overview ── */}
+          {nutriRows.length > 0 && (() => {
+            const byPlayer = {};
+            for (const r of nutriRows) {
+              if (!byPlayer[r.user_name]) byPlayer[r.user_name] = { total: 0, green: 0, yellow: 0, red: 0, none: 0 };
+              byPlayer[r.user_name].total++;
+              if (r.player_rating === 'green')  byPlayer[r.user_name].green++;
+              else if (r.player_rating === 'yellow') byPlayer[r.user_name].yellow++;
+              else if (r.player_rating === 'red')    byPlayer[r.user_name].red++;
+              else byPlayer[r.user_name].none++;
+            }
+            const players = Object.entries(byPlayer).sort((a, b) => b[1].total - a[1].total);
+            return (
+              <div className={styles.nutriSection}>
+                <div className={styles.nutriTitle}>
+                  🍽️ {lang === 'ja' ? '栄養記録' : 'Nutrition Submissions'}
+                  <span className={styles.nutriPeriod}>({weekDays}{lang === 'ja' ? '日間' : 'd'})</span>
+                </div>
+                <table className={styles.nutriTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.nutriThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                      <th className={styles.nutriTh}>{lang === 'ja' ? '件数' : 'Meals'}</th>
+                      <th className={styles.nutriTh}>🟢</th>
+                      <th className={styles.nutriTh}>🟡</th>
+                      <th className={styles.nutriTh}>🔴</th>
+                      <th className={styles.nutriTh}>{lang === 'ja' ? '未評価' : '—'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.map(([name, s]) => (
+                      <tr key={name} className={styles.nutriTr}>
+                        <td className={styles.nutriTdName}>{name}</td>
+                        <td className={styles.nutriTd}><strong>{s.total}</strong></td>
+                        <td className={styles.nutriTd} style={{ color: s.green  ? '#15803d' : '#d1d5db' }}>{s.green  || '—'}</td>
+                        <td className={styles.nutriTd} style={{ color: s.yellow ? '#b45309' : '#d1d5db' }}>{s.yellow || '—'}</td>
+                        <td className={styles.nutriTd} style={{ color: s.red    ? '#b91c1c' : '#d1d5db' }}>{s.red    || '—'}</td>
+                        <td className={styles.nutriTd} style={{ color: '#9ca3af' }}>{s.none || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 

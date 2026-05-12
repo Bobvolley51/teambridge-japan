@@ -51,11 +51,11 @@ async function compressImage(file) {
 }
 
 function emptyEntry() {
-  return { id: null, notes: '', coach_review_requested: false, photos: [], rating: null, comment: '', commentId: null, allComments: [] };
+  return { id: null, notes: '', coach_review_requested: false, player_rating: null, photos: [], rating: null, comment: '', commentId: null, allComments: [] };
 }
 
 // ── MealCard defined before NutritionDashboard to avoid TDZ ──────────────
-function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChange, onAskCoach, onPhotoUpload, onPhotoDelete, onSaveComment, onPhotoClick }) {
+function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChange, onAskCoach, onPlayerRating, onPhotoUpload, onPhotoDelete, onSaveComment, onPhotoClick }) {
   const [notes,   setNotes]   = useState(entry.notes);
   const [comment, setComment] = useState(entry.comment);
   const [rating,  setRating]  = useState(entry.rating);
@@ -129,6 +129,28 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChang
         entry.notes
           ? <div className={styles.notesRead}>{entry.notes}</div>
           : !isTrainer ? <div className={styles.notesEmpty}>{lang === 'ja' ? 'メモなし' : 'No notes'}</div> : null
+      )}
+
+      {/* Player self-rating */}
+      {isOwn && !isTrainer && (
+        <div className={styles.selfRatingRow}>
+          <span className={styles.selfRatingLabel}>{lang === 'ja' ? '評価:' : 'Rate:'}</span>
+          {RATINGS.map(r => (
+            <button
+              key={r.v}
+              className={`${styles.ratingBtn} ${entry.player_rating === r.v ? styles.ratingBtnActive : ''}`}
+              onClick={() => onPlayerRating(entry.player_rating === r.v ? null : r.v)}>
+              {r.e}
+            </button>
+          ))}
+        </div>
+      )}
+      {isTrainer && entry.player_rating && (
+        <div className={styles.selfRatingRow}>
+          <span className={styles.selfRatingLabel}>{lang === 'ja' ? '選手の評価:' : 'Player rating:'}</span>
+          <span>{RATINGS.find(r => r.v === entry.player_rating)?.e}</span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{RATINGS.find(r => r.v === entry.player_rating)?.[lang === 'ja' ? 'ja' : 'en']}</span>
+        </div>
       )}
 
       {/* Ask Coach button (players only, own meals) */}
@@ -217,7 +239,7 @@ export default function NutritionDashboard({ lang, profile }) {
   // Load player list for trainer dropdown
   useEffect(() => {
     if (!isTrainer) return;
-    supabase.from('profiles').select('id, display_name').order('display_name').then(({ data }) => {
+    supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name').then(({ data }) => {
       setPlayers(data ?? []);
     });
   }, [isTrainer]);
@@ -227,7 +249,7 @@ export default function NutritionDashboard({ lang, profile }) {
     setLoading(true);
     const { data } = await supabase
       .from('nutrition_entries')
-      .select('id, meal_type, notes, coach_review_requested, nutrition_photos(id, storage_path), nutrition_comments(id, author_id, author_name, comment, rating)')
+      .select('id, meal_type, notes, coach_review_requested, player_rating, nutrition_photos(id, storage_path), nutrition_comments(id, author_id, author_name, comment, rating)')
       .eq('user_id', viewUserId)
       .eq('meal_date', selectedDay);
 
@@ -240,6 +262,7 @@ export default function NutritionDashboard({ lang, profile }) {
         id: e.id,
         notes: e.notes ?? '',
         coach_review_requested: e.coach_review_requested ?? false,
+        player_rating: e.player_rating ?? null,
         photos: (e.nutrition_photos ?? []).map(p => ({
           id: p.id,
           url: supabase.storage.from('nutrition-photos').getPublicUrl(p.storage_path).data.publicUrl,
@@ -317,7 +340,30 @@ export default function NutritionDashboard({ lang, profile }) {
     const current = entries[mealType]?.coach_review_requested ?? false;
     const next = !current;
     await supabase.from('nutrition_entries').update({ coach_review_requested: next }).eq('id', id);
+    if (next) {
+      const { data: trainers } = await supabase.from('profiles').select('id').eq('role', 'Athletic Trainer');
+      if (trainers?.length) {
+        const meal = MEALS.find(m => m.id === mealType);
+        await supabase.from('notifications').insert(
+          trainers.map(t => ({
+            user_id:    t.id,
+            type:       'nutrition',
+            title:      lang === 'ja' ? '栄養フィードバック依頼' : 'Nutrition Feedback Request',
+            body:       `${viewUserName} — ${lang === 'ja' ? meal?.ja : meal?.en}`,
+            nav_target: 'nutrition',
+            ref_id:     id,
+          }))
+        );
+      }
+    }
     setEntries(e => ({ ...e, [mealType]: { ...(e[mealType] ?? emptyEntry()), id, coach_review_requested: next } }));
+  }
+
+  async function savePlayerRating(mealType, player_rating) {
+    const id = await ensureEntry(mealType);
+    if (!id) return;
+    await supabase.from('nutrition_entries').update({ player_rating }).eq('id', id);
+    setEntries(e => ({ ...e, [mealType]: { ...(e[mealType] ?? emptyEntry()), id, player_rating } }));
   }
 
   async function uploadPhoto(mealType, file) {
@@ -461,6 +507,7 @@ export default function NutritionDashboard({ lang, profile }) {
                 saving={!!saving[meal.id]}
                 onNotesChange={notes => saveNotes(meal.id, notes)}
                 onAskCoach={() => toggleAskCoach(meal.id)}
+                onPlayerRating={r => savePlayerRating(meal.id, r)}
                 onPhotoUpload={file => uploadPhoto(meal.id, file)}
                 onPhotoDelete={(id, path) => deletePhoto(meal.id, id, path)}
                 onSaveComment={(comment, rating) => saveComment(meal.id, comment, rating)}

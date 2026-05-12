@@ -423,7 +423,7 @@ export default function Home() {
 
       {/* Mobile bottom navigation */}
       <nav className={styles.mobileNav}>
-        {[...nav_items, ...NAV_CAL_SUBS].map(item => {
+        {nav_items.flatMap(item => item.id === 'calendar' ? [item, ...NAV_CAL_SUBS] : [item]).map(item => {
           const MIcon = item.Icon;
           return (
           <button key={item.id}

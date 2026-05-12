@@ -254,6 +254,9 @@
 .notesEmpty { font-size: 12px; color: #9ca3af; }
 
 /* ── Ask Coach button ────────────────────────────────────── */
+.selfRatingRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.selfRatingLabel { font-size: 12px; font-weight: 600; color: #6b7280; }
+
 .askCoachBtn {
   font-size: 12px;
   font-weight: 600;

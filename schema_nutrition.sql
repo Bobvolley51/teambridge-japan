@@ -9,6 +9,7 @@ create table if not exists nutrition_entries (
   meal_date               date        not null,
   meal_type               text        not null check (meal_type in ('breakfast','lunch','dinner','snack')),
   notes                   text,
+  player_rating           text        check (player_rating in ('green','yellow','red')),
   coach_review_requested  boolean     not null default false,
   created_at              timestamptz default now(),
   updated_at              timestamptz default now(),
