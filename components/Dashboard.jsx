@@ -26,13 +26,21 @@ function fmtDate(lang) {
   });
 }
 
-
 function pad(n) { return String(n).padStart(2, '0'); }
 
 function fmtEventTime(ev, lang) {
   if (ev.all_day) return lang === 'ja' ? '終日' : 'All day';
   const d = new Date(ev.start_time);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function countdown(startTime, lang) {
+  const diff = Math.round((new Date(startTime) - Date.now()) / 60000);
+  if (diff <= 0) return lang === 'ja' ? '進行中' : 'Now';
+  if (diff < 60) return lang === 'ja' ? `${diff}分後` : `in ${diff}m`;
+  const h = Math.floor(diff / 60), m = diff % 60;
+  if (m === 0) return lang === 'ja' ? `${h}時間後` : `in ${h}h`;
+  return lang === 'ja' ? `${h}時間${m}分後` : `in ${h}h ${m}m`;
 }
 
 const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athletic', 'Therapist'];
@@ -59,6 +67,71 @@ const PRI = {
 
 const TASK_PRI_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#6b7280' };
 
+// ── #3 Player Summary Card ────────────────────────────────────────────────────
+
+function PlayerSummaryCard({ lang, lastRpe, wellnessAvg, nextEvent, onNavigate }) {
+  return (
+    <div className={styles.card} style={{ marginBottom: 0 }}>
+      <div className={styles.cardHead}>
+        <span className={styles.cardTitle}>📊 {lang === 'ja' ? 'マイデータ' : 'My Stats'}</span>
+      </div>
+      <div className={styles.cardBody} style={{ display: 'flex', gap: 0, flexDirection: 'column' }}>
+        {/* Last RPE */}
+        <div className={styles.alertSection}>
+          <div className={styles.playerStatRow}>
+            <span className={styles.playerStatLabel}>
+              {lang === 'ja' ? '最新RPE' : 'Last RPE'}
+            </span>
+            {lastRpe ? (
+              <div className={styles.playerStatVal}>
+                <strong>{lastRpe.rpe}</strong>
+                <span className={styles.playerStatSub}> · {lastRpe.event_title ?? lastRpe.event_date}</span>
+              </div>
+            ) : (
+              <span className={styles.playerStatEmpty}>—</span>
+            )}
+          </div>
+        </div>
+        {/* Wellness trend */}
+        <div className={styles.alertSection}>
+          <div className={styles.playerStatRow}>
+            <span className={styles.playerStatLabel}>
+              {lang === 'ja' ? 'ウェルネス (7日平均)' : 'Wellness (7d avg)'}
+            </span>
+            {wellnessAvg != null ? (
+              <div className={styles.playerStatVal}>
+                <strong style={{ color: wellnessAvg >= 7 ? '#16a34a' : wellnessAvg >= 5 ? '#d97706' : '#dc2626' }}>
+                  {wellnessAvg.toFixed(1)}
+                </strong>
+                <span className={styles.playerStatSub}> / 10</span>
+              </div>
+            ) : (
+              <span className={styles.playerStatEmpty}>—</span>
+            )}
+          </div>
+        </div>
+        {/* Next event */}
+        <div className={styles.alertSection}>
+          <div className={styles.playerStatRow}>
+            <span className={styles.playerStatLabel}>
+              {lang === 'ja' ? '次の予定' : 'Next event'}
+            </span>
+            {nextEvent ? (
+              <div className={styles.playerStatVal} style={{ cursor: 'pointer' }} onClick={() => onNavigate('calendar')}>
+                <span className={styles.alertDot} style={{ background: CAT_COLOR[nextEvent.category] ?? '#6b7280', display: 'inline-block', marginRight: 5, verticalAlign: 'middle' }} />
+                <strong>{nextEvent.title}</strong>
+                <span className={styles.playerStatSub}> · {fmtEventTime(nextEvent, lang)}</span>
+              </div>
+            ) : (
+              <span className={styles.playerStatEmpty}>—</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionLabel({ children }) {
@@ -80,18 +153,25 @@ export default function Dashboard({
   onNavigate,
   onOpenWellness,
 }) {
-  const [events,          setEvents]          = useState([]);
-  const [messages,        setMessages]        = useState([]);
-  const [announcements,   setAnnouncements]   = useState([]);
-  const [tasks,           setTasks]           = useState([]);
-  const [wellnessAlerts,  setWellnessAlerts]  = useState([]);
-  const [acwrAlerts,      setAcwrAlerts]      = useState([]); // { name, acwr, zone }
-  const [overlapAlerts,   setOverlapAlerts]   = useState([]);
-  const [calChanges,      setCalChanges]      = useState([]);
-  const [availability,    setAvailability]    = useState([]);
-  const [loading,         setLoading]         = useState(true);
+  const [events,            setEvents]            = useState([]);
+  const [messages,          setMessages]          = useState([]);
+  const [announcements,     setAnnouncements]     = useState([]);
+  const [readAnnIds,        setReadAnnIds]        = useState(new Set());
+  const [tasks,             setTasks]             = useState([]);
+  const [wellnessAlerts,    setWellnessAlerts]    = useState([]);
+  const [wellnessProgress,  setWellnessProgress]  = useState(null); // { submitted, total }
+  const [acwrAlerts,        setAcwrAlerts]        = useState([]);
+  const [overlapAlerts,     setOverlapAlerts]     = useState([]);
+  const [calChanges,        setCalChanges]        = useState([]);
+  const [availability,      setAvailability]      = useState([]);
+  const [playerRpe,         setPlayerRpe]         = useState(null);
+  const [playerWellnessAvg, setPlayerWellnessAvg] = useState(null);
+  const [weekOpen,          setWeekOpen]          = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
+  const [loading,           setLoading]           = useState(true);
 
-  useEffect(() => { load(); }, [currentUserInitials, currentUserId, profile?.role]);
+  useEffect(() => { load(); }, [currentUserId, profile?.role]);
 
   async function load() {
     setLoading(true);
@@ -101,57 +181,78 @@ export default function Dashboard({
     weekEnd.setDate(weekEnd.getDate() + 7);
     weekEnd.setHours(23, 59, 59, 999);
 
-    const todayDateStr = todayStart.toISOString().slice(0, 10);
-    const yesterday = new Date(todayStart);
+    const todayDateStr    = todayStart.toISOString().slice(0, 10);
+    const yesterday       = new Date(todayStart);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayDateStr = yesterday.toISOString().slice(0, 10);
+    const week7Ago        = new Date(todayStart);
+    week7Ago.setDate(week7Ago.getDate() - 7);
+    const week7AgoStr     = week7Ago.toISOString().slice(0, 10);
 
-    const canSeeWellness      = WELLNESS_ALERT_ROLES.includes(profile?.role);
-    const canSeeAvailability  = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
+    const isPlayer         = profile?.role === 'Player';
+    const canSeeWellness   = WELLNESS_ALERT_ROLES.includes(profile?.role);
+    const canSeeAvail      = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
+    const isAdminSchedule  = ['GM', 'Headcoach', 'Coaching Staff'].includes(profile?.role);
 
     const [
       { data: myPartsData },
       { data: allEventsData },
       { data: msgData },
       { data: annData },
+      { data: annReadsData },
       { data: taskData },
       { data: wellData },
+      { data: wellSubmittedData },
+      { data: playerCountData },
       { data: rpeData },
       { data: calChangeData },
       { data: avData },
       { data: playerProfiles },
+      { data: myLastRpeData },
+      { data: myWellnessData },
     ] = await Promise.all([
+      // My participation events
       currentUserId
         ? supabase.from('event_participants')
             .select('status, events(id, title, start_time, end_time, all_day, category, location)')
             .eq('profile_id', currentUserId)
             .neq('status', 'out')
         : Promise.resolve({ data: [] }),
-      // For coaching/admin roles: fetch all team events today (not just own participation)
-      ['GM', 'Headcoach', 'Coaching Staff'].includes(profile?.role)
+      // All team events for the next 7 days (admin/coaching roles)
+      isAdminSchedule
         ? supabase.from('events')
             .select('id, title, start_time, end_time, all_day, category, location')
             .gte('start_time', todayStart.toISOString())
-            .lte('start_time', new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate(), 23, 59, 59, 999).toISOString())
+            .lte('start_time', weekEnd.toISOString())
             .order('start_time')
         : Promise.resolve({ data: [] }),
+      // Messages
       supabase.from('messages')
         .select('id, channel, user_name, content, created_at')
         .order('created_at', { ascending: false })
         .limit(40),
+      // Announcements
       supabase.from('announcements')
         .select('id, title, content, priority, author_name, created_at')
         .order('created_at', { ascending: false })
         .limit(8),
-      currentUserInitials
+      // #4: Read announcements from DB
+      currentUserId
+        ? supabase.from('announcement_reads')
+            .select('announcement_id')
+            .eq('user_id', currentUserId)
+        : Promise.resolve({ data: [] }),
+      // #6: Tasks by UUID
+      currentUserId
         ? supabase.from('tasks')
             .select('id, title, status, priority, created_at')
-            .eq('assignee', currentUserInitials)
+            .eq('assigned_to', currentUserId)
             .neq('status', 'done')
             .order('priority', { ascending: true })
             .order('created_at', { ascending: false })
             .limit(20)
         : Promise.resolve({ data: [] }),
+      // Wellness low-score alerts
       canSeeWellness
         ? supabase.from('wellness_responses')
             .select('user_name, question_key, score, response_date')
@@ -160,11 +261,23 @@ export default function Dashboard({
             .order('response_date', { ascending: false })
             .order('user_name')
         : Promise.resolve({ data: [] }),
+      // #2: Wellness submission count today
+      canSeeWellness
+        ? supabase.from('wellness_responses')
+            .select('user_id')
+            .eq('response_date', todayDateStr)
+        : Promise.resolve({ data: [] }),
+      // #2: Total player count
+      canSeeWellness
+        ? supabase.from('profiles').select('id').eq('role', 'Player')
+        : Promise.resolve({ data: [] }),
+      // ACWR RPE data
       canSeeWellness
         ? supabase.from('session_rpe')
             .select('user_id, user_name, event_date, load_au')
             .gte('event_date', (() => { const d = new Date(); d.setDate(d.getDate() - 28); return d.toISOString().slice(0, 10); })())
         : Promise.resolve({ data: [] }),
+      // Calendar change notifications
       currentUserId
         ? supabase.from('notifications')
             .select('id, title, body, created_at, ref_id')
@@ -173,20 +286,36 @@ export default function Dashboard({
             .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [] }),
-      canSeeAvailability
+      // Availability
+      canSeeAvail
         ? supabase.from('player_availability').select('*').order('player_name')
         : Promise.resolve({ data: [] }),
-      canSeeAvailability
+      canSeeAvail
         ? supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name')
+        : Promise.resolve({ data: [] }),
+      // #3: Player's last RPE session
+      isPlayer && currentUserId
+        ? supabase.from('session_rpe')
+            .select('rpe, event_title, event_date')
+            .eq('user_id', currentUserId)
+            .order('event_date', { ascending: false })
+            .limit(1)
+        : Promise.resolve({ data: [] }),
+      // #3: Player's wellness last 7 days
+      isPlayer && currentUserId
+        ? supabase.from('wellness_responses')
+            .select('score, question_key')
+            .eq('user_id', currentUserId)
+            .gte('response_date', week7AgoStr)
+            .in('question_key', ['fatigue', 'sleep', 'appetite'])
         : Promise.resolve({ data: [] }),
     ]);
 
-    // Personal participation events (with RSVP status)
+    // ── Events merge ──
     const partMap = {};
     for (const p of (myPartsData ?? [])) {
       if (p.events?.id) partMap[p.events.id] = { ...p.events, _myStatus: p.status ?? 'in' };
     }
-    // All team events (for admin roles) — merge in, keeping RSVP status if already present
     for (const ev of (allEventsData ?? [])) {
       if (!partMap[ev.id]) partMap[ev.id] = { ...ev, _myStatus: null };
     }
@@ -195,7 +324,7 @@ export default function Dashboard({
     myEventsRaw.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     setEvents(myEventsRaw);
 
-    // Overlap detection: find checked-in events that haven't ended yet and overlap
+    // Overlap detection
     const now = new Date();
     const futureEvs = (myPartsData ?? [])
       .map(p => p.events)
@@ -213,10 +342,12 @@ export default function Dashboard({
 
     setMessages(msgData ?? []);
     setAnnouncements(annData ?? []);
+    // #4: DB-backed read IDs
+    setReadAnnIds(new Set((annReadsData ?? []).map(r => r.announcement_id)));
     setTasks(taskData ?? []);
     setCalChanges(calChangeData ?? []);
 
-    // Group low-score responses by date + player name
+    // Wellness alerts
     const warnMap = {};
     for (const r of (wellData ?? [])) {
       const mapKey = `${r.response_date}::${r.user_name}`;
@@ -225,7 +356,13 @@ export default function Dashboard({
     }
     setWellnessAlerts(Object.values(warnMap));
 
-    // Compute ACWR per player from session_rpe data
+    // #2: Wellness progress
+    if (canSeeWellness) {
+      const uniqueSubmitted = new Set((wellSubmittedData ?? []).map(r => r.user_id)).size;
+      setWellnessProgress({ submitted: uniqueSubmitted, total: (playerCountData ?? []).length });
+    }
+
+    // ACWR
     const rpeRows = rpeData ?? [];
     if (rpeRows.length > 0) {
       const day7  = new Date(); day7.setDate(day7.getDate() - 7);
@@ -247,62 +384,87 @@ export default function Dashboard({
       setAcwrAlerts(alerts);
     }
 
-    // Merge all players with their availability row (default to 'full' if no row yet)
+    // Availability merge
     const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
     const mergedAv = (playerProfiles ?? []).map(p => avMap[p.id] ?? {
       player_id: p.id, player_name: p.display_name, status: 'full', reason: null, updated_at: null,
     });
     setAvailability(mergedAv);
+
+    // #3: Player personal data
+    if (isPlayer) {
+      setPlayerRpe((myLastRpeData ?? [])[0] ?? null);
+      const wScores = (myWellnessData ?? []).map(r => r.score);
+      setPlayerWellnessAvg(wScores.length > 0 ? wScores.reduce((a, b) => a + b, 0) / wScores.length : null);
+    }
+
     setLoading(false);
   }
 
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // ── #4: DB-backed dismiss ────────────────────────────────────────────────────
+  const dismissAnnouncement = async (id) => {
+    setReadAnnIds(prev => new Set([...prev, id]));
+    if (currentUserId) {
+      await supabase.from('announcement_reads')
+        .upsert({ user_id: currentUserId, announcement_id: id }, { onConflict: 'user_id,announcement_id' });
+    }
+  };
 
-  const todayEnd  = new Date(); todayEnd.setHours(23, 59, 59, 999);
-  const todayDateStr = new Date().toISOString().slice(0, 10);
-  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  // ── #5: Inline RSVP ──────────────────────────────────────────────────────────
+  const handleRsvp = async (eventId, newStatus) => {
+    setEvents(prev => prev.map(ev =>
+      ev.id === eventId ? { ...ev, _myStatus: newStatus } : ev
+    ));
+    await supabase.from('event_participants')
+      .upsert({ profile_id: currentUserId, event_id: eventId, status: newStatus },
+               { onConflict: 'profile_id,event_id' });
+  };
+
+  // ── Derived data ─────────────────────────────────────────────────────────────
+
+  const now            = new Date();
+  const todayEnd       = new Date(); todayEnd.setHours(23, 59, 59, 999);
+  const todayDateStr   = now.toISOString().slice(0, 10);
+  const yest           = new Date(); yest.setDate(yest.getDate() - 1);
   const yesterdayDateStr = yest.toISOString().slice(0, 10);
 
-  const todayEvents  = events.filter(ev => new Date(ev.start_time) <= todayEnd);
+  const todayEvents     = events.filter(ev => new Date(ev.start_time) <= todayEnd);
+  const upcomingEvents  = events.filter(ev => new Date(ev.start_time) > todayEnd);
+  const nextEvent       = todayEvents.find(ev => !ev.all_day && new Date(ev.start_time) > now)
+                       ?? upcomingEvents[0]
+                       ?? null;
 
   const wellnessDoneToday = typeof window !== 'undefined'
     ? !!localStorage.getItem(`wellness_done_${currentUserId}_${todayDateStr}`)
     : true;
 
   const RSVP_LABEL = {
-    in:    { en: '✓ In',    ja: '✓ 参加',  cls: 'rsvpIn' },
-    maybe: { en: '? Maybe', ja: '? 未定',  cls: 'rsvpMaybe' },
-    out:   { en: '✗ Out',   ja: '✗ 欠席',  cls: 'rsvpOut' },
+    in:    { en: 'In',    ja: '参加',  cls: 'rsvpIn' },
+    maybe: { en: 'Maybe', ja: '未定',  cls: 'rsvpMaybe' },
+    out:   { en: 'Out',   ja: '欠席',  cls: 'rsvpOut' },
   };
-  const urgentTasks  = tasks.filter(t => t.priority === 'high');
-  const weekTasks    = tasks.filter(t => t.priority !== 'high');
-  const canSeeWellness      = WELLNESS_ALERT_ROLES.includes(profile?.role);
-  const canSeeAvailability  = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
-  const avIssues            = availability.filter(p => p.status !== 'full');
-  const avFull              = availability.filter(p => p.status === 'full').length;
+
+  const urgentTasks        = tasks.filter(t => t.priority === 'high');
+  const weekTasks          = tasks.filter(t => t.priority !== 'high');
+  const canSeeWellness     = WELLNESS_ALERT_ROLES.includes(profile?.role);
+  const canSeeAvailability = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
+  const avIssues           = availability.filter(p => p.status !== 'full');
+  const avFull             = availability.filter(p => p.status === 'full').length;
+  const isPlayer           = profile?.role === 'Player';
 
   const wellnessToday     = wellnessAlerts.filter(w => w.date === todayDateStr);
   const wellnessYesterday = wellnessAlerts.filter(w => w.date === yesterdayDateStr);
 
-  // Messages: only show those newer than the last time user visited Chat
+  // Messages: only newer than last Chat visit
   const lastChatVisit = typeof window !== 'undefined'
     ? localStorage.getItem(`chat_last_visited_${currentUserId}`) || ''
     : '';
 
-  // Announcements: only show those < 72h old and not dismissed
-  const dismissedAnns = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem(`ann_dismissed_${currentUserId}`) || '[]')
-    : [];
+  // Announcements: < 72h old, not dismissed in DB
   const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
   const visibleAnnouncements = announcements.filter(
-    a => a.created_at >= cutoff72h && !dismissedAnns.includes(a.id)
+    a => a.created_at >= cutoff72h && !readAnnIds.has(a.id)
   );
-
-  const dismissAnnouncement = (id) => {
-    const updated = [...dismissedAnns, id];
-    localStorage.setItem(`ann_dismissed_${currentUserId}`, JSON.stringify(updated));
-    setAnnouncements(prev => prev.filter(a => a.id !== id));
-  };
 
   const dismissedCalChanges = typeof window !== 'undefined'
     ? JSON.parse(localStorage.getItem(`cal_changes_dismissed_${currentUserId}`) || '[]')
@@ -314,7 +476,6 @@ export default function Dashboard({
     setCalChanges(prev => prev.filter(n => n.id !== id));
   };
 
-  // Group messages by channel, take 4 most recent per channel (exclude DMs, show only new)
   const channels = {};
   for (const msg of messages) {
     if (msg.channel?.startsWith('dm:')) continue;
@@ -324,7 +485,6 @@ export default function Dashboard({
   }
   const channelNames = Object.keys(channels);
 
-  // Profile summary line
   const profileLine = (() => {
     if (!profile) return '';
     if (profile.role === 'Player') {
@@ -337,7 +497,16 @@ export default function Dashboard({
     return profile.role ?? '';
   })();
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // #7: Group upcoming events by date
+  const upcomingByDate = {};
+  for (const ev of upcomingEvents) {
+    const ds = new Date(ev.start_time).toLocaleDateString(
+      lang === 'ja' ? 'ja-JP' : 'en-GB',
+      { weekday: 'short', month: 'short', day: 'numeric' }
+    );
+    if (!upcomingByDate[ds]) upcomingByDate[ds] = [];
+    upcomingByDate[ds].push(ev);
+  }
 
   const glanceStats = loading ? [] : [
     { icon: '📅', value: todayEvents.length,  label: lang === 'ja' ? '今日の予定' : 'today' },
@@ -376,7 +545,7 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Schedule change banners ── */}
+      {/* Schedule change banners */}
       {visibleCalChanges.map(n => (
         <div key={n.id} className={styles.calChangeBanner} onClick={() => onNavigate('calendar')}>
           <span className={styles.calChangeBannerIcon}>⚠️</span>
@@ -390,8 +559,8 @@ export default function Dashboard({
         </div>
       ))}
 
-      {/* ── Missed wellness reminder ── */}
-      {profile?.role === 'Player' && !wellnessDoneToday && onOpenWellness && (
+      {/* Missed wellness reminder */}
+      {isPlayer && !wellnessDoneToday && onOpenWellness && (
         <div className={styles.wellnessBanner}>
           <span className={styles.wellnessBannerIcon}>💪</span>
           <div className={styles.wellnessBannerBody}>
@@ -418,7 +587,20 @@ export default function Dashboard({
         </div>
       ) : (
         <>
-          {/* ── Top row: Schedule | Availability | Health+Performance ── */}
+          {/* #3: Player summary card */}
+          {isPlayer && (
+            <div style={{ padding: '16px 24px 0' }}>
+              <PlayerSummaryCard
+                lang={lang}
+                lastRpe={playerRpe}
+                wellnessAvg={playerWellnessAvg}
+                nextEvent={todayEvents[0] ?? null}
+                onNavigate={onNavigate}
+              />
+            </div>
+          )}
+
+          {/* Top row: Schedule | Availability | Health+Performance */}
           <div className={`${styles.topRow} ${canSeeAvailability && canSeeWellness ? styles.topRowThree : !canSeeWellness && !canSeeAvailability ? styles.topRowFull : styles.topRowTwo}`}>
 
             {/* Today's Schedule */}
@@ -440,29 +622,73 @@ export default function Dashboard({
                 )}
               </div>
               <div className={styles.cardBody}>
+                {/* #1: Next Up block */}
+                {nextEvent && !nextEvent.all_day && new Date(nextEvent.start_time) > now && (
+                  <div className={styles.nextUpBlock} onClick={() => onNavigate('calendar')}>
+                    <span className={styles.nextUpDot} style={{ background: CAT_COLOR[nextEvent.category] ?? '#6b7280' }} />
+                    <div className={styles.nextUpInfo}>
+                      <div className={styles.nextUpTitle}>{nextEvent.title}</div>
+                      <div className={styles.nextUpTime}>{fmtEventTime(nextEvent, lang)}{nextEvent.location ? ` · ${nextEvent.location}` : ''}</div>
+                    </div>
+                    <span className={styles.nextUpCountdown}>{countdown(nextEvent.start_time, lang)}</span>
+                  </div>
+                )}
+
                 {todayEvents.length === 0 ? (
                   <EmptyState>{lang === 'ja' ? '今日の予定はありません。' : 'Nothing scheduled today.'}</EmptyState>
                 ) : (
                   <div className={styles.alertSection}>
                     {todayEvents.map(ev => {
-                      const rsvp = ev._myStatus ? (RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in) : null;
+                      const status = ev._myStatus;
                       return (
-                        <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
-                          <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
+                        <div key={ev.id} className={styles.alertItem}>
+                          <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280', cursor: 'pointer' }} onClick={() => onNavigate('calendar')} />
+                          <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onNavigate('calendar')}>
                             <div className={styles.alertText}>{ev.title}</div>
                             <div className={styles.alertSub}>
                               {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
                             </div>
                           </div>
-                          {rsvp && (
-                            <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
-                              {lang === 'ja' ? rsvp.ja : rsvp.en}
-                            </span>
+                          {/* #5: Inline RSVP buttons — only for events where user is a participant */}
+                          {status !== null && (
+                            <div className={styles.rsvpBtnGroup}>
+                              {['in', 'maybe', 'out'].map(s => (
+                                <button key={s}
+                                  className={`${styles.rsvpBtnInline} ${status === s ? styles[`rsvpBtnActive_${s}`] : ''}`}
+                                  onClick={() => handleRsvp(ev.id, s)}>
+                                  {RSVP_LABEL[s]?.[lang] ?? s}
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* #7: This week collapsible */}
+                {upcomingEvents.length > 0 && (
+                  <div className={styles.weekSection}>
+                    <button className={styles.weekToggle} onClick={() => setWeekOpen(v => !v)}>
+                      <span>{lang === 'ja' ? '今週の予定' : 'This week'}</span>
+                      <span className={styles.weekToggleCount}>{upcomingEvents.length}</span>
+                      <span>{weekOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {weekOpen && Object.entries(upcomingByDate).map(([date, evs]) => (
+                      <div key={date} className={styles.weekGroup}>
+                        <div className={styles.weekDateLabel}>{date}</div>
+                        {evs.map(ev => (
+                          <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
+                            <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
+                            <div>
+                              <div className={styles.alertText}>{ev.title}</div>
+                              <div className={styles.alertSub}>{fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -483,10 +709,9 @@ export default function Dashboard({
                   </span>
                 </div>
                 <div className={styles.cardBody}>
-                  {/* Count row */}
                   <div className={styles.avCountRow}>
                     {[
-                      { status: 'full',    count: avFull,                                            color: '#16a34a', bg: '#dcfce7', en: 'Full',    ja: '全体練習可' },
+                      { status: 'full',    count: avFull,                                              color: '#16a34a', bg: '#dcfce7', en: 'Full',    ja: '全体練習可' },
                       { status: 'limited', count: avIssues.filter(p => p.status === 'limited').length, color: '#d97706', bg: '#fef3c7', en: 'Limited', ja: '制限あり'  },
                       { status: 'out',     count: avIssues.filter(p => p.status === 'out').length,     color: '#dc2626', bg: '#fee2e2', en: 'Out',     ja: '練習不可'  },
                     ].map(s => (
@@ -496,7 +721,6 @@ export default function Dashboard({
                       </div>
                     ))}
                   </div>
-                  {/* Alert list */}
                   {avIssues.length === 0 ? (
                     <EmptyState>✓ {lang === 'ja' ? '全員が練習可' : 'All players available'}</EmptyState>
                   ) : (
@@ -529,7 +753,7 @@ export default function Dashboard({
               </div>
             )}
 
-            {/* Wellness & Performance Alerts (role-gated) */}
+            {/* Health & Performance */}
             {canSeeWellness && (
               <div className={styles.card}>
                 <div className={styles.cardHead}>
@@ -541,19 +765,30 @@ export default function Dashboard({
                   </span>
                 </div>
                 <div className={styles.cardBody}>
+                  {/* #2: Wellness progress bar */}
+                  {wellnessProgress && (
+                    <div className={styles.wellnessProgressWrap}>
+                      <div className={styles.wellnessProgressLabel}>
+                        <span>{lang === 'ja' ? 'ウェルネス提出' : 'Wellness submitted'}</span>
+                        <strong>{wellnessProgress.submitted} / {wellnessProgress.total}</strong>
+                      </div>
+                      <div className={styles.wellnessProgressBar}>
+                        <div className={styles.wellnessProgressFill}
+                          style={{ width: wellnessProgress.total > 0 ? `${Math.round(wellnessProgress.submitted / wellnessProgress.total * 100)}%` : '0%' }} />
+                      </div>
+                    </div>
+                  )}
+
                   {wellnessAlerts.length === 0 && acwrAlerts.length === 0 ? (
                     <EmptyState>{lang === 'ja' ? '✓ アラートはありません。' : '✓ No alerts.'}</EmptyState>
                   ) : (
                     <>
-                      {/* ACWR alerts */}
                       {acwrAlerts.length > 0 && (
                         <div className={styles.alertSection}>
                           <SectionLabel>📊 {lang === 'ja' ? 'ACWR 負荷アラート' : 'ACWR Load Alert'}</SectionLabel>
                           {acwrAlerts.map(a => (
-                            <div key={a.name} className={styles.alertItem}
-                              onClick={() => onNavigate('performance')} style={{ cursor: 'pointer' }}>
-                              <span className={styles.alertDot}
-                                style={{ background: a.zone === 'highrisk' ? '#ef4444' : '#f59e0b' }} />
+                            <div key={a.name} className={styles.alertItem} onClick={() => onNavigate('performance')} style={{ cursor: 'pointer' }}>
+                              <span className={styles.alertDot} style={{ background: a.zone === 'highrisk' ? '#ef4444' : '#f59e0b' }} />
                               <div>
                                 <div className={styles.alertText}>{a.name}</div>
                                 <div className={styles.alertSub}>
@@ -566,40 +801,32 @@ export default function Dashboard({
                           ))}
                         </div>
                       )}
-                      {/* Wellness alerts — today */}
                       {wellnessToday.length > 0 && (
                         <div className={styles.alertSection}>
                           <SectionLabel>💪 {lang === 'ja' ? 'ウェルネス — 今日' : 'Wellness — Today'}</SectionLabel>
                           {wellnessToday.map(w => (
-                            <div key={`${w.date}::${w.name}`} className={styles.alertItem}
-                              onClick={() => onNavigate('wellness')} style={{ cursor: 'pointer' }}>
+                            <div key={`${w.date}::${w.name}`} className={styles.alertItem} onClick={() => onNavigate('wellness')} style={{ cursor: 'pointer' }}>
                               <span className={styles.alertDot} style={{ background: '#ef4444' }} />
                               <div>
                                 <div className={styles.alertText}>{w.name}</div>
                                 <div className={styles.alertSub}>
-                                  {w.scores.map(s =>
-                                    `${QUESTION_LABELS[s.key]?.[lang] ?? s.key}: ${s.score}`
-                                  ).join(' · ')}
+                                  {w.scores.map(s => `${QUESTION_LABELS[s.key]?.[lang] ?? s.key}: ${s.score}`).join(' · ')}
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-                      {/* Wellness alerts — yesterday */}
                       {wellnessYesterday.length > 0 && (
                         <div className={styles.alertSection}>
                           <SectionLabel>💪 {lang === 'ja' ? 'ウェルネス — 昨日' : 'Wellness — Yesterday'}</SectionLabel>
                           {wellnessYesterday.map(w => (
-                            <div key={`${w.date}::${w.name}`} className={styles.alertItem}
-                              onClick={() => onNavigate('wellness')} style={{ cursor: 'pointer' }}>
+                            <div key={`${w.date}::${w.name}`} className={styles.alertItem} onClick={() => onNavigate('wellness')} style={{ cursor: 'pointer' }}>
                               <span className={styles.alertDot} style={{ background: '#f97316' }} />
                               <div>
                                 <div className={styles.alertText}>{w.name}</div>
                                 <div className={styles.alertSub}>
-                                  {w.scores.map(s =>
-                                    `${QUESTION_LABELS[s.key]?.[lang] ?? s.key}: ${s.score}`
-                                  ).join(' · ')}
+                                  {w.scores.map(s => `${QUESTION_LABELS[s.key]?.[lang] ?? s.key}: ${s.score}`).join(' · ')}
                                 </div>
                               </div>
                             </div>
@@ -621,7 +848,7 @@ export default function Dashboard({
             )}
           </div>
 
-          {/* ── Bottom cards: Tasks | Messages | Announcements ── */}
+          {/* Bottom cards: Tasks | Messages | Announcements */}
           <div className={styles.cards}>
 
             {/* Tasks */}
@@ -639,17 +866,13 @@ export default function Dashboard({
                   <>
                     {urgentTasks.length > 0 && (
                       <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '🔴 今日の緊急タスク' : '🔴 Urgent today'}</SectionLabel>
+                        <SectionLabel>{lang === 'ja' ? '🔴 緊急' : '🔴 Urgent'}</SectionLabel>
                         {urgentTasks.map(t => (
                           <div key={t.id} className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
                             <span className={styles.alertDot} style={{ background: TASK_PRI_COLOR[t.priority] ?? '#6b7280' }} />
                             <div>
                               <div className={styles.alertText}>{t.title}</div>
-                              <div className={styles.alertSub}>
-                                {t.status === 'todo'
-                                  ? (lang === 'ja' ? '未着手' : 'To do')
-                                  : (lang === 'ja' ? '進行中' : 'In progress')}
-                              </div>
+                              <div className={styles.alertSub}>{t.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}</div>
                             </div>
                           </div>
                         ))}
@@ -657,16 +880,14 @@ export default function Dashboard({
                     )}
                     {weekTasks.length > 0 && (
                       <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '📋 今週のタスク' : '📋 This week'}</SectionLabel>
+                        <SectionLabel>{lang === 'ja' ? '📋 タスク' : '📋 Tasks'}</SectionLabel>
                         {weekTasks.map(t => (
                           <div key={t.id} className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
                             <span className={styles.alertDot} style={{ background: TASK_PRI_COLOR[t.priority] ?? '#6b7280' }} />
                             <div>
                               <div className={styles.alertText}>{t.title}</div>
                               <div className={styles.alertSub}>
-                                {t.status === 'todo'
-                                  ? (lang === 'ja' ? '未着手' : 'To do')
-                                  : (lang === 'ja' ? '進行中' : 'In progress')}
+                                {t.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}
                                 {t.priority === 'medium' ? ` · ${lang === 'ja' ? '中' : 'Medium'}` : ''}
                               </div>
                             </div>
