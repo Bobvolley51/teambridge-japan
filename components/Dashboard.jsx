@@ -111,6 +111,7 @@ export default function Dashboard({
 
     const [
       { data: myPartsData },
+      { data: allEventsData },
       { data: msgData },
       { data: annData },
       { data: taskData },
@@ -125,6 +126,14 @@ export default function Dashboard({
             .select('status, events(id, title, start_time, end_time, all_day, category, location)')
             .eq('profile_id', currentUserId)
             .neq('status', 'out')
+        : Promise.resolve({ data: [] }),
+      // For coaching/admin roles: also fetch all team events (not just own participation)
+      ['GM', 'Headcoach', 'Coaching Staff'].includes(profile?.role)
+        ? supabase.from('events')
+            .select('id, title, start_time, end_time, all_day, category, location')
+            .gte('start_time', todayStart.toISOString())
+            .lte('start_time', weekEnd.toISOString())
+            .order('start_time')
         : Promise.resolve({ data: [] }),
       supabase.from('messages')
         .select('id, channel, user_name, content, created_at')
@@ -172,10 +181,17 @@ export default function Dashboard({
         : Promise.resolve({ data: [] }),
     ]);
 
-    // Filter to events in the 7-day window
-    const myEventsRaw = (myPartsData ?? [])
-      .map(p => ({ ...p.events, _myStatus: p.status ?? 'in' }))
-      .filter(ev => ev && new Date(ev.start_time) >= todayStart && new Date(ev.start_time) <= weekEnd);
+    // Personal participation events (with RSVP status)
+    const partMap = {};
+    for (const p of (myPartsData ?? [])) {
+      if (p.events?.id) partMap[p.events.id] = { ...p.events, _myStatus: p.status ?? 'in' };
+    }
+    // All team events (for admin roles) — merge in, keeping RSVP status if already present
+    for (const ev of (allEventsData ?? [])) {
+      if (!partMap[ev.id]) partMap[ev.id] = { ...ev, _myStatus: null };
+    }
+    const myEventsRaw = Object.values(partMap)
+      .filter(ev => new Date(ev.start_time) >= todayStart && new Date(ev.start_time) <= weekEnd);
     myEventsRaw.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     setEvents(myEventsRaw);
 
@@ -433,7 +449,7 @@ export default function Dashboard({
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '本日' : 'Today'}</SectionLabel>
                         {todayEvents.map(ev => {
-                          const rsvp = RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in;
+                          const rsvp = ev._myStatus ? (RSVP_LABEL[ev._myStatus] ?? RSVP_LABEL.in) : null;
                           return (
                             <div key={ev.id} className={styles.alertItem} onClick={() => onNavigate('calendar')} style={{ cursor: 'pointer' }}>
                               <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280' }} />
@@ -443,9 +459,11 @@ export default function Dashboard({
                                   {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
                                 </div>
                               </div>
-                              <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
-                                {lang === 'ja' ? rsvp.ja : rsvp.en}
-                              </span>
+                              {rsvp && (
+                                <span className={`${styles.rsvpBadge} ${styles[rsvp.cls]}`}>
+                                  {lang === 'ja' ? rsvp.ja : rsvp.en}
+                                </span>
+                              )}
                             </div>
                           );
                         })}
