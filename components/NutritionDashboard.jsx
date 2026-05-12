@@ -607,7 +607,12 @@ export default function NutritionDashboard({ lang, profile }) {
                                 {rPct > 0 && <div className={styles.ratingBarRed}    style={{ width: `${rPct}%` }} />}
                                 {ratedPct < 100 && <div className={styles.ratingBarUnrated} style={{ width: `${100 - ratedPct}%` }} />}
                               </div>
-                              <span className={styles.ratedPct}>{ratedPct}%</span>
+                              <span className={styles.ratedPct}>
+                                {rated > 0
+                                  ? <><span style={{ color: '#16a34a' }}>{Math.round(gPct)}%</span>{' / '}<span style={{ color: '#d97706' }}>{Math.round(yPct)}%</span>{' / '}<span style={{ color: '#dc2626' }}>{Math.round(rPct)}%</span></>
+                                  : `${ratedPct}% rated`
+                                }
+                              </span>
                             </div>
                           )}
                         </td>
