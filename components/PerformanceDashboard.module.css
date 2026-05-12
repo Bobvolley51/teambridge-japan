@@ -125,7 +125,6 @@
 .sessionCard {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  overflow: hidden;
   background: #fff;
 }
 
@@ -144,7 +143,7 @@
   transition: background 0.1s;
 }
 .sessionHeader:hover { background: #fdf2f4; }
-.sessionHeaderOpen   { background: #fdf2f4; border-bottom: 2px solid #e5e7eb; }
+.sessionHeaderOpen   { background: #fdf2f4; border-bottom: 2px solid #d1d5db; border-radius: 0; }
 
 /* Top row: date + title + count + caret */
 .sessTopRow {
@@ -219,9 +218,8 @@
 
 /* Expanded detail */
 .sessDetail {
-  background: #fafafa;
-  border-top: 1px solid #e5e7eb;
-  padding: 12px 18px 14px;
+  background: #f9fafb;
+  padding: 0 18px 16px;
   overflow-x: auto;
 }
 .sessTable {
@@ -232,29 +230,30 @@
 }
 .sessThName {
   text-align: left;
-  padding: 7px 12px 7px 0;
+  padding: 10px 14px 10px 0;
   font-size: 11px;
   font-weight: 700;
-  color: #6b7280;
+  color: #7e0027;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #d1d5db;
 }
 .sessTh {
   text-align: center;
-  padding: 7px 10px;
+  padding: 10px 10px;
   font-size: 11px;
   font-weight: 700;
-  color: #6b7280;
+  color: #7e0027;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #d1d5db;
+  white-space: nowrap;
 }
-.sessTr { border-bottom: 1px solid #f3f4f6; }
+.sessTr { border-bottom: 1px solid #e5e7eb; }
 .sessTr:last-child { border-bottom: none; }
 .sessTr:hover { background: #fff; }
-.sessTdName { padding: 8px 12px 8px 0; font-weight: 600; color: #111827; white-space: nowrap; }
-.sessTd     { padding: 8px 10px; text-align: center; }
+.sessTdName { padding: 10px 14px 10px 0; font-weight: 600; color: #111827; white-space: nowrap; font-size: 13px; }
+.sessTd     { padding: 10px 10px; text-align: center; font-size: 13px; }
 .sessThDiv  { width: 1px; background: #e5e7eb; padding: 0; border-bottom: 2px solid #e5e7eb; }
 .sessTdDiv  { width: 1px; background: #e5e7eb; padding: 0; }
 

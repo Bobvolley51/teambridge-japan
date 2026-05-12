@@ -143,7 +143,7 @@ export default function PerformanceDashboard({ lang, profile }) {
         );
       })()}
 
-      {tab !== 'vert' && <div className={styles.content}>
+      {tab !== 'vert' && tab !== 'sessions' && <div className={styles.content}>
         {loading ? (
           <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
 
@@ -272,7 +272,14 @@ export default function PerformanceDashboard({ lang, profile }) {
             </>
           )
 
-        ) : tab === 'vert' ? null : (() => {
+        ) : null}
+      </div>}
+
+      {tab === 'sessions' && (loading ? (
+        <div className={styles.sessionList}>
+          <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
+        </div>
+      ) : (() => {
           // VERT lookup: user_id|date → vert record
           const vertByKey = {};
           for (const v of vertRecords) {
@@ -384,8 +391,7 @@ export default function PerformanceDashboard({ lang, profile }) {
               })}
             </div>
           );
-        })()}
-      </div>}
+        })())}
 
       {tab === 'vert' && (
         <VertDashboard lang={lang} profile={profile} />
