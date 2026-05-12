@@ -405,6 +405,22 @@ export default function Home() {
           })}
         </aside>
         <main className={styles.main}>
+          {/* Mobile calendar sub-nav strip */}
+          {['calendar','tasks','feed','travel'].includes(nav) && (
+            <nav className={styles.calSubNav}>
+              {[{ id: 'calendar', Icon: IconCalendar, label: { en: 'Calendar', ja: 'カレンダー' } }, ...NAV_CAL_SUBS].map(sub => {
+                const SubIcon = sub.Icon;
+                return (
+                  <button key={sub.id}
+                    className={`${styles.calSubBtn} ${nav === sub.id ? styles.calSubBtnActive : ''}`}
+                    onClick={() => navigate(sub.id)}>
+                    <SubIcon size={15} />
+                    {sub.label[lang]}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
           {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} onOpenWellness={profile?.role === 'Player' ? () => setShowWellness(true) : undefined} />}
           {nav==='calendar'  && <Calendar          lang={lang} currentUserName={displayName} role={profile?.role} currentUserId={user.id} />}
           {nav==='chat'      && <Chat              uiLang={lang} currentUser={{ name: displayName, initials, id: user.id, avatarUrl: profile?.avatar_url }} profile={profile} />}
@@ -423,7 +439,7 @@ export default function Home() {
 
       {/* Mobile bottom navigation */}
       <nav className={styles.mobileNav}>
-        {nav_items.flatMap(item => item.id === 'calendar' ? [item, ...NAV_CAL_SUBS] : [item]).map(item => {
+        {nav_items.map(item => {
           const MIcon = item.Icon;
           return (
           <button key={item.id}

@@ -247,6 +247,20 @@
 .logoText { }
 .logoImg { height: 32px; width: auto; object-fit: contain; display: block; }
 
+/* ── Calendar sub-nav strip (mobile only) ────────── */
+
+.calSubNav { display: none; }
+
+.calSubBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  padding: 6px 12px; border: none; background: none;
+  color: #6b7280; cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.1s, border-color 0.1s;
+}
+.calSubBtnActive { color: #7e0027; border-bottom-color: #7e0027; }
+
 /* ── Mobile bottom nav ───────────────────────────── */
 
 .mobileNav { display: none; }
@@ -311,6 +325,17 @@
   .main {
     padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
+
+  .calSubNav {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fff;
+  }
+  .calSubNav::-webkit-scrollbar { display: none; }
 
   .mobileNav {
     display: flex;
