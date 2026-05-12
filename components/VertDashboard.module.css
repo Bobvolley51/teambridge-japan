@@ -732,3 +732,151 @@
 
 .saveBtn:hover:not(:disabled) { background: #9b0030; }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Trends view ──────────────────────────────────────── */
+.trendWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 24px;
+}
+
+.trendControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.trendHint {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.trendEmpty {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.trendCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.trendCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+.trendPlayerName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+.trendSessCount {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+.trendSummary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: 4px;
+}
+.trendSumItem {
+  font-size: 12px;
+  font-weight: 700;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.trendTableWrap {
+  overflow-x: auto;
+}
+.trendTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 360px;
+}
+.trendThDate {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+.trendThSess {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+.trendTh {
+  text-align: center;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+.trendTr { border-bottom: 1px solid #f3f4f6; }
+.trendTr:last-child { border-bottom: none; }
+.trendTr:hover { background: #fafafa; }
+.trendTdDate {
+  padding: 9px 12px;
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.trendTdSess {
+  padding: 9px 12px;
+  color: #374151;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trendTdVal {
+  padding: 9px 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+.trendVal {
+  font-size: 13px;
+  font-weight: 700;
+}
+.trendArrow {
+  font-size: 12px;
+  font-weight: 800;
+  margin-left: 4px;
+}
+

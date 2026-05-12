@@ -355,6 +355,9 @@ export default function VertDashboard({ lang, profile }) {
           <button className={`${styles.tab} ${view === 'stats'  ? styles.tabActive : ''}`} onClick={() => setView('stats')}>
             {isJa ? '統計' : 'Statistics'}
           </button>
+          <button className={`${styles.tab} ${view === 'trends' ? styles.tabActive : ''}`} onClick={() => setView('trends')}>
+            {isJa ? 'トレンド' : 'Trends'}
+          </button>
           {canUpload && (
             <button className={`${styles.tab} ${view === 'upload' ? styles.tabActive : ''}`} onClick={() => { setView('upload'); setUploadState('idle'); }}>
               {isJa ? 'アップロード' : 'Upload Session'}
@@ -528,6 +531,118 @@ export default function VertDashboard({ lang, profile }) {
           )}
         </div>
       )}
+
+      {/* ── TRENDS ─────────────────────────────────────────── */}
+      {view === 'trends' && (() => {
+        // Group filtered sessions by player, oldest→newest
+        const trendMap = {};
+        for (const s of [...filtered].sort((a, b) => a.session_date.localeCompare(b.session_date))) {
+          const key = s.user_id || s.vert_name;
+          if (!trendMap[key]) {
+            const pl = players.find(p => p.id === s.user_id);
+            trendMap[key] = { name: pl?.display_name || s.vert_name || '—', sessions: [] };
+          }
+          trendMap[key].sessions.push(s);
+        }
+        const trendPlayers = Object.values(trendMap).sort((a, b) => a.name.localeCompare(b.name));
+
+        function delta(prev, curr, field, inv) {
+          if (prev == null || curr == null) return null;
+          const d = curr - prev;
+          if (Math.abs(d) < 0.5) return { arrow: '→', color: '#9ca3af', d };
+          const improving = inv ? d < 0 : d > 0;
+          return { arrow: improving ? '↑' : '↓', color: improving ? '#059669' : '#dc2626', d };
+        }
+
+        const TREND_COLS = [
+          { key: 'avg_hi_jump_cm',  label: isJa ? 'Hi Jump' : 'Hi Jump', unit: ' cm', inv: false },
+          { key: 'elevated_pct',    label: isJa ? 'Elevated%' : 'Elevated%', unit: '%', inv: true  },
+          { key: 'intensity',       label: isJa ? 'Intensity' : 'Intensity', unit: '',  inv: false },
+        ];
+
+        if (trendPlayers.length === 0) return (
+          <div className={styles.trendWrap}>
+            <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>
+          </div>
+        );
+
+        return (
+          <div className={styles.trendWrap}>
+            {/* Time range selector reused */}
+            <div className={styles.trendControls}>
+              <span className={styles.trendHint}>{isJa ? '期間:' : 'Range:'}</span>
+              {[['last', isJa ? '最新' : 'Last'], ['7d', '7d'], ['14d', '14d'], ['all', isJa ? '全期間' : 'All']].map(([k, label]) => (
+                <button key={k} className={`${styles.rangeBtn} ${timeRange === k ? styles.rangeBtnActive : ''}`} onClick={() => setTimeRange(k)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {trendPlayers.map(p => {
+              const first = p.sessions[0];
+              const last  = p.sessions[p.sessions.length - 1];
+              return (
+                <div key={p.name} className={styles.trendCard}>
+                  <div className={styles.trendCardHeader}>
+                    <span className={styles.trendPlayerName}>{p.name}</span>
+                    <span className={styles.trendSessCount}>{p.sessions.length} {isJa ? 'セッション' : 'sessions'}</span>
+                    {p.sessions.length > 1 && (
+                      <div className={styles.trendSummary}>
+                        {TREND_COLS.map(col => {
+                          const d = delta(first[col.key], last[col.key], col.key, col.inv);
+                          if (!d) return null;
+                          return (
+                            <span key={col.key} className={styles.trendSumItem} style={{ color: d.color }}>
+                              {col.label} {d.arrow} {d.d > 0 ? '+' : ''}{d.d.toFixed(col.key === 'intensity' ? 0 : 1)}{col.unit}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.trendTableWrap}>
+                    <table className={styles.trendTable}>
+                      <thead>
+                        <tr>
+                          <th className={styles.trendThDate}>{isJa ? '日付' : 'Date'}</th>
+                          <th className={styles.trendThSess}>{isJa ? 'セッション' : 'Session'}</th>
+                          {TREND_COLS.map(col => (
+                            <th key={col.key} className={styles.trendTh}>{col.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {p.sessions.map((s, i) => {
+                          const prev = p.sessions[i - 1];
+                          return (
+                            <tr key={i} className={styles.trendTr}>
+                              <td className={styles.trendTdDate}>{s.session_date}</td>
+                              <td className={styles.trendTdSess}>{s.session_name || '—'}</td>
+                              {TREND_COLS.map(col => {
+                                const val = s[col.key];
+                                const d   = prev ? delta(prev[col.key], val, col.key, col.inv) : null;
+                                const color = cellColor(col.key, val);
+                                return (
+                                  <td key={col.key} className={styles.trendTdVal}>
+                                    <span className={styles.trendVal} style={{ color: color || '#111827' }}>
+                                      {val != null ? `${parseFloat(val).toFixed(col.key === 'intensity' ? 0 : 1)}${col.unit}` : '—'}
+                                    </span>
+                                    {d && <span className={styles.trendArrow} style={{ color: d.color }}>{d.arrow}</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── UPLOAD: DROP ZONE ──────────────────────────────── */}
       {view === 'upload' && canUpload && uploadState === 'idle' && (
