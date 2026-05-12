@@ -431,10 +431,11 @@ export default function Dashboard({
     myEventsRaw.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     setEvents(myEventsRaw);
 
-    // Overlap detection (use expanded participation events)
+    // Overlap detection — today's participation events only
     const now = new Date();
+    const todayEndMs = todayStart.getTime() + 86399999; // 23:59:59.999 local
     const futureEvs = myExpanded
-      .filter(ev => !ev.all_day && new Date(ev.end_time) > now);
+      .filter(ev => !ev.all_day && new Date(ev.start_time).getTime() <= todayEndMs && new Date(ev.end_time) > now);
     const overlaps = [];
     for (let i = 0; i < futureEvs.length; i++) {
       for (let j = i + 1; j < futureEvs.length; j++) {
