@@ -273,14 +273,24 @@ export default function PerformanceDashboard({ lang, profile }) {
           )
 
         ) : tab === 'vert' ? null : (() => {
-          // Group RPE records by date + event title
+          // VERT lookup: user_id|date → vert record
+          const vertByKey = {};
+          for (const v of vertRecords) {
+            vertByKey[`${v.user_id}|${v.session_date}`] = v;
+          }
+
+          // Group RPE records by date + event title; attach VERT per player
           const sessionMap = {};
           for (const r of records) {
             const key = `${r.event_date}|${r.event_title ?? ''}`;
             if (!sessionMap[key]) sessionMap[key] = { date: r.event_date, title: r.event_title ?? '—', players: [] };
-            sessionMap[key].players.push(r);
+            sessionMap[key].players.push({
+              ...r,
+              vert: vertByKey[`${r.user_id}|${r.event_date}`] ?? null,
+            });
           }
           const sessions = Object.values(sessionMap).sort((a, b) => b.date.localeCompare(a.date));
+          const hasVert = sessions.some(s => s.players.some(p => p.vert));
 
           return sessions.length === 0 ? (
             <div className={styles.empty}>
@@ -339,19 +349,32 @@ export default function PerformanceDashboard({ lang, profile }) {
                               <th className={styles.sessTh}>RPE</th>
                               <th className={styles.sessTh}>{lang === 'ja' ? '時間' : 'Min'}</th>
                               <th className={styles.sessTh}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                              {hasVert && <th className={styles.sessThDiv} />}
+                              {hasVert && <th className={styles.sessTh}>{lang === 'ja' ? 'ジャンプ' : 'Jumps'}</th>}
+                              {hasVert && <th className={styles.sessTh}>{lang === 'ja' ? '最高跳躍' : 'Hi Jump'}</th>}
+                              {hasVert && <th className={styles.sessTh}>{lang === 'ja' ? '着地%' : 'Elev%'}</th>}
                             </tr>
                           </thead>
                           <tbody>
-                            {sorted.map((p, i) => (
-                              <tr key={i} className={styles.sessTr}>
-                                <td className={styles.sessTdName}>{p.user_name}</td>
-                                <td className={styles.sessTd}>
-                                  <span className={styles.rpeBadge} style={{ background: rpeColor(p.rpe), color: '#fff' }}>{p.rpe}</span>
-                                </td>
-                                <td className={styles.sessTd}>{p.duration_min ?? <span className={styles.noData}>—</span>}</td>
-                                <td className={styles.sessTd}><span className={styles.loadNum}>{p.load_au}</span></td>
-                              </tr>
-                            ))}
+                            {sorted.map((p, i) => {
+                              const v = p.vert;
+                              const elevPct = v?.elevated_pct;
+                              const elevClass = elevPct == null ? '' : elevPct >= 20 ? styles.cellRed : elevPct >= 10 ? styles.cellAmber : styles.cellGreen;
+                              return (
+                                <tr key={i} className={styles.sessTr}>
+                                  <td className={styles.sessTdName}>{p.user_name}</td>
+                                  <td className={styles.sessTd}>
+                                    <span className={styles.rpeBadge} style={{ background: rpeColor(p.rpe), color: '#fff' }}>{p.rpe}</span>
+                                  </td>
+                                  <td className={styles.sessTd}>{p.duration_min ?? <span className={styles.noData}>—</span>}</td>
+                                  <td className={styles.sessTd}><span className={styles.loadNum}>{p.load_au}</span></td>
+                                  {hasVert && <td className={styles.sessTdDiv} />}
+                                  {hasVert && <td className={styles.sessTd}>{v?.jumps ?? <span className={styles.noData}>—</span>}</td>}
+                                  {hasVert && <td className={styles.sessTd}>{v?.avg_hi_jump_cm != null ? `${v.avg_hi_jump_cm} cm` : <span className={styles.noData}>—</span>}</td>}
+                                  {hasVert && <td className={`${styles.sessTd} ${elevClass}`}>{elevPct != null ? `${elevPct}%` : <span className={styles.noData}>—</span>}</td>}
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

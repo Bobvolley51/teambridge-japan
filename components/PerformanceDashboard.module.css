@@ -255,6 +255,8 @@
 .sessTr:hover { background: #fff; }
 .sessTdName { padding: 8px 12px 8px 0; font-weight: 600; color: #111827; white-space: nowrap; }
 .sessTd     { padding: 8px 10px; text-align: center; }
+.sessThDiv  { width: 1px; background: #e5e7eb; padding: 0; border-bottom: 2px solid #e5e7eb; }
+.sessTdDiv  { width: 1px; background: #e5e7eb; padding: 0; }
 
 @media (max-width: 768px) {
   .topBar      { padding: 10px 12px 8px; }
