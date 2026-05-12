@@ -1,0 +1,373 @@
+/* NutritionDashboard.module.css */
+
+.wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ── Trainer bar ─────────────────────────────────────────── */
+.trainerBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #fdf2f4;
+  border-bottom: 1px solid #f5c2ce;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.playerLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5c001a;
+  white-space: nowrap;
+}
+.playerSelect {
+  flex: 1;
+  max-width: 240px;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #fff;
+  color: #111827;
+}
+.reviewBanner {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7e0027;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+/* ── 14-day strip ────────────────────────────────────────── */
+.dayStrip {
+  display: flex;
+  gap: 5px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid #f3f4f6;
+  scrollbar-width: none;
+}
+.dayStrip::-webkit-scrollbar { display: none; }
+
+.dayPill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 44px;
+  font-family: inherit;
+  gap: 2px;
+  flex-shrink: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+.dayPill:hover { background: #fdf2f4; border-color: #f5c2ce; }
+.dayPillActive { background: #7e0027 !important; border-color: #7e0027 !important; }
+
+.dayName {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.dayPillActive .dayName { color: #fdf2f4; }
+
+.dayNum {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+.dayPillActive .dayNum { color: #fff; }
+
+.todayDot {
+  width: 5px;
+  height: 5px;
+  background: #7e0027;
+  border-radius: 50%;
+  margin-top: 1px;
+}
+.dayPillActive .todayDot { background: #fdf2f4; }
+
+/* ── Meal grid ───────────────────────────────────────────── */
+.mealsGrid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px 16px 24px;
+  align-content: start;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+/* ── Meal card ───────────────────────────────────────────── */
+.mealCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.mealCardReview {
+  border-color: #fca5a5;
+  background: #fff9f9;
+}
+
+.mealHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mealIcon  { font-size: 17px; line-height: 1; }
+.mealTitle { font-size: 13px; font-weight: 700; color: #111827; flex: 1; }
+.mealRating { font-size: 15px; }
+.reviewFlag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* ── Photos ──────────────────────────────────────────────── */
+.photoGrid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.photoThumb {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.thumbDel {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.addPhotoBtn {
+  width: 66px;
+  height: 66px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+}
+.addPhotoBtn:hover { border-color: #7e0027; color: #7e0027; background: #fdf2f4; }
+.addPhotoBtn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Notes ───────────────────────────────────────────────── */
+.notesArea {
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 7px 9px;
+  resize: none;
+  color: #111827;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.notesArea:focus { outline: none; border-color: #7e0027; }
+.notesRead {
+  font-size: 13px;
+  color: #374151;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 7px 9px;
+  line-height: 1.5;
+}
+.notesEmpty { font-size: 12px; color: #9ca3af; }
+
+/* ── Ask Coach button ────────────────────────────────────── */
+.askCoachBtn {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.askCoachBtn:hover { border-color: #7e0027; color: #7e0027; background: #fdf2f4; }
+.askCoachBtnActive {
+  background: #fef3c7 !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+  cursor: default;
+}
+
+/* ── Trainer section ─────────────────────────────────────── */
+.trainerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 8px;
+}
+.ratingRow { display: flex; gap: 5px; flex-wrap: wrap; }
+.ratingBtn {
+  font-size: 12px;
+  font-family: inherit;
+  padding: 4px 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.ratingBtn:hover { border-color: #7e0027; }
+.ratingBtnActive { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+
+.commentArea {
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 7px 9px;
+  resize: none;
+  color: #111827;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.commentArea:focus { outline: none; border-color: #7e0027; }
+
+.commentSaveBtn {
+  align-self: flex-end;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 5px 16px;
+  background: #7e0027;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.commentSaveBtn:hover { background: #5c001a; }
+
+/* ── Comments ────────────────────────────────────────────── */
+.coachComments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 6px;
+}
+.coachCommentsLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+.commentItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.commentAuthor { font-weight: 700; color: #374151; }
+.commentRating { font-size: 13px; }
+.commentText   { color: #6b7280; flex: 1; }
+
+/* ── Lightbox ────────────────────────────────────────────── */
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+.lightboxImg {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.lightboxClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightboxClose:hover { background: rgba(255, 255, 255, 0.35); }
