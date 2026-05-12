@@ -112,7 +112,145 @@
 .attNone  { color: #d1d5db; font-size: 13px; }
 .posChip  { font-size: 10px; color: #7e0027; background: #fdf2f4; border-radius: 4px; padding: 1px 6px; font-weight: 600; }
 
+/* ── Session cards ───────────────────────────────────────── */
+.sessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sessionCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.sessionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+  flex-wrap: wrap;
+}
+.sessionHeader:hover { background: #fdf2f4; }
+.sessionHeaderOpen   { background: #fdf2f4; border-bottom: 1px solid #e5e7eb; }
+
+.sessLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.sessDate {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+.sessTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+.sessCount {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.sessStats {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.sessStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.sessStatLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.sessStatVal {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.sessRange { font-size: 12px; color: #9ca3af; margin: 0 1px; }
+.sessAu    { font-size: 11px; font-weight: 500; color: #9ca3af; }
+
+.sessCaret {
+  font-size: 11px;
+  color: #9ca3af;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.sessDetail {
+  padding: 0 18px 12px;
+  background: #fafafa;
+}
+.sessTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sessThName {
+  text-align: left;
+  padding: 8px 10px 8px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+.sessTh {
+  text-align: center;
+  padding: 8px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+.sessTr { border-bottom: 1px solid #f3f4f6; }
+.sessTr:last-child { border-bottom: none; }
+.sessTr:hover { background: #fdf2f4; }
+.sessTdName { padding: 8px 10px 8px 0; font-weight: 600; color: #111827; }
+.sessTd     { padding: 7px 8px; text-align: center; }
+
 @media (max-width: 768px) {
-  .topBar  { padding: 10px 12px 8px; }
-  .content { padding: 12px 12px 16px; }
+  .topBar      { padding: 10px 12px 8px; }
+  .content     { padding: 12px 12px 16px; }
+  .sessionList { padding: 10px 12px 16px; }
+  .sessStats   { gap: 12px; }
+  .sessStatVal { font-size: 14px; }
 }

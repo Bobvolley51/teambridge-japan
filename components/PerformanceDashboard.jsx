@@ -31,12 +31,12 @@ function daysAgo(n) {
 }
 
 export default function PerformanceDashboard({ lang, profile }) {
-  const [tab,         setTab]         = useState('acwr');
-  const [records,     setRecords]     = useState([]);
-  const [vertRecords, setVertRecords] = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showLegend,  setShowLegend]  = useState(false);
-  const [sessSort,    setSessSort]    = useState({ col: 'date', dir: 'desc' });
+  const [tab,              setTab]              = useState('acwr');
+  const [records,          setRecords]          = useState([]);
+  const [vertRecords,      setVertRecords]      = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [showLegend,       setShowLegend]       = useState(false);
+  const [expandedSession,  setExpandedSession]  = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -273,116 +273,90 @@ export default function PerformanceDashboard({ lang, profile }) {
           )
 
         ) : tab === 'vert' ? null : (() => {
-          // Combined sessions view: merge RPE + VERT by user_id + date
-          const vertByKey = {};
-          for (const v of vertRecords) {
-            const k = `${v.user_id}|${v.session_date}`;
-            if (!vertByKey[k]) vertByKey[k] = v;
-          }
-
-          // Build one row per player per date from RPE records, joining VERT
-          const seen = new Set();
-          const combined = [];
+          // Group RPE records by date + event title
+          const sessionMap = {};
           for (const r of records) {
-            const k = `${r.user_id}|${r.event_date}`;
-            if (seen.has(k)) continue;
-            seen.add(k);
-            const v = vertByKey[k] || null;
-            combined.push({ rpe: r, vert: v });
+            const key = `${r.event_date}|${r.event_title ?? ''}`;
+            if (!sessionMap[key]) sessionMap[key] = { date: r.event_date, title: r.event_title ?? '—', players: [] };
+            sessionMap[key].players.push(r);
           }
-          // Also add VERT-only rows (no RPE logged)
-          for (const v of vertRecords) {
-            const k = `${v.user_id}|${v.session_date}`;
-            if (!seen.has(k)) {
-              seen.add(k);
-              combined.push({ rpe: null, vert: v });
-            }
-          }
-          const sessSortFn = (a, b) => {
-            const dir = sessSort.dir === 'asc' ? 1 : -1;
-            const col = sessSort.col;
-            const av = col === 'date'    ? (a.rpe?.event_date || (a.vert?.session_date ?? ''))
-                     : col === 'player'  ? (a.rpe?.user_name || (a.vert?.vert_name ?? ''))
-                     : col === 'session' ? (a.rpe?.event_title || (a.vert?.session_name ?? ''))
-                     : col === 'rpe'     ? (a.rpe?.rpe ?? -1)
-                     : col === 'load'    ? (a.rpe?.load_au ?? -1)
-                     : col === 'jumps'   ? (a.vert?.jumps ?? -1)
-                     : col === 'hijump'  ? (a.vert?.avg_hi_jump_cm ?? -1)
-                     : 0;
-            const bv = col === 'date'    ? (b.rpe?.event_date || (b.vert?.session_date ?? ''))
-                     : col === 'player'  ? (b.rpe?.user_name || (b.vert?.vert_name ?? ''))
-                     : col === 'session' ? (b.rpe?.event_title || (b.vert?.session_name ?? ''))
-                     : col === 'rpe'     ? (b.rpe?.rpe ?? -1)
-                     : col === 'load'    ? (b.rpe?.load_au ?? -1)
-                     : col === 'jumps'   ? (b.vert?.jumps ?? -1)
-                     : col === 'hijump'  ? (b.vert?.avg_hi_jump_cm ?? -1)
-                     : 0;
-            if (typeof av === 'string') return av.localeCompare(bv) * dir;
-            return (av - bv) * dir;
-          };
-          combined.sort(sessSortFn);
+          const sessions = Object.values(sessionMap).sort((a, b) => b.date.localeCompare(a.date));
 
-          const sortTh = (col, label, cls = styles.th) => {
-            const active = sessSort.col === col;
-            return (
-              <th className={`${cls} ${styles.thSortable} ${active ? styles.thSortActive : ''}`}
-                  onClick={() => setSessSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))}>
-                {label}{active ? (sessSort.dir === 'asc' ? ' ▲' : ' ▼') : ''}
-              </th>
-            );
-          };
-
-          return combined.length === 0 ? (
+          return sessions.length === 0 ? (
             <div className={styles.empty}>
-              {lang === 'ja' ? 'まだセッションデータがありません' : 'No session data yet'}
+              {lang === 'ja' ? 'まだセッションデータがありません' : 'No session data yet — players submit RPE after Ball Practice / Game events'}
             </div>
           ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    {sortTh('date',    lang === 'ja' ? '日付'       : 'Date',       styles.thName)}
-                    {sortTh('player',  lang === 'ja' ? '選手'       : 'Player',     styles.thName)}
-                    {sortTh('session', lang === 'ja' ? 'セッション' : 'Session',    styles.thName)}
-                    {sortTh('rpe',     'RPE')}
-                    <th className={styles.th}>{lang === 'ja' ? '時間' : 'Min'}</th>
-                    {sortTh('load',    lang === 'ja' ? '負荷 AU'    : 'Load AU')}
-                    <th className={styles.thDiv}></th>
-                    {sortTh('jumps',   lang === 'ja' ? 'ジャンプ'   : 'Jumps')}
-                    {sortTh('hijump',  lang === 'ja' ? '最高跳躍'   : 'Hi Jump')}
-                    <th className={styles.th}>{lang === 'ja' ? '着地%' : 'Elevated%'}</th>
-                    <th className={styles.th}>{lang === 'ja' ? '強度' : 'Intensity'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {combined.map(({ rpe: r, vert: v }, i) => {
-                    const date    = r?.event_date   || v?.session_date;
-                    const name    = r?.user_name    || v?.vert_name || '—';
-                    const session = r?.event_title  || v?.session_name || '—';
-                    const hasVert = !!v;
-                    const elevPct = v?.elevated_pct;
-                    const elevClass = elevPct == null ? '' : elevPct >= 20 ? styles.cellRed : elevPct >= 10 ? styles.cellAmber : styles.cellGreen;
-                    return (
-                      <tr key={i} className={`${styles.tr} ${!hasVert ? styles.trNoVert : ''}`}>
-                        <td className={styles.tdName}>{date}</td>
-                        <td className={styles.tdName}>{name}</td>
-                        <td className={styles.tdName}>{session}</td>
-                        <td className={styles.td}>
-                          {r ? <span className={styles.rpeBadge} style={{ background: rpeColor(r.rpe), color: '#fff' }}>{r.rpe}</span>
-                             : <span className={styles.noData}>—</span>}
-                        </td>
-                        <td className={styles.td}>{r?.duration_min ?? <span className={styles.noData}>—</span>}</td>
-                        <td className={styles.td}>{r ? <span className={styles.loadNum}>{r.load_au}</span> : <span className={styles.noData}>—</span>}</td>
-                        <td className={styles.tdDiv}></td>
-                        <td className={styles.td}>{v?.jumps             ?? <span className={styles.noData}>—</span>}</td>
-                        <td className={styles.td}>{v?.avg_hi_jump_cm != null ? `${v.avg_hi_jump_cm} cm` : <span className={styles.noData}>—</span>}</td>
-                        <td className={`${styles.td} ${elevClass}`}>{elevPct != null ? `${elevPct}%` : <span className={styles.noData}>—</span>}</td>
-                        <td className={styles.td}>{v?.intensity         ?? <span className={styles.noData}>—</span>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className={styles.sessionList}>
+              {sessions.map(s => {
+                const key  = `${s.date}|${s.title}`;
+                const open = expandedSession === key;
+                const rpes = s.players.map(p => p.rpe);
+                const avgRpe  = (rpes.reduce((a, b) => a + b, 0) / rpes.length);
+                const minRpe  = Math.min(...rpes);
+                const maxRpe  = Math.max(...rpes);
+                const avgLoad = Math.round(s.players.reduce((sum, p) => sum + (p.load_au ?? 0), 0) / s.players.length);
+                const sorted  = [...s.players].sort((a, b) => b.rpe - a.rpe);
+                return (
+                  <div key={key} className={styles.sessionCard}>
+                    <button
+                      className={`${styles.sessionHeader} ${open ? styles.sessionHeaderOpen : ''}`}
+                      onClick={() => setExpandedSession(open ? null : key)}>
+                      <div className={styles.sessLeft}>
+                        <span className={styles.sessDate}>{s.date}</span>
+                        <span className={styles.sessTitle}>{s.title}</span>
+                        <span className={styles.sessCount}>{s.players.length} {lang === 'ja' ? '名' : 'players'}</span>
+                      </div>
+                      <div className={styles.sessStats}>
+                        <div className={styles.sessStat}>
+                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均RPE' : 'Avg RPE'}</span>
+                          <span className={styles.sessStatVal} style={{ color: rpeColor(avgRpe) }}>{avgRpe.toFixed(1)}</span>
+                        </div>
+                        <div className={styles.sessStat}>
+                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '範囲' : 'Range'}</span>
+                          <span className={styles.sessStatVal}>
+                            <span style={{ color: rpeColor(minRpe) }}>{minRpe}</span>
+                            <span className={styles.sessRange}>–</span>
+                            <span style={{ color: rpeColor(maxRpe) }}>{maxRpe}</span>
+                          </span>
+                        </div>
+                        <div className={styles.sessStat}>
+                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均負荷' : 'Avg Load'}</span>
+                          <span className={styles.sessStatVal}>{avgLoad} <span className={styles.sessAu}>AU</span></span>
+                        </div>
+                      </div>
+                      <span className={styles.sessCaret}>{open ? '▲' : '▼'}</span>
+                    </button>
+
+                    {open && (
+                      <div className={styles.sessDetail}>
+                        <table className={styles.sessTable}>
+                          <thead>
+                            <tr>
+                              <th className={styles.sessThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                              <th className={styles.sessTh}>RPE</th>
+                              <th className={styles.sessTh}>{lang === 'ja' ? '時間' : 'Min'}</th>
+                              <th className={styles.sessTh}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sorted.map((p, i) => (
+                              <tr key={i} className={styles.sessTr}>
+                                <td className={styles.sessTdName}>{p.user_name}</td>
+                                <td className={styles.sessTd}>
+                                  <span className={styles.rpeBadge} style={{ background: rpeColor(p.rpe), color: '#fff' }}>{p.rpe}</span>
+                                </td>
+                                <td className={styles.sessTd}>{p.duration_min ?? <span className={styles.noData}>—</span>}</td>
+                                <td className={styles.sessTd}><span className={styles.loadNum}>{p.load_au}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
