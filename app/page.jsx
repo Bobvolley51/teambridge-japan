@@ -36,8 +36,8 @@ const NAV_BASE = [
   { id: 'dashboard', Icon: IconHome,     label: { en: 'Dashboard', ja: 'ダッシュ' } },
   { id: 'calendar',  Icon: IconCalendar, label: { en: 'Calendar',  ja: 'カレン'   } },
   { id: 'chat',      Icon: IconChat,     label: { en: 'Chat',      ja: 'チャット'  } },
-  { id: 'tactics',   Icon: IconTactics,  label: { en: 'Tactics',   ja: '戦術'     } },
 ];
+const NAV_TACTICS = { id: 'tactics', Icon: IconTactics, label: { en: 'Tactics', ja: '戦術' } };
 
 const NAV_CAL_SUBS = [
   { id: 'tasks',  Icon: IconCheck, label: { en: 'Tasks',  ja: 'タスク'   } },
@@ -52,9 +52,10 @@ const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Sta
 const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Medical', ja: 'メディカル' } };
 
 // Roles that can view the wellness dashboard
-const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist'];
-const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
-const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic', 'GM'];
+const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
+const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
+const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic', 'GM', 'Coaching Staff'];
+const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Staff/Orga', 'Player'];
 
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
@@ -327,15 +328,17 @@ export default function Home() {
     || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : null)
     || user.email;
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
-  const isAdmin        = ['GM', 'Headcoach'].includes(profile?.role);
+  const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role);
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
   const canPerformance = PERFORMANCE_VIEWERS.includes(profile?.role);
   const canMedical     = MEDICAL_VIEWERS.includes(profile?.role);
+  const canTactics     = TACTICS_VIEWERS.includes(profile?.role);
 
   const isPlayer = profile?.role === 'Player';
 
   const nav_items = [
     ...NAV_BASE,
+    ...(canTactics     ? [NAV_TACTICS]     : []),
     ...(isPlayer       ? [NAV_MYSTATS]     : []),
     ...(canWellness    ? [NAV_WELLNESS]    : []),
     ...(canPerformance ? [NAV_PERFORMANCE] : []),
@@ -405,7 +408,7 @@ export default function Home() {
           {nav==='calendar'  && <Calendar          lang={lang} currentUserName={displayName} role={profile?.role} currentUserId={user.id} />}
           {nav==='chat'      && <Chat              uiLang={lang} currentUser={{ name: displayName, initials, id: user.id, avatarUrl: profile?.avatar_url }} profile={profile} />}
           {nav==='tasks'     && <Tasks             lang={lang} profile={profile} />}
-          {nav==='tactics'   && <Tactics           lang={lang} profile={profile} />}
+          {nav==='tactics'   && canTactics && <Tactics           lang={lang} profile={profile} />}
           {nav==='feed'      && <Announcements     lang={lang} currentUserName={user.email} />}
           {nav==='travel'    && <Travel            lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}

@@ -35,8 +35,8 @@ function fmtEventTime(ev, lang) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Staff/Orga', 'Athletic', 'Therapist'];
-const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga'];
+const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athletic', 'Therapist'];
+const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
 const QUESTION_LABELS = {
   fatigue:     { en: 'Fatigue',     ja: '疲労' },

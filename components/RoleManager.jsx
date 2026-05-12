@@ -6,25 +6,29 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './RoleManager.module.css';
 
-const ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Staff/Orga', 'Player'];
+const ROLES = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player', 'Staff/Orga'];
 const POSITIONS = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero'];
 
 const ROLE_COLORS = {
-  GM:           styles.roleGM,
-  Headcoach:    styles.roleHeadcoach,
-  Athletic:     styles.roleAthletic,
-  Therapist:    styles.roleTherapist,
-  'Staff/Orga': styles.roleStaffOrga,
-  Player:       styles.rolePlayer,
+  GM:                   styles.roleGM,
+  Headcoach:            styles.roleHeadcoach,
+  Athletic:             styles.roleAthletic,
+  Therapist:            styles.roleTherapist,
+  'Coaching Staff':     styles.roleCoachingStaff,
+  'Organisation Staff': styles.roleOrgStaff,
+  'Staff/Orga':         styles.roleStaffOrga,
+  Player:               styles.rolePlayer,
 };
 
 const ROLE_DOT_COLORS = {
-  GM:           styles.dotGM,
-  Headcoach:    styles.dotHeadcoach,
-  Athletic:     styles.dotAthletic,
-  Therapist:    styles.dotTherapist,
-  'Staff/Orga': styles.dotStaffOrga,
-  Player:       styles.dotPlayer,
+  GM:                   styles.dotGM,
+  Headcoach:            styles.dotHeadcoach,
+  Athletic:             styles.dotAthletic,
+  Therapist:            styles.dotTherapist,
+  'Coaching Staff':     styles.dotCoachingStaff,
+  'Organisation Staff': styles.dotOrgStaff,
+  'Staff/Orga':         styles.dotStaffOrga,
+  Player:               styles.dotPlayer,
 };
 
 function timeAgo(iso, lang) {
@@ -429,7 +433,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
   const [editProfile, setEditProfile] = useState(null);
   const [delProfile,  setDelProfile]  = useState(null);
   const [activeTab,   setActiveTab]   = useState('users');
-  const isHeadcoach = currentUserRole === 'Headcoach';
+  const isHeadcoach = ['Headcoach', 'GM'].includes(currentUserRole);
 
   const load = useCallback(async () => {
     setLoading(true);

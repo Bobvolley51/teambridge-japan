@@ -236,8 +236,10 @@
 .roleHeadcoach   { background: #fee2e2; color: #991b1b; }
 .roleAthletic    { background: #fef3c7; color: #92400e; }
 .roleTherapist   { background: #d1fae5; color: #065f46; }
-.roleStaffOrga   { background: #e0e7ff; color: #3730a3; }
-.rolePlayer      { background: #f3f4f6; color: #374151; }
+.roleCoachingStaff  { background: #fff7ed; color: #9a3412; }
+.roleOrgStaff       { background: #f0f9ff; color: #0369a1; }
+.roleStaffOrga      { background: #e0e7ff; color: #3730a3; }
+.rolePlayer         { background: #f3f4f6; color: #374151; }
 
 .roleSelect {
   flex: 1;
