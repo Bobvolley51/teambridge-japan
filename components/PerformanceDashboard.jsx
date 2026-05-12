@@ -37,6 +37,7 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [loading,          setLoading]          = useState(true);
   const [showLegend,       setShowLegend]       = useState(false);
   const [expandedSession,  setExpandedSession]  = useState(null);
+  const [expandedAcwr,     setExpandedAcwr]     = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -233,37 +234,77 @@ export default function PerformanceDashboard({ lang, profile }) {
                   </thead>
                   <tbody>
                     {acwrRows.map(row => {
-                      const zone = row.acwr != null ? getZone(row.acwr) : null;
+                      const zone    = row.acwr != null ? getZone(row.acwr) : null;
+                      const open    = expandedAcwr === row.uid;
+                      const allSess = [...(playerMap[row.uid]?.all ?? [])]
+                        .sort((a, b) => b.event_date.localeCompare(a.event_date));
                       return (
-                        <tr key={row.uid} className={styles.tr}>
-                          <td className={styles.tdName}>{row.name}</td>
-                          <td className={styles.td}>{row.acute}</td>
-                          <td className={styles.td}>{row.chronic}</td>
-                          <td className={styles.td}>
-                            {row.acwr != null
-                              ? <span className={styles.acwrVal} style={{ color: zone?.color }}>
-                                  {row.acwr.toFixed(2)}
-                                </span>
-                              : <span className={styles.noData}>—</span>}
-                          </td>
-                          <td className={styles.td}>
-                            {zone
-                              ? <span className={styles.zoneBadge}
-                                  style={{ color: zone.color, background: zone.bg, borderColor: zone.color }}>
-                                  {zone[lang]}
-                                </span>
-                              : <span className={styles.noData}>—</span>}
-                          </td>
-                          <td className={styles.td}>
-                            <div className={styles.dotRow}>
-                              {row.recent.map((s, i) => (
-                                <span key={i} className={styles.rpeDot}
-                                  style={{ background: rpeColor(s.rpe) }}
-                                  title={`${s.event_title} — RPE ${s.rpe} (${s.load_au} AU)`} />
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
+                        <>
+                          <tr key={row.uid}
+                            className={`${styles.tr} ${styles.trClickable}`}
+                            onClick={() => setExpandedAcwr(open ? null : row.uid)}>
+                            <td className={styles.tdName}>
+                              <span className={styles.acwrCaret}>{open ? '▾' : '▸'}</span>
+                              {row.name}
+                            </td>
+                            <td className={styles.td}>{row.acute}</td>
+                            <td className={styles.td}>{row.chronic}</td>
+                            <td className={styles.td}>
+                              {row.acwr != null
+                                ? <span className={styles.acwrVal} style={{ color: zone?.color }}>
+                                    {row.acwr.toFixed(2)}
+                                  </span>
+                                : <span className={styles.noData}>—</span>}
+                            </td>
+                            <td className={styles.td}>
+                              {zone
+                                ? <span className={styles.zoneBadge}
+                                    style={{ color: zone.color, background: zone.bg, borderColor: zone.color }}>
+                                    {zone[lang]}
+                                  </span>
+                                : <span className={styles.noData}>—</span>}
+                            </td>
+                            <td className={styles.td}>
+                              <div className={styles.dotRow}>
+                                {row.recent.map((s, i) => (
+                                  <span key={i} className={styles.rpeDot}
+                                    style={{ background: rpeColor(s.rpe) }}
+                                    title={`${s.event_title} — RPE ${s.rpe} (${s.load_au} AU)`} />
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                          {open && (
+                            <tr key={`${row.uid}-detail`} className={styles.trDetail}>
+                              <td colSpan={6} className={styles.tdDetail}>
+                                <table className={styles.detailTable}>
+                                  <thead>
+                                    <tr>
+                                      <th className={styles.detailTh}>{lang === 'ja' ? '日付' : 'Date'}</th>
+                                      <th className={styles.detailTh}>{lang === 'ja' ? 'セッション' : 'Session'}</th>
+                                      <th className={styles.detailTh}>RPE</th>
+                                      <th className={styles.detailTh}>{lang === 'ja' ? '時間' : 'Min'}</th>
+                                      <th className={styles.detailTh}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {allSess.map((s, i) => (
+                                      <tr key={i} className={styles.detailTr}>
+                                        <td className={styles.detailTd}>{s.event_date}</td>
+                                        <td className={styles.detailTd}>{s.event_title ?? '—'}</td>
+                                        <td className={styles.detailTdC}>
+                                          <span className={styles.rpeBadge} style={{ background: rpeColor(s.rpe), color: '#fff' }}>{s.rpe}</span>
+                                        </td>
+                                        <td className={styles.detailTdC}>{s.duration_min ?? <span className={styles.noData}>—</span>}</td>
+                                        <td className={styles.detailTdC}><span className={styles.loadNum}>{s.load_au}</span></td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       );
                     })}
                   </tbody>

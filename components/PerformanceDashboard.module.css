@@ -86,6 +86,26 @@
 .rpeBadge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 800; }
 .loadNum  { font-size: 13px; font-weight: 700; color: #374151; }
 
+.trClickable { cursor: pointer; }
+.acwrCaret   { font-size: 11px; color: #9ca3af; margin-right: 5px; }
+
+.trDetail td { padding: 0 !important; border-bottom: 2px solid #e5e7eb; }
+.tdDetail    { background: #f9fafb; }
+
+.detailTable  { width: 100%; border-collapse: collapse; font-size: 12px; }
+.detailTh {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+  background: #f3f4f6;
+}
+.detailTr { border-bottom: 1px solid #f3f4f6; }
+.detailTr:last-child { border-bottom: none; }
+.detailTr:hover { background: #fff; }
+.detailTd  { padding: 7px 12px; color: #374151; white-space: nowrap; }
+.detailTdC { padding: 7px 12px; text-align: center; }
+
 .thDiv, .tdDiv { width: 8px; padding: 0 !important; background: #f3f4f6; }
 .thSortable { cursor: pointer; user-select: none; }
 .thSortable:hover { background: #fdf2f4; }
