@@ -55,7 +55,7 @@ const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Med
 const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
 const PERFORMANCE_VIEWERS = ['Headcoach', 'Athletic', 'Therapist', 'Coaching Staff'];
 const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic', 'GM', 'Coaching Staff'];
-const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Athletic', 'Therapist', 'Coaching Staff', 'Player'];
+const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff', 'Player'];
 
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
