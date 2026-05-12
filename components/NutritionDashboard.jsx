@@ -247,26 +247,31 @@ export default function NutritionDashboard({ lang, profile }) {
     });
   }, [isTrainer]);
 
+  const MAX_MEALS = DAYS.length * MEALS.length; // 14 days × 4 meals = 56
+
   // Load stats overview (trainers: all players; players: own summary)
   const loadStats = useCallback(async () => {
     const since = DAYS[0];
     if (isTrainer) {
-      const { data } = await supabase
-        .from('nutrition_entries')
-        .select('user_id, user_name, player_rating')
-        .gte('meal_date', since);
-      if (!data) return;
+      const [{ data: allPlayers }, { data: entries }] = await Promise.all([
+        supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name'),
+        supabase.from('nutrition_entries').select('user_id, player_rating').gte('meal_date', since),
+      ]);
+      if (!allPlayers) return;
       const map = {};
-      for (const e of data) {
-        if (!map[e.user_id]) map[e.user_id] = { name: e.user_name, total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
+      for (const p of allPlayers) {
+        map[p.id] = { name: p.display_name ?? '—', total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
+      }
+      for (const e of (entries ?? [])) {
+        if (!map[e.user_id]) continue;
         const r = map[e.user_id];
         r.total++;
-        if (e.player_rating === 'green')  r.green++;
+        if (e.player_rating === 'green')       r.green++;
         else if (e.player_rating === 'yellow') r.yellow++;
         else if (e.player_rating === 'red')    r.red++;
         else r.unrated++;
       }
-      setStatsRows(Object.values(map).sort((a, b) => a.name.localeCompare(b.name)));
+      setStatsRows(Object.values(map));
     } else {
       // Player: load own summary
       const { data } = await supabase
@@ -563,7 +568,7 @@ export default function NutritionDashboard({ lang, profile }) {
                 <thead>
                   <tr>
                     <th className={styles.statsThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                    <th className={styles.statsTh}>{lang === 'ja' ? '合計' : 'Total'}</th>
+                    <th className={styles.statsTh}>{lang === 'ja' ? `提出 / ${MAX_MEALS}` : `Logged / ${MAX_MEALS}`}</th>
                     <th className={styles.statsTh}>🟢</th>
                     <th className={styles.statsTh}>🟡</th>
                     <th className={styles.statsTh}>🔴</th>
@@ -574,22 +579,23 @@ export default function NutritionDashboard({ lang, profile }) {
                   {statsRows.map((r, i) => (
                     <tr key={i} className={styles.statsTr}>
                       <td className={styles.statsTdName}>{r.name}</td>
-                      <td className={styles.statsTd}><strong>{r.total}</strong></td>
                       <td className={styles.statsTd}>
-                        {r.green > 0 && <span className={styles.statsBadge} style={{ background: '#16a34a' }}>{r.green}</span>}
-                        {r.green === 0 && <span className={styles.statsZero}>—</span>}
+                        <span className={`${styles.totalCell} ${r.total === 0 ? styles.totalZero : ''}`}>
+                          <strong>{r.total}</strong>
+                          <span className={styles.totalMax}>/{MAX_MEALS}</span>
+                        </span>
                       </td>
                       <td className={styles.statsTd}>
-                        {r.yellow > 0 && <span className={styles.statsBadge} style={{ background: '#d97706' }}>{r.yellow}</span>}
-                        {r.yellow === 0 && <span className={styles.statsZero}>—</span>}
+                        {r.green > 0 ? <span className={styles.statsBadge} style={{ background: '#16a34a' }}>{r.green}</span> : <span className={styles.statsZero}>—</span>}
                       </td>
                       <td className={styles.statsTd}>
-                        {r.red > 0 && <span className={styles.statsBadge} style={{ background: '#dc2626' }}>{r.red}</span>}
-                        {r.red === 0 && <span className={styles.statsZero}>—</span>}
+                        {r.yellow > 0 ? <span className={styles.statsBadge} style={{ background: '#d97706' }}>{r.yellow}</span> : <span className={styles.statsZero}>—</span>}
                       </td>
                       <td className={styles.statsTd}>
-                        {r.unrated > 0 && <span className={styles.statsUnrated}>{r.unrated}</span>}
-                        {r.unrated === 0 && <span className={styles.statsZero}>—</span>}
+                        {r.red > 0 ? <span className={styles.statsBadge} style={{ background: '#dc2626' }}>{r.red}</span> : <span className={styles.statsZero}>—</span>}
+                      </td>
+                      <td className={styles.statsTd}>
+                        {r.unrated > 0 ? <span className={styles.statsUnrated}>{r.unrated}</span> : <span className={styles.statsZero}>—</span>}
                       </td>
                     </tr>
                   ))}

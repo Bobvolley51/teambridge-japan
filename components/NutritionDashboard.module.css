@@ -197,6 +197,20 @@
   font-size: 13px;
   color: #e5e7eb;
 }
+.totalCell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-size: 14px;
+}
+.totalMax {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+.totalZero strong {
+  color: #d1d5db;
+}
 
 /* ── 14-day strip ────────────────────────────────────────── */
 .dayStrip {
