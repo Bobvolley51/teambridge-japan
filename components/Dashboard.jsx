@@ -34,6 +34,57 @@ function fmtEventTime(ev, lang) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Mirrors Calendar.jsx — expands recurring events into occurrences within [fromISO, toISO]
+function expandRecurring(rawEvents, fromISO, toISO) {
+  const fromDate = new Date(fromISO);
+  const toDate   = new Date(toISO);
+  const result   = [];
+  for (const ev of rawEvents) {
+    const baseStart = new Date(ev.start_time);
+    const duration  = new Date(ev.end_time) - baseStart;
+    if (!ev.recurrence) {
+      if (baseStart >= fromDate && baseStart <= toDate)
+        result.push({ ...ev, _key: ev.id });
+      continue;
+    }
+    const recEnd       = ev.recurrence_end ? new Date(ev.recurrence_end) : toDate;
+    const effectiveEnd = recEnd < toDate ? recEnd : toDate;
+    if (ev.recurrence.startsWith('weekly:')) {
+      const selectedDays = ev.recurrence.split(':')[1].split(',').map(Number);
+      const h = baseStart.getHours(), m = baseStart.getMinutes();
+      const startDay = new Date(baseStart > fromDate ? baseStart : fromDate);
+      startDay.setHours(0, 0, 0, 0);
+      let d = new Date(startDay);
+      while (d <= effectiveEnd) {
+        const dow = (d.getDay() + 6) % 7;
+        if (selectedDays.includes(dow)) {
+          const occStart = new Date(d); occStart.setHours(h, m, 0, 0);
+          if (occStart >= fromDate) {
+            result.push({ ...ev, start_time: occStart.toISOString(), end_time: new Date(occStart.getTime() + duration).toISOString(), _key: `${ev.id}_${occStart.toISOString()}` });
+          }
+        }
+        d = new Date(d); d.setDate(d.getDate() + 1);
+      }
+      continue;
+    }
+    let curr = new Date(baseStart), safety = 0;
+    while (curr <= effectiveEnd && safety < 500) {
+      safety++;
+      if (curr >= fromDate)
+        result.push({ ...ev, start_time: curr.toISOString(), end_time: new Date(curr.getTime() + duration).toISOString(), _key: `${ev.id}_${curr.toISOString()}` });
+      const next = new Date(curr);
+      if      (ev.recurrence === 'daily')   next.setDate(next.getDate() + 1);
+      else if (ev.recurrence === 'weekly')  next.setDate(next.getDate() + 7);
+      else if (ev.recurrence === 'monthly') next.setMonth(next.getMonth() + 1);
+      else if (ev.recurrence === 'yearly')  next.setFullYear(next.getFullYear() + 1);
+      else break;
+      if (next.getTime() === curr.getTime()) break;
+      curr = next;
+    }
+  }
+  return result.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+}
+
 function countdown(startTime, lang) {
   const diff = Math.round((new Date(startTime) - Date.now()) / 60000);
   if (diff <= 0) return lang === 'ja' ? '進行中' : 'Now';
@@ -211,18 +262,17 @@ export default function Dashboard({
       { data: myLastRpeData },
       { data: myWellnessData },
     ] = await Promise.all([
-      // My participation events
+      // My participation events — no date filter so recurring base events are included
       currentUserId
         ? supabase.from('event_participants')
-            .select('status, events(id, title, start_time, end_time, all_day, category, location)')
+            .select('status, events(id, title, start_time, end_time, all_day, category, location, recurrence, recurrence_end)')
             .eq('profile_id', currentUserId)
             .neq('status', 'out')
         : Promise.resolve({ data: [] }),
-      // All team events for the next 7 days (admin/coaching roles)
+      // All team events (admin roles) — only upper bound so old recurring events are included
       isAdminSchedule
         ? supabase.from('events')
-            .select('id, title, start_time, end_time, all_day, category, location')
-            .gte('start_time', todayStart.toISOString())
+            .select('id, title, start_time, end_time, all_day, category, location, recurrence, recurrence_end')
             .lte('start_time', weekEnd.toISOString())
             .order('start_time')
         : Promise.resolve({ data: [] }),
@@ -311,24 +361,40 @@ export default function Dashboard({
         : Promise.resolve({ data: [] }),
     ]);
 
-    // ── Events merge ──
-    const partMap = {};
+    // ── Events merge (recurring-aware) ──
+    const rangeFrom = todayStart.toISOString();
+    const rangeTo   = weekEnd.toISOString();
+
+    // Build status map by base event id (participation is per event, not per occurrence)
+    const statusByEventId = {};
     for (const p of (myPartsData ?? [])) {
-      if (p.events?.id) partMap[p.events.id] = { ...p.events, _myStatus: p.status ?? 'in' };
+      if (p.events?.id) statusByEventId[p.events.id] = p.status ?? 'in';
     }
-    for (const ev of (allEventsData ?? [])) {
-      if (!partMap[ev.id]) partMap[ev.id] = { ...ev, _myStatus: null };
-    }
-    const myEventsRaw = Object.values(partMap)
-      .filter(ev => new Date(ev.start_time) >= todayStart && new Date(ev.start_time) <= weekEnd);
+
+    // Expand my participated events into occurrences within the window
+    const myBaseEvents = (myPartsData ?? [])
+      .filter(p => p.events?.id)
+      .map(p => p.events);
+    const myExpanded = expandRecurring(myBaseEvents, rangeFrom, rangeTo)
+      .map(ev => ({ ...ev, _myStatus: statusByEventId[ev.id] ?? 'in' }));
+
+    // Expand all team events (admin) — then merge, preferring participation entries
+    const adminExpanded = isAdminSchedule
+      ? expandRecurring(allEventsData ?? [], rangeFrom, rangeTo)
+      : [];
+
+    const partMap = {};
+    for (const ev of myExpanded)    partMap[ev._key] = ev;
+    for (const ev of adminExpanded) { if (!partMap[ev._key]) partMap[ev._key] = { ...ev, _myStatus: null }; }
+
+    const myEventsRaw = Object.values(partMap);
     myEventsRaw.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     setEvents(myEventsRaw);
 
-    // Overlap detection
+    // Overlap detection (use expanded participation events)
     const now = new Date();
-    const futureEvs = (myPartsData ?? [])
-      .map(p => p.events)
-      .filter(ev => ev && !ev.all_day && new Date(ev.end_time) > now);
+    const futureEvs = myExpanded
+      .filter(ev => !ev.all_day && new Date(ev.end_time) > now);
     const overlaps = [];
     for (let i = 0; i < futureEvs.length; i++) {
       for (let j = i + 1; j < futureEvs.length; j++) {
