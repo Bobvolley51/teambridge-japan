@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/date';
+import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
 
@@ -191,6 +192,45 @@ function SectionLabel({ children }) {
 
 function EmptyState({ children }) {
   return <div className={styles.empty}>{children}</div>;
+}
+
+function TaskItem({ task, lang, priColor, onNavigate }) {
+  const title = useTranslated(task.title, lang);
+  return (
+    <div className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
+      <span className={styles.alertDot} style={{ background: priColor }} />
+      <div>
+        <div className={styles.alertText}>{title}</div>
+        <div className={styles.alertSub}>
+          {task.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}
+          {task.priority === 'medium' ? ` · ${lang === 'ja' ? '中' : 'Medium'}` : ''}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnnItem({ ann, lang, onNavigate, onDismiss }) {
+  const title   = useTranslated(ann.title,   lang);
+  const content = useTranslated(ann.content, lang);
+  const pri = PRI[ann.priority] ?? PRI.medium;
+  return (
+    <div className={styles.annItem}>
+      <div className={styles.annItemTop}>
+        <span className={styles.annPriBadge}
+          style={{ background: pri.bg, border: `1px solid ${pri.border}`, color: pri.dot }}>
+          <span className={styles.annPriDot} style={{ background: pri.dot }} />
+          {pri[lang]}
+        </span>
+        <button className={styles.noticedBtn} onClick={() => onDismiss(ann.id)}>
+          ✓ {lang === 'ja' ? '確認済み' : 'Noticed'}
+        </button>
+      </div>
+      <div className={styles.annTitle} onClick={() => onNavigate('feed')} style={{ cursor: 'pointer' }}>{title}</div>
+      <div className={styles.annContent}>{content}</div>
+      <div className={styles.annMeta}>{ann.author_name} · {timeAgo(ann.created_at, lang)}</div>
+    </div>
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -910,13 +950,7 @@ export default function Dashboard({
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '🔴 緊急' : '🔴 Urgent'}</SectionLabel>
                         {urgentTasks.map(t => (
-                          <div key={t.id} className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
-                            <span className={styles.alertDot} style={{ background: TASK_PRI_COLOR[t.priority] ?? '#6b7280' }} />
-                            <div>
-                              <div className={styles.alertText}>{t.title}</div>
-                              <div className={styles.alertSub}>{t.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}</div>
-                            </div>
-                          </div>
+                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} />
                         ))}
                       </div>
                     )}
@@ -924,16 +958,7 @@ export default function Dashboard({
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '📋 タスク' : '📋 Tasks'}</SectionLabel>
                         {weekTasks.map(t => (
-                          <div key={t.id} className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
-                            <span className={styles.alertDot} style={{ background: TASK_PRI_COLOR[t.priority] ?? '#6b7280' }} />
-                            <div>
-                              <div className={styles.alertText}>{t.title}</div>
-                              <div className={styles.alertSub}>
-                                {t.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}
-                                {t.priority === 'medium' ? ` · ${lang === 'ja' ? '中' : 'Medium'}` : ''}
-                              </div>
-                            </div>
-                          </div>
+                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} />
                         ))}
                       </div>
                     )}
@@ -995,26 +1020,9 @@ export default function Dashboard({
                 {visibleAnnouncements.length === 0 ? (
                   <EmptyState>{lang === 'ja' ? '新しいお知らせはありません。' : 'No new announcements.'}</EmptyState>
                 ) : (
-                  visibleAnnouncements.map(a => {
-                    const pri = PRI[a.priority] ?? PRI.medium;
-                    return (
-                      <div key={a.id} className={styles.annItem}>
-                        <div className={styles.annItemTop}>
-                          <span className={styles.annPriBadge}
-                            style={{ background: pri.bg, border: `1px solid ${pri.border}`, color: pri.dot }}>
-                            <span className={styles.annPriDot} style={{ background: pri.dot }} />
-                            {pri[lang]}
-                          </span>
-                          <button className={styles.noticedBtn} onClick={() => dismissAnnouncement(a.id)}>
-                            ✓ {lang === 'ja' ? '確認済み' : 'Noticed'}
-                          </button>
-                        </div>
-                        <div className={styles.annTitle} onClick={() => onNavigate('feed')} style={{ cursor: 'pointer' }}>{a.title}</div>
-                        <div className={styles.annContent}>{a.content}</div>
-                        <div className={styles.annMeta}>{a.author_name} · {timeAgo(a.created_at, lang)}</div>
-                      </div>
-                    );
-                  })
+                  visibleAnnouncements.map(a => (
+                    <AnnItem key={a.id} ann={a} lang={lang} onNavigate={onNavigate} onDismiss={dismissAnnouncement} />
+                  ))
                 )}
               </div>
               <div className={styles.cardFoot}>
