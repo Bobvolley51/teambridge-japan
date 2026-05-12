@@ -302,18 +302,21 @@ export default function PerformanceDashboard({ lang, profile }) {
                     <button
                       className={`${styles.sessionHeader} ${open ? styles.sessionHeaderOpen : ''}`}
                       onClick={() => setExpandedSession(open ? null : key)}>
-                      <div className={styles.sessLeft}>
+                      {/* Row 1: title + caret */}
+                      <div className={styles.sessTopRow}>
                         <span className={styles.sessDate}>{s.date}</span>
                         <span className={styles.sessTitle}>{s.title}</span>
                         <span className={styles.sessCount}>{s.players.length} {lang === 'ja' ? '名' : 'players'}</span>
+                        <span className={styles.sessCaret}>{open ? '▲' : '▼'}</span>
                       </div>
+                      {/* Row 2: stat pills */}
                       <div className={styles.sessStats}>
                         <div className={styles.sessStat}>
-                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均RPE' : 'Avg RPE'}</span>
+                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均 RPE' : 'Avg RPE'}</span>
                           <span className={styles.sessStatVal} style={{ color: rpeColor(avgRpe) }}>{avgRpe.toFixed(1)}</span>
                         </div>
                         <div className={styles.sessStat}>
-                          <span className={styles.sessStatLabel}>{lang === 'ja' ? '範囲' : 'Range'}</span>
+                          <span className={styles.sessStatLabel}>{lang === 'ja' ? 'RPE 範囲' : 'RPE Range'}</span>
                           <span className={styles.sessStatVal}>
                             <span style={{ color: rpeColor(minRpe) }}>{minRpe}</span>
                             <span className={styles.sessRange}>–</span>
@@ -322,10 +325,9 @@ export default function PerformanceDashboard({ lang, profile }) {
                         </div>
                         <div className={styles.sessStat}>
                           <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均負荷' : 'Avg Load'}</span>
-                          <span className={styles.sessStatVal}>{avgLoad} <span className={styles.sessAu}>AU</span></span>
+                          <span className={styles.sessStatVal}>{avgLoad}<span className={styles.sessAu}> AU</span></span>
                         </div>
                       </div>
-                      <span className={styles.sessCaret}>{open ? '▲' : '▼'}</span>
                     </button>
 
                     {open && (
