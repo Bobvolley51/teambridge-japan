@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamBridge Japan — Roles & Features</title>
+
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  HOW TO UPDATE THIS FILE AFTER CODE CHANGES                  ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  1. ROLES changed?                                           ║
+║     → Edit the ROLES array in the <script> section below.   ║
+║       Each role has: id, color, dotColor, en, ja            ║
+║                                                              ║
+║  2. PERMISSIONS changed?                                     ║
+║     → Edit the FEATURES array. Each feature has an          ║
+║       "access" object: { gm, headcoach, athletic, … }       ║
+║       Use true/false or special strings like "popup",        ║
+║       "unique", "upload", "view", "edit", "super"           ║
+║                                                              ║
+║  3. FEATURE NAME changed (EN or JP)?                         ║
+║     → Edit the "en" / "ja" fields in the FEATURES array.    ║
+║                                                              ║
+║  4. New section/group?                                       ║
+║     → Add a new entry to FEATURE_GROUPS and reference it    ║
+║       in the FEATURES array via the "group" field.          ║
+║                                                              ║
+║  Last audited: 2026-05-16 — based on direct source code read ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
+<style>
+  :root {
+    --bg:       #ffffff;
+    --surface:  #f8f9fb;
+    --border:   #e5e7eb;
+    --text:     #111827;
+    --muted:    #6b7280;
+    --accent:   #1d4ed8;
+    --radius:   10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: #0f172a;
+    color: #fff;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.18);
+  }
+  .header-left h1 { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+  .header-left p  { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+  .header-right   { display: flex; gap: 8px; align-items: center; }
+
+  .lang-toggle { display: flex; background: #1e293b; border-radius: 8px; overflow: hidden; }
+  .lang-btn {
+    border: none; background: none; color: #94a3b8;
+    padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s;
+  }
+  .lang-btn.active { background: var(--accent); color: #fff; }
+  .lang-btn:hover:not(.active) { color: #fff; }
+
+  .print-btn {
+    background: #1e293b; color: #94a3b8; border: none;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all .15s;
+  }
+  .print-btn:hover { background: #334155; color: #fff; }
+
+  /* ── LAYOUT ── */
+  .content { max-width: 1150px; margin: 0 auto; padding: 32px 24px 60px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 2px solid var(--border);
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 20px; border: none; background: none; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  section.tab-panel { display: none; }
+  section.tab-panel.active { display: block; }
+
+  /* ── SECTION INTRO ── */
+  .section-intro {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+    margin-bottom: 24px; font-size: 13px; color: var(--muted);
+  }
+  .section-intro code {
+    background: #fff; border: 1px solid var(--border); padding: 1px 5px;
+    border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text);
+  }
+
+  /* ── ROLES GRID ── */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .role-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; background: var(--bg); transition: box-shadow .15s;
+  }
+  .role-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+  .role-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .role-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .role-name { font-size: 16px; font-weight: 700; }
+  .role-sub  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .role-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .role-tag  {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+
+  /* ── FEATURE MATRIX ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 16px; font-size: 12px; align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+
+  .matrix-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th {
+    background: #0f172a; color: #fff;
+    padding: 10px 12px; text-align: center; white-space: nowrap;
+    font-size: 11px; font-weight: 600; letter-spacing: .3px;
+  }
+  thead th:first-child { text-align: left; min-width: 260px; }
+  tbody tr:nth-child(even) td { background: var(--surface); }
+  tbody tr:hover td { background: #f0f4ff; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody td:first-child { font-weight: 500; }
+  tbody td:not(:first-child) { text-align: center; }
+  .td-note { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+  .group-row td {
+    background: #1e293b !important; color: #94a3b8;
+    font-size: 11px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; padding: 6px 12px;
+  }
+  .ic-yes    { color: #16a34a; font-size: 16px; }
+  .ic-no     { color: #d1d5db; font-size: 16px; }
+  .ic-popup  { color: #f59e0b; font-size: 14px; font-weight: 700; }
+  .ic-unique { color: #2563eb; font-size: 14px; font-weight: 700; }
+  .ic-upload { color: #7c3aed; font-size: 14px; font-weight: 700; }
+  .ic-super  { color: #ca8a04; font-size: 14px; font-weight: 700; }
+  .ic-view   { color: #6b7280; font-size: 14px; }
+  .ic-edit   { color: #059669; font-size: 14px; font-weight: 700; }
+
+  /* ── POPUP SECTION ── */
+  .popup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px; margin-bottom: 32px;
+  }
+  .popup-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); overflow: hidden;
+  }
+  .popup-card-head {
+    background: #0f172a; color: #fff; padding: 14px 18px;
+    font-size: 15px; font-weight: 700;
+  }
+  .popup-card-head .pe { font-size: 20px; margin-right: 8px; }
+  .popup-trigger { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 400; }
+  .popup-privacy { font-size: 11px; color: #fbbf24; margin-top: 2px; font-weight: 400; }
+  .popup-card-body { padding: 16px 18px; }
+  .popup-step { margin-bottom: 14px; }
+  .popup-step-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); margin-bottom: 8px;
+  }
+  .popup-cond {
+    display: inline-block; font-size: 11px; background: #fef3c7; color: #92400e;
+    border: 1px solid #fde68a; border-radius: 4px;
+    padding: 2px 7px; margin-left: 6px; font-weight: 400;
+    text-transform: none; letter-spacing: 0;
+  }
+  .popup-q {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .popup-q:last-child { border-bottom: none; }
+  .popup-q-icon { color: var(--muted); flex-shrink: 0; margin-top: 1px; }
+  .popup-q-text { flex: 1; }
+  .popup-q-type {
+    font-size: 11px; color: #2563eb; background: #eff6ff;
+    border: 1px solid #bfdbfe; border-radius: 4px;
+    padding: 1px 6px; white-space: nowrap; flex-shrink: 0;
+  }
+  .popup-q-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── DASHBOARD SECTION ── */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .dash-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; background: var(--bg);
+  }
+  .dash-card-title { font-weight: 700; margin-bottom: 8px; font-size: 14px; }
+  .dash-card-body  { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .dash-feature-list { list-style: none; margin-top: 10px; }
+  .dash-feature-list li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12.5px;
+  }
+  .dash-feature-list li:last-child { border-bottom: none; }
+  .dash-status { font-size: 11px; font-weight: 700; flex-shrink: 0; padding-top: 1px; }
+  .dash-status.done    { color: #16a34a; }
+  .dash-status.partial { color: #d97706; }
+  .dash-status.pending { color: #6b7280; }
+  .dash-status.bug     { color: #dc2626; }
+
+  /* ── NOTES SECTION ── */
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .note-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; background: var(--bg);
+  }
+  .note-card.warn { border-color: #fca5a5; background: #fff5f5; }
+  .note-card-head {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; margin-bottom: 10px;
+  }
+  .note-card.warn .note-card-head { color: #dc2626; }
+  .note-card-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .note-card-body code {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text);
+  }
+
+  @media print {
+    header { position: static; }
+    .tab-btn:not(.active), .print-btn, .lang-toggle { display: none; }
+    section.tab-panel { display: block !important; page-break-before: always; }
+    section.tab-panel:first-of-type { page-break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>TeamBridge Japan — Roles &amp; Features</h1>
+    <p class="en">Last audited: 2026-05-16 · Based on direct source code analysis</p>
+    <p class="ja" style="display:none">最終監査: 2026年5月13日 · ソースコードの直接調査に基づく</p>
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn"        onclick="setLang('ja')">日本語</button>
+    </div>
+    <button class="print-btn" onclick="window.print()">🖨 Print / PDF</button>
+  </div>
+</header>
+
+<div class="content">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('roles')"     id="tab-roles">
+      <span class="en">Roles</span><span class="ja" style="display:none">ロール</span>
+    </button>
+    <button class="tab-btn" onclick="openTab('matrix')"           id="tab-matrix">
+      <span class="en">Feature Matrix</span><span class="ja" style="display:none">機能マトリクス</span>
+    </button>
+    <button class="tab-btn" onclick="openTab('popups')"           id="tab-popups">
+      <span class="en">Player Popups</span><span class="ja" style="display:none">選手ポップアップ</span>
+    </button>
+    <button class="tab-btn" onclick="openTab('dashboard')"        id="tab-dashboard">
+      <span class="en">Dashboard</span><span class="ja" style="display:none">ダッシュボード</span>
+    </button>
+    <button class="tab-btn" onclick="openTab('notes')"            id="tab-notes">
+      <span class="en">Notes</span><span class="ja" style="display:none">備考</span>
+    </button>
+  </div>
+
+  <!-- ROLES -->
+  <section class="tab-panel active" id="panel-roles">
+    <div class="section-intro">
+      <span class="en">7 roles in the system. Role is stored in <code>profiles.role</code>. Admin panel is granted to GM, Headcoach and Organisation Staff. The <code>is_super_admin</code> flag (separate DB column) is required to assign or change roles.</span>
+      <span class="ja" style="display:none">システムには7つのロールがあります。ロールは <code>profiles.role</code> に保存されます。管理パネルはGM・ヘッドコーチ・組織スタッフに付与されます。ロール変更には <code>is_super_admin</code> フラグが必要です。</span>
+    </div>
+    <div class="roles-grid" id="roles-grid"></div>
+  </section>
+
+  <!-- MATRIX -->
+  <section class="tab-panel" id="panel-matrix">
+    <div class="legend">
+      <strong class="en">Legend:</strong><strong class="ja" style="display:none">凡例：</strong>
+      <span class="legend-item"><span class="ic-yes">✓</span> <span class="en">Full access</span><span class="ja" style="display:none">フルアクセス</span></span>
+      <span class="legend-item"><span class="ic-no">·</span> <span class="en">No access</span><span class="ja" style="display:none">アクセスなし</span></span>
+      <span class="legend-item"><span class="ic-popup">▲</span> <span class="en">Auto-popup (player input only)</span><span class="ja" style="display:none">自動ポップアップ（選手入力）</span></span>
+      <span class="legend-item"><span class="ic-unique">★</span> <span class="en">Exclusive to this role</span><span class="ja" style="display:none">このロール専用</span></span>
+      <span class="legend-item"><span class="ic-upload">⬆</span> <span class="en">Can upload / manage</span><span class="ja" style="display:none">アップロード・管理可</span></span>
+      <span class="legend-item"><span class="ic-view">👁</span> <span class="en">View only</span><span class="ja" style="display:none">閲覧のみ</span></span>
+      <span class="legend-item"><span class="ic-edit">✎</span> <span class="en">Edit / full write</span><span class="ja" style="display:none">編集・書き込み権限</span></span>
+      <span class="legend-item"><span class="ic-super">⚑</span> <span class="en">Super-admin flag required</span><span class="ja" style="display:none">スーパー管理者フラグ必要</span></span>
+    </div>
+    <div class="matrix-wrap">
+      <table id="matrix-table">
+        <thead><tr>
+          <th><span class="en">Feature</span><span class="ja" style="display:none">機能</span></th>
+        </tr></thead>
+        <tbody id="matrix-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- POPUPS -->
+  <section class="tab-panel" id="panel-popups">
+    <div class="section-intro">
+      <span class="en">Player-only auto-triggered forms. Each popup appears based on specific conditions — no manual navigation required. Data is restricted to the coaching/medical circle (Organisation Staff excluded).</span>
+      <span class="ja" style="display:none">選手専用の自動トリガーフォームです。特定の条件に基づき自動表示 — 手動ナビゲーション不要。データはコーチング・医療スタッフのみ閲覧可能（組織スタッフを除く）。</span>
+    </div>
+    <div class="popup-grid" id="popup-grid"></div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="tab-panel" id="panel-dashboard">
+    <div class="section-intro">
+      <span class="en">The Dashboard adapts to the user's role — cards are shown or hidden based on permissions. All data is fetched in a single parallel Promise.all on load. Numbers below refer to the original improvement proposals (#1–#7).</span>
+      <span class="ja" style="display:none">ダッシュボードはロールに応じて表示が変わります。権限に基づきカードを表示・非表示。データはロード時に並列取得。以下の番号は元の改善提案（#1〜#7）に対応します。</span>
+    </div>
+    <div class="dashboard-grid" id="dashboard-grid"></div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="tab-panel" id="panel-notes">
+    <div class="notes-grid" id="notes-grid"></div>
+  </section>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA — Update these arrays after code changes
+// Source files: app/page.jsx, components/*.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ROLES = [
+  {
+    id: 'gm', color: '#be185d',
+    en: { name: 'GM', sub: 'General Manager. Broadest strategic oversight. Access to all dashboards except App Usage Statistics. Can manage users and approve accounts.' },
+    ja: { name: 'GM', sub: 'ゼネラルマネージャー。戦略的統括。アプリ統計以外の全ダッシュボードにアクセス可能。ユーザー管理・アカウント承認権限あり。' },
+    tags_en: ['Admin', 'All Dashboards', 'User Mgmt', 'VERT Upload'],
+    tags_ja: ['管理者', '全ダッシュボード', 'ユーザー管理', 'VERTアップロード'],
+  },
+  {
+    id: 'headcoach', color: '#1d4ed8',
+    en: { name: 'Headcoach', sub: 'Head coach. Widest access of all roles — the only role with App Usage Statistics. Can review nutrition, upload VERT data, and manage users.' },
+    ja: { name: 'ヘッドコーチ', sub: '監督。全ロール中最も広いアクセス権。アプリ統計閲覧・栄養フィードバック・VERTアップロード・ユーザー管理が可能。' },
+    tags_en: ['Admin', 'App Stats (exclusive)', 'All Dashboards', 'Nutrition Feedback'],
+    tags_ja: ['管理者', 'アプリ統計（専用）', '全ダッシュボード', '栄養フィードバック'],
+  },
+  {
+    id: 'athletic', color: '#15803d',
+    en: { name: 'Athletic Trainer', sub: 'Athletic trainer / conditioning. Focus on wellness, load monitoring, nutrition review, and VERT tracking. No Tactics access. Cannot edit travel plans.' },
+    ja: { name: 'アスレティックトレーナー', sub: 'トレーナー／コンディショニング担当。ウェルネス・負荷管理・栄養レビュー・VERTトラッキングに特化。戦術アクセスなし。旅程編集不可。' },
+    tags_en: ['Wellness', 'Performance', 'VERT Upload', 'Nutrition Feedback', 'No Tactics'],
+    tags_ja: ['ウェルネス', 'パフォーマンス', 'VERTアップロード', '栄養フィードバック', '戦術なし'],
+  },
+  {
+    id: 'therapist', color: '#7c3aed',
+    en: { name: 'Therapist', sub: 'Physiotherapist / medical staff. Unique: can edit treatment records and set player availability status. No Tactics access.' },
+    ja: { name: 'セラピスト', sub: '理学療法士／メディカルスタッフ。治療記録の編集・選手参加可否設定ができる唯一のロール。戦術アクセスなし。' },
+    tags_en: ['Medical (edit)', 'Player Availability', 'Wellness', 'Performance', 'No Tactics'],
+    tags_ja: ['メディカル（編集）', '選手参加可否', 'ウェルネス', 'パフォーマンス', '戦術なし'],
+  },
+  {
+    id: 'coachingstaff', color: '#c2410c',
+    en: { name: 'Coaching Staff', sub: 'Assistant coaches, video analysts. Full coaching view incl. Tactics. Can upload VERT and edit travel plans. No admin rights.' },
+    ja: { name: 'コーチングスタッフ', sub: 'アシスタントコーチ・ビデオアナリスト。戦術含む全コーチングビュー。VERTアップロード・旅程編集可能。管理権限なし。' },
+    tags_en: ['All Dashboards', 'Tactics', 'VERT Upload', 'Travel Edit'],
+    tags_ja: ['全ダッシュボード', '戦術', 'VERTアップロード', '旅程編集'],
+  },
+  {
+    id: 'orgstaff', color: '#334155',
+    en: { name: 'Organisation Staff', sub: 'Club management / operations. User management and travel planning only. Zero access to player health, performance, or tactical data.' },
+    ja: { name: '組織スタッフ', sub: 'クラブ運営・管理。ユーザー管理と旅程管理のみ。選手の健康・パフォーマンス・戦術データへのアクセスは一切なし。' },
+    tags_en: ['Admin', 'User Mgmt', 'Travel Edit', 'No Player Data'],
+    tags_ja: ['管理者', 'ユーザー管理', '旅程編集', '選手データなし'],
+  },
+  {
+    id: 'player', color: '#0369a1',
+    en: { name: 'Player', sub: 'Athletes. Self-reporting via auto-popups (wellness, RPE, body weight). Personal stats, own VERT data, nutrition logging, and Tactics access (read + contribute).' },
+    ja: { name: '選手', sub: 'アスリート。自動ポップアップで自己入力（ウェルネス・RPE・体重）。個人データ・自分のVERTデータ・栄養記録・戦術（閲覧＋投稿）が可能。' },
+    tags_en: ['Self-Reporting', 'My Stats', 'Nutrition', 'Tactics', 'VERT (own data)'],
+    tags_ja: ['自己入力', 'マイデータ', '栄養', '戦術', 'VERT（自分のデータ）'],
+  },
+];
+
+const FEATURE_GROUPS = {
+  all:      { en: '🌐 All Roles — Core Navigation',           ja: '🌐 全ロール — 共通ナビゲーション' },
+  calact:   { en: '📅 Calendar & Scheduling — Actions',       ja: '📅 カレンダー・スケジュール — アクション' },
+  tactics:  { en: '🎯 Tactics Board',                         ja: '🎯 戦術ボード' },
+  player:   { en: '💪 Player Self-Reporting (auto-popup)',     ja: '💪 選手自己入力（自動ポップアップ）' },
+  nutrition:{ en: '🥗 Nutrition Dashboard',                   ja: '🥗 栄養ダッシュボード' },
+  coaching: { en: '📊 Coaching & Medical Dashboards',         ja: '📊 コーチング・メディカルダッシュボード' },
+  vert:     { en: '📈 VERT Jump Tracking',                    ja: '📈 VERTジャンプトラッキング' },
+  admin:    { en: '⚙️ Administration',                        ja: '⚙️ 管理機能' },
+  dev:      { en: '🚧 In Development (built, not in nav)',    ja: '🚧 開発中（実装済み、ナビゲーション未追加）' },
+};
+
+// access: true=✓  false=·  'popup'=▲  'unique'=★  'upload'=⬆  'super'=⚑  'view'=👁  'edit'=✎
+const FEATURES = [
+  // ── ALL ──
+  { group:'all', en:'Dashboard (personalised by role)', ja:'ダッシュボード（ロール別カスタマイズ）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Calendar (view events)', ja:'カレンダー（イベント閲覧）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Chat — channels & direct messages', ja:'チャット — チャンネル＋DM',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Tasks (own assigned tasks)', ja:'タスク（自分のタスク）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Announcements / News (view)', ja:'お知らせ／ニュース（閲覧）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Travel itinerary (view)', ja:'旅程管理（閲覧）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Global Search Ctrl+K — events, tasks, announcements, trips, users', ja:'グローバル検索 Ctrl+K — イベント・タスク・お知らせ・旅程・ユーザー',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Notification Bell (calendar changes, task deadlines, birthdays, chat unread count)', ja:'通知ベル（カレンダー変更・タスク期限・誕生日・チャット未読数）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'all', en:'Chat Direct Messages — full names and position shown in sidebar', ja:'チャットDM — サイドバーにフルネームと役職表示',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+
+  // ── CALENDAR ACTIONS ──
+  { group:'calact', en:'Create / edit / delete events', ja:'イベントの作成・編集・削除',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:false },
+    note:{ en:'All staff roles — Players: view only', ja:'スタッフ全ロール — 選手：閲覧のみ' } },
+  { group:'calact', en:'RSVP to events (In / Maybe / Out)', ja:'イベントのRSVP（参加・未定・欠席）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true } },
+  { group:'calact', en:'Create / manage Chat channels', ja:'チャットチャンネルの作成・管理',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:false },
+    note:{ en:'All non-Player roles', ja:'選手以外の全ロール' } },
+  { group:'calact', en:'Post Announcements', ja:'お知らせの投稿',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:false },
+    note:{ en:'All non-Player roles', ja:'選手以外の全ロール' } },
+  { group:'calact', en:'Create / edit Travel plans (flights, hotels, transfers, meals…)', ja:'旅程の作成・編集（フライト・ホテル・移動・食事など）',
+    access:{ gm:true, headcoach:true, athletic:false, therapist:false, coachingstaff:true, orgstaff:true, player:false },
+    note:{ en:'GM · Headcoach · Coaching Staff · Org. Staff — Athletic Trainer & Therapist: view only', ja:'GM・ヘッドコーチ・コーチングスタッフ・組織スタッフ — アスレティックトレーナー・セラピストは閲覧のみ' } },
+
+  { group:'calact', en:'Auto-invite all players & staff to Ball-Practice and Weightlifting events', ja:'ボール練習・ウエイトリフティングに全選手＆スタッフを自動招待',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true },
+    note:{ en:'Invitation added automatically on event creation/category selection', ja:'イベント作成・カテゴリ選択時に自動招待' } },
+  { group:'calact', en:'Players see only invited events in Calendar', ja:'選手は招待されたイベントのみカレンダーに表示',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:'view' },
+    note:{ en:'Staff see all events; Players filtered to events they are a participant in', ja:'スタッフは全イベントを閲覧；選手は参加者として招待されたイベントのみ' } },
+  { group:'calact', en:'Birthday events — yearly calendar entries auto-created for all users via daily cron', ja:'誕生日イベント — 日次cronで全ユーザーの年次カレンダーイベントを自動生成',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:true },
+    note:{ en:'Birthday on the day: auto-announcement for all + Headcoach notification. Vercel cron runs daily at 06:00 UTC. Admin setup button in RoleManager (GM/Headcoach).', ja:'当日：全員向け自動アナウンス＋ヘッドコーチ通知。Vercel cronが毎日06:00 UTCに実行。RoleManagerに管理者設定ボタン（GM・ヘッドコーチ）。' } },
+
+  // ── TACTICS ──
+  { group:'tactics', en:'Access Tactics board (scouting notes, video analysis, roster, server info)', ja:'戦術ボードへのアクセス（スカウト・ビデオ分析・ロスター・サーバー情報）',
+    access:{ gm:true, headcoach:true, athletic:false, therapist:false, coachingstaff:true, orgstaff:false, player:true },
+    note:{ en:'Athletic Trainer & Therapist excluded by design', ja:'アスレティックトレーナー・セラピストは意図的に除外' } },
+  { group:'tactics', en:'Create / edit tactics content (all who have access can contribute)', ja:'戦術コンテンツの作成・編集（アクセス可能な全ロールが投稿可）',
+    access:{ gm:true, headcoach:true, athletic:false, therapist:false, coachingstaff:true, orgstaff:false, player:true } },
+
+  // ── PLAYER ──
+  { group:'player', en:'Wellness Check (daily auto-popup on first login)', ja:'ウェルネスチェック（毎日・初回ログイン時自動表示）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:'popup' } },
+  { group:'player', en:'Session RPE (auto-popup after Ball-Practice or Game starts)', ja:'セッションRPE（ボール練習・試合開始後に自動表示）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:'popup' } },
+  { group:'player', en:'Body Weight Check (auto-popup once per week after Weightlifting)', ja:'体重チェック（ウエイトリフティング後・週1回自動表示）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:'popup' } },
+  { group:'player', en:'My Stats — personal wellness history, RPE history, body weight trend', ja:'マイデータ — 個人ウェルネス・RPE・体重の履歴',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:true } },
+
+  // ── NUTRITION ──
+  { group:'nutrition', en:'Log meals (breakfast / lunch / dinner / snack) + photo upload', ja:'食事記録（朝食・昼食・夕食・スナック）＋写真アップロード',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:false, player:true },
+    note:{ en:'Players log own meals; all coaching staff can also log and view', ja:'選手が自分の食事を記録、スタッフも記録・閲覧可能' } },
+  { group:'nutrition', en:'Coach review — rate meals (🟢 / 🟡 / 🔴) and leave comments', ja:'コーチレビュー — 評価（🟢良好 / 🟡普通 / 🔴要改善）とコメント',
+    access:{ gm:false, headcoach:'edit', athletic:'edit', therapist:false, coachingstaff:false, orgstaff:false, player:false },
+    note:{ en:'Headcoach & Athletic Trainer only (TRAINER_ROLES in code)', ja:'ヘッドコーチ・アスレティックトレーナーのみ（コードのTRAINER_ROLES）' } },
+  { group:'nutrition', en:'Request coach feedback on a meal (player flag)', ja:'食事へのコーチフィードバック依頼（選手がフラグ設定）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:true } },
+
+  // ── COACHING ──
+  { group:'coaching', en:'Wellness Dashboard — team view, low-score alerts (today & yesterday)', ja:'ウェルネスダッシュボード — チームビュー、低スコアアラート（今日・昨日）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:false, player:false },
+    note:{ en:'No Org. Staff access', ja:'組織スタッフはアクセス不可' } },
+  { group:'coaching', en:'Performance / Load Dashboard — ACWR monitoring (28-day rolling)', ja:'パフォーマンス・負荷ダッシュボード — ACWRモニタリング（28日ローリング）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:false, player:false },
+    note:{ en:'No Org. Staff access', ja:'組織スタッフはアクセス不可' } },
+  { group:'coaching', en:'Wellness Dashboard — week view toggle: Heatmap vs per-question Values table', ja:'ウェルネスダッシュボード — 週ビュー切替：ヒートマップ vs 質問別数値テーブル',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:false, player:false },
+    note:{ en:'Toggle buttons 🗓/📊 in week view controls — body pain and nutrition sections always visible', ja:'週ビューコントロールに切替ボタン 🗓/📊 — 痛み・栄養セクションは常時表示' } },
+  { group:'coaching', en:'Medical Dashboard — Availability (photos/jersey/position), Pain & Medical (body map + records), Coach Updates, Treatment Log', ja:'メディカルダッシュボード — 参加可否（写真・背番号・ポジション別）・痛み＆メディカル（ボディマップ＋記録）・コーチへの連絡・治療記録',
+    access:{ gm:'view', headcoach:'view', athletic:'view', therapist:'edit', coachingstaff:'view', orgstaff:false, player:false },
+    note:{ en:'Pain & Medical tab: all SHARED_ROLES see body map + treatment entries (without private notes); Therapist: full edit + private notes. Availability groups players by position with photo.', ja:'痛み＆メディカルタブ：全SHAREDロールがボディマップ＋処置記録を閲覧（プライベートメモ除く）；セラピストは編集＋プライベートメモも閲覧可。参加可否はポジション別グループ＋写真付き。' } },
+  { group:'coaching', en:'Player Availability — grouped by position, with photo, jersey number; quick-set status chips', ja:'選手参加可否 — ポジション別グループ・写真・背番号付き；ステータスチップで即時変更',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:true, player:false },
+    note:{ en:'View: all non-Player roles — Quick-set chips: Therapist only — Edit details: Therapist only', ja:'閲覧：選手以外の全ロール　ステータスチップ：セラピストのみ　詳細編集：セラピストのみ' } },
+
+  // ── VERT ──
+  { group:'vert', en:'VERT Dashboard — full team data (embedded in Performance Dashboard)', ja:'VERTダッシュボード — 全選手データ（パフォーマンスダッシュボード内）',
+    access:{ gm:true, headcoach:true, athletic:true, therapist:true, coachingstaff:true, orgstaff:false, player:false },
+    note:{ en:'Live — accessible via Performance Dashboard', ja:'ライブ — パフォーマンスダッシュボード経由でアクセス可能' } },
+  { group:'vert', en:'VERT Dashboard — own data only (embedded in My Stats)', ja:'VERTダッシュボード — 自分のデータのみ（マイデータ内）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:true },
+    note:{ en:'Live — accessible via My Stats page', ja:'ライブ — マイデータページ経由でアクセス可能' } },
+  { group:'vert', en:'Upload VERT PDFs (Claude vision API parses jump data automatically)', ja:'VERT PDFのアップロード（Claude vision APIが自動解析）',
+    access:{ gm:'upload', headcoach:'upload', athletic:'upload', therapist:false, coachingstaff:'upload', orgstaff:false, player:false },
+    note:{ en:'GM · Headcoach · Athletic Trainer · Coaching Staff', ja:'GM・ヘッドコーチ・アスレティックトレーナー・コーチングスタッフ' } },
+
+  // ── ADMIN ──
+  { group:'admin', en:'User Management — view list, edit profiles, delete users', ja:'ユーザー管理 — 一覧・プロフィール編集・削除',
+    access:{ gm:true, headcoach:true, athletic:false, therapist:false, coachingstaff:false, orgstaff:true, player:false } },
+  { group:'admin', en:'Approve account requests (new user sign-up flow)', ja:'アカウント申請の承認（新規ユーザー登録フロー）',
+    access:{ gm:true, headcoach:true, athletic:false, therapist:false, coachingstaff:false, orgstaff:true, player:false } },
+  { group:'admin', en:'App Usage Statistics — login activity, message counts, task completion rates', ja:'アプリ利用統計 — ログイン履歴・メッセージ数・タスク完了率',
+    access:{ gm:false, headcoach:'unique', athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:false },
+    note:{ en:'Headcoach exclusively — behavioural data kept confidential', ja:'ヘッドコーチ専用 — 行動データは機密扱い' } },
+  { group:'admin', en:'Assign / change roles', ja:'ロールの付与・変更',
+    access:{ gm:'super', headcoach:'super', athletic:'super', therapist:'super', coachingstaff:'super', orgstaff:'super', player:'super' },
+    note:{ en:'is_super_admin DB flag required — no role grants this automatically', ja:'DBの is_super_admin フラグが必要 — どのロールも自動的に取得不可' } },
+
+  // ── IN DEVELOPMENT ──
+  { group:'dev', en:'AI Assistant — translation & communication (EN / DE / JP)', ja:'AIアシスタント — 翻訳・コミュニケーション（英語・ドイツ語・日本語）',
+    access:{ gm:false, headcoach:false, athletic:false, therapist:false, coachingstaff:false, orgstaff:false, player:false },
+    note:{ en:'Component built (AIAssistant.jsx + /api/translate), not yet wired into navigation', ja:'コンポーネント実装済み（AIAssistant.jsx + /api/translate）、ナビゲーション未追加' } },
+];
+
+// ── PLAYER POPUPS ──────────────────────────────────────────────────────────────
+const POPUPS = [
+  {
+    emoji:'💪',
+    en:{ title:'Daily Wellness Check', trigger:'Shown on first login of the day if no submission exists in DB today' },
+    ja:{ title:'毎日のウェルネスチェック', trigger:'当日DBに記録がない場合、初回ログイン時に自動表示' },
+    privacy:{ en:'🔒 Visible to: Headcoach · Athletic Trainer · Therapist · GM · Coaching Staff', ja:'🔒 閲覧可：ヘッドコーチ・アスレティックトレーナー・セラピスト・GM・コーチングスタッフ' },
+    steps:[
+      { en:{ label:'Step 1 — Always shown' }, ja:{ label:'ステップ1 — 常に表示' },
+        questions:[
+          { en:{ q:'Fatigue level today', type:'Scale 1–10' }, ja:{ q:'今日の疲労レベルは？', type:'1〜10スケール' } },
+          { en:{ q:'Sleep quality & duration', type:'Scale 1–10' }, ja:{ q:'睡眠の質と時間は？', type:'1〜10スケール' } },
+          { en:{ q:'Appetite', type:'Scale 1–10' }, ja:{ q:'食欲は？', type:'1〜10スケール' } },
+          { en:{ q:'Any illness symptoms today?', type:'Yes / No' }, ja:{ q:'体調不良の症状はありますか？', type:'はい / いいえ' } },
+          { en:{ q:'Overall body pain level', type:'Scale 1–10', note:'1 = no pain · 10 = worst' }, ja:{ q:'全身の痛みレベルは？', type:'1〜10スケール', note:'1 = 痛みなし · 10 = 最悪' } },
+        ] },
+      { en:{ label:'Step 2 — Conditional', cond:'illness = Yes OR pain ≥ 4' }, ja:{ label:'ステップ2 — 条件付き', cond:'体調不良＝はい または 痛み4以上' },
+        questions:[
+          { en:{ q:'Which illness symptoms?', type:'Multi-select', note:'Headache · Fever · Sore throat · Cough · Runny nose · Nausea · Fatigue / Malaise · Other' }, ja:{ q:'症状を選んでください', type:'複数選択', note:'頭痛・発熱・喉の痛み・咳・鼻水・吐き気・倦怠感・その他' }, cond:'illness' },
+          { en:{ q:'Body temperature (°C)', type:'Number' }, ja:{ q:'体温（°C）', type:'数値入力' }, cond:'illness' },
+          { en:{ q:'Where is your pain or tightness?', type:'Multi-select', note:'Shoulders · Lower Back · Knees · Ankles · Quads · Hamstrings · Other' }, ja:{ q:'痛みや張りがある部位は？', type:'複数選択', note:'肩・腰・膝・足首・大腿四頭筋・ハムストリングス・その他' }, cond:'pain' },
+        ] },
+      { en:{ label:'Step 3 — Conditional', cond:'"Other" body part selected in Step 2' }, ja:{ label:'ステップ3 — 条件付き', cond:'ステップ2で「その他」を選択した場合' },
+        questions:[
+          { en:{ q:'Describe your pain or concern', type:'Free text', note:'Message sent directly to Athletic Trainer & Therapist' }, ja:{ q:'どのような痛みや症状ですか？', type:'自由記述', note:'アスレティックトレーナー・セラピストに直接送信' } },
+        ] },
+    ],
+  },
+  {
+    emoji:'🏋️',
+    en:{ title:'Session RPE', trigger:'Auto-popup after Ball-Practice or Game events start (within last 12 hours). Not shown if already logged for that event.' },
+    ja:{ title:'セッションRPE', trigger:'ボール練習・試合イベント開始後（過去12時間以内）に自動表示。既に記録済みの場合は非表示。' },
+    privacy:{ en:'🔒 Visible to: Headcoach · Athletic Trainer · Therapist · GM · Coaching Staff', ja:'🔒 閲覧可：ヘッドコーチ・アスレティックトレーナー・セラピスト・GM・コーチングスタッフ' },
+    steps:[
+      { en:{ label:'Step 1 — Always shown' }, ja:{ label:'ステップ1 — 常に表示' },
+        questions:[
+          { en:{ q:'How hard was the overall session?', type:'Scale 1–10', note:'1 = very easy · 10 = maximal effort' }, ja:{ q:'セッション全体のきつさは？', type:'1〜10スケール', note:'1 = 非常に楽 · 10 = 最大限の努力' } },
+          { en:{ q:'Session duration (minutes)', type:'Number', note:'Pre-filled from calendar event — player can adjust' }, ja:{ q:'セッション時間（分）', type:'数値入力', note:'カレンダーイベントから自動入力、修正可能' } },
+        ] },
+    ],
+  },
+  {
+    emoji:'⚖️',
+    en:{ title:'Weekly Body Weight', trigger:'Shown once per ISO week, triggered after a Weightlifting event. Skipped if already submitted this week (DB check).' },
+    ja:{ title:'週次体重測定', trigger:'ウエイトリフティングイベント後に週1回表示。当週提出済みの場合はスキップ（DBで確認）。' },
+    privacy:{ en:'🔒 Visible to: Headcoach · Athletic Trainer · Therapist · GM · Coaching Staff', ja:'🔒 閲覧可：ヘッドコーチ・アスレティックトレーナー・セラピスト・GM・コーチングスタッフ' },
+    steps:[
+      { en:{ label:'Step 1 — Always shown' }, ja:{ label:'ステップ1 — 常に表示' },
+        questions:[
+          { en:{ q:'Body weight (kg)', type:'Number', note:'Typically measured by Athletic Trainer or Medical Staff before logging' }, ja:{ q:'体重（kg）', type:'数値入力', note:'通常はアスレティックトレーナーまたは医療スタッフが測定後に入力' } },
+        ] },
+    ],
+  },
+];
+
+// ── DASHBOARD CARDS ────────────────────────────────────────────────────────────
+const DASHBOARD_CARDS = [
+  {
+    title:{ en:'📅 Today\'s Schedule', ja:'📅 今日のスケジュール' },
+    body:{ en:'Shows today\'s events with category colour dots. Inline RSVP buttons (In / Maybe / Out) update the DB optimistically. Conflict detection warns when events overlap.', ja:'今日のイベントをカテゴリカラーで表示。インラインRSVPボタン（参加・未定・欠席）がDBを即時更新。スケジュール衝突を検知・警告。' },
+    features:[
+      { status:'done',    en:'#1 Next Up block — next upcoming event with countdown timer', ja:'#1 次のイベント — カウントダウン付き次イベント表示' },
+      { status:'done',    en:'#5 Inline RSVP buttons on each event row', ja:'#5 各イベント行にインラインRSVPボタン' },
+      { status:'done',    en:'Overlap detection — warns when today\'s events conflict', ja:'スケジュール衝突検知 — 今日のイベントの時間帯重複を警告' },
+      { status:'pending', en:'#7 "This Week" collapsible section — upcomingByDate data computed but render not implemented', ja:'#7 「今週」折りたたみセクション — データ計算済み、UI未実装' },
+    ],
+  },
+  {
+    title:{ en:'🩺 Player Availability', ja:'🩺 選手の参加可否' },
+    body:{ en:'Summary count (Full / Limited / Out) plus alert list for players with issues. Visible to all non-Player roles. Full Medical Dashboard has 4 tabs: Availability, Pain & Medical, Coach Updates, Treatment Log.', ja:'参加可否の集計（全体・制限・不可）とアラートリスト。選手以外の全ロールに表示。メディカルダッシュボードは4タブ：参加可否・痛み＆メディカル・コーチへの連絡・治療記録。' },
+    features:[
+      { status:'done', en:'Live count grouped by availability status', ja:'参加可否ステータスのリアルタイム集計' },
+      { status:'done', en:'Alert list with status and reason per player', ja:'選手ごとのステータス・理由付きアラートリスト' },
+      { status:'done', en:'Availability tab: player photo, jersey number, position grouping', ja:'参加可否タブ：選手写真・背番号・ポジション別グループ' },
+      { status:'done', en:'Pain & Medical tab: body map + treatment records + wellness pain history', ja:'痛み&メディカルタブ：ボディマップ＋処置記録＋ウェルネス痛み履歴' },
+    ],
+  },
+  {
+    title:{ en:'⚠️ Health & Performance Alerts', ja:'⚠️ 健康・パフォーマンスアラート' },
+    body:{ en:'Visible to coaching/medical roles only. Shows wellness progress, ACWR load alerts, and low-score alerts for today and yesterday.', ja:'コーチング・医療ロールのみ表示。ウェルネス提出進捗・ACWRアラート・今日・昨日の低スコアウェルネスアラートを表示。' },
+    features:[
+      { status:'done', en:'#2 Wellness submission progress bar (X / Y players submitted today)', ja:'#2 ウェルネス提出進捗バー（本日提出数 / 総選手数）' },
+      { status:'done', en:'ACWR alerts: Caution (>1.3) and High Risk (>1.5)', ja:'ACWRアラート：注意（>1.3）・リスク高（>1.5）' },
+      { status:'done', en:'Wellness low-score alerts — today & yesterday', ja:'ウェルネス低スコアアラート — 今日・昨日' },
+    ],
+  },
+  {
+    title:{ en:'📊 My Stats mini-card (Player only)', ja:'📊 マイデータミニカード（選手専用）' },
+    body:{ en:'Compact summary shown only to Players at the top of the Dashboard. Full personal history is on the My Stats page.', ja:'ダッシュボード上部に選手のみ表示されるコンパクトサマリー。完全な履歴はマイデータページで確認可能。' },
+    features:[
+      { status:'done', en:'#3 Last RPE score + session name', ja:'#3 最新RPEスコア＋セッション名' },
+      { status:'done', en:'#3 Wellness 7-day average (fatigue / sleep / appetite)', ja:'#3 ウェルネス7日間平均（疲労・睡眠・食欲）' },
+      { status:'done', en:'#3 Next upcoming event', ja:'#3 次の予定イベント' },
+    ],
+  },
+  {
+    title:{ en:'✅ My Tasks', ja:'✅ マイタスク' },
+    body:{ en:'Open tasks assigned to the current user, split into Urgent and regular. Tasks matched by UUID (assigned_to column). Task assignors always see tasks they created. Column shift buttons let users move tasks forward/backward.', ja:'自分に割り当てられた未完了タスクを緊急と通常に分類表示。UUIDで照合（assigned_toカラム）。タスク作成者は作成したタスクを常に確認可能。列移動ボタンでタスクを前後に移動できる。' },
+    features:[
+      { status:'done', en:'#6 Task matching by user UUID — not by initials or display name', ja:'#6 UUIDでタスクを照合 — イニシャルや表示名ではなく' },
+      { status:'done', en:'isStaff role check fixed — GM, Headcoach, Coaching Staff etc. correctly see all team tasks', ja:'isStaffロール判定修正済み — GM・ヘッドコーチ・コーチングスタッフが正しくチーム全タスクを表示' },
+      { status:'done', en:'← Back shift button moves task to previous column; assignors always see tasks they created', ja:'← 戻るシフトボタンで前列に移動；タスク作成者は作成したタスクを常に表示' },
+      { status:'done', en:'Tasks vanish from Dashboard after 3 days or Noticed click — localStorage-tracked', ja:'タスクは3日後またはNoticedクリックでダッシュボードから非表示 — localStorage管理' },
+    ],
+  },
+  {
+    title:{ en:'📢 Announcements', ja:'📢 お知らせ' },
+    body:{ en:'Shows unread announcements from the last 72 hours. Dismiss is saved to the DB (announcement_reads table) and synced across devices.', ja:'過去72時間の未読お知らせを表示。既読はDBに保存（announcement_readsテーブル）しデバイス間で同期。' },
+    features:[
+      { status:'done', en:'#4 DB-backed dismissal via announcement_reads table — device-synced', ja:'#4 announcement_readsテーブルでDB既読管理 — デバイス間同期' },
+    ],
+  },
+  {
+    title:{ en:'⚡ Schedule Change Banners', ja:'⚡ スケジュール変更バナー' },
+    body:{ en:'Dismissable banners when calendar events the user participates in are modified. Fetches the last 48 hours from the notifications table (calendar_change type).', ja:'参加しているカレンダーイベントが変更された場合に表示される非表示可能なバナー。notificationsテーブル（calendar_changeタイプ）から過去48時間分を取得。' },
+    features:[
+      { status:'done', en:'DB-backed calendar change notifications, last 48h', ja:'DBベースのカレンダー変更通知、過去48時間分' },
+    ],
+  },
+];
+
+// ── NOTES ─────────────────────────────────────────────────────────────────────
+const NOTES = [
+  {
+    icon:'🔑', warn:false,
+    en:{ title:'Super-Admin Flag', body:'Role assignment is locked behind <code>profiles.is_super_admin = true</code>, enforced server-side via <code>/api/set-role</code> with token verification. No role — not even GM or Headcoach — grants this automatically. Must be set directly in the database.' },
+    ja:{ title:'スーパー管理者フラグ', body:'ロール変更は <code>profiles.is_super_admin = true</code> フラグが必要で、<code>/api/set-role</code> によりサーバー側でトークン検証されます。GM・ヘッドコーチも含め、どのロールも自動的に取得できません。DB直接設定が必要です。' },
+  },
+  {
+    icon:'📋', warn:false,
+    en:{ title:'Account Lifecycle', body:'<ol style="padding-left:16px;line-height:2"><li>User submits account request → account locked (email unconfirmed).</li><li>GM, Headcoach, or Org. Staff approves in Admin tab → email confirmed server-side via <code>/api/invite</code>.</li><li>Delete via <code>/api/delete-user</code> → cascades to all user data.</li></ol>' },
+    ja:{ title:'アカウントライフサイクル', body:'<ol style="padding-left:16px;line-height:2"><li>ユーザーがアカウント申請 → ロック状態（メール未確認）。</li><li>GM・ヘッドコーチ・組織スタッフが管理タブで承認 → <code>/api/invite</code> でメール確認済みに。</li><li><code>/api/delete-user</code> で削除 → 全データにカスケード削除。</li></ol>' },
+  },
+  {
+    icon:'📡', warn:false,
+    en:{ title:'Email Notifications (Gmail SMTP)', body:'<code>/api/notify-email</code> sends automatic notifications for calendar events starting within 36 hours. Two trigger types: <strong>invite</strong> (new participant added) and <strong>update</strong> (event details changed). Requires <code>GMAIL_USER</code> and <code>GMAIL_APP_PASSWORD</code> env vars.' },
+    ja:{ title:'メール通知（Gmail SMTP）', body:'<code>/api/notify-email</code> が36時間以内に開始するカレンダーイベントの通知を送信します。2つのトリガー：<strong>invite</strong>（新参加者追加）と <strong>update</strong>（イベント変更）。環境変数 <code>GMAIL_USER</code> と <code>GMAIL_APP_PASSWORD</code> が必要。' },
+  },
+  {
+    icon:'🔒', warn:false,
+    en:{ title:'Player Data — Restricted Circle', body:'<p>Sensitive player data (Wellness, Nutrition, Performance/Load, Medical) is limited to coaching/medical staff by design.</p><ul style="margin-top:8px;line-height:2;padding-left:16px"><li><strong>Organisation Staff</strong> has zero access to player health or performance data.</li><li><strong>Athletic Trainer & Therapist</strong> are excluded from Tactics — they stay in their medical/fitness domain.</li><li>VERT data follows the same split: coaches see all in Performance Dashboard; players see only their own in My Stats.</li></ul>' },
+    ja:{ title:'選手データ — 限定アクセス', body:'<p>選手の個人データ（ウェルネス・栄養・負荷・メディカル）はコーチング・医療スタッフのみに制限されています。</p><ul style="margin-top:8px;line-height:2;padding-left:16px"><li><strong>組織スタッフ</strong>は選手の健康・パフォーマンスデータに一切アクセスできません。</li><li><strong>アスレティックトレーナー・セラピスト</strong>は戦術から除外 — 医療・フィットネス領域に専念。</li><li>VERTデータも同様：コーチはパフォーマンスダッシュボードで全選手のデータを、選手はマイデータで自分のデータのみ閲覧。</li></ul>' },
+  },
+
+  {
+    icon:'🛠️', warn:false,
+    en:{ title:'API Routes', body:'<ul style="line-height:2;padding-left:16px"><li><code>/api/chat</code> — Claude AI chat backend</li><li><code>/api/translate</code> — AI translation EN / DE / JP</li><li><code>/api/parse-vert</code> — Claude vision API parses VERT jump PDFs</li><li><code>/api/notify-email</code> — Gmail SMTP calendar notifications</li><li><code>/api/lookup-username</code> — resolve @username → email for DMs</li><li><code>/api/invite</code> — approve new account requests (server-side email confirm)</li><li><code>/api/delete-user</code> — delete user + cascade all data</li><li><code>/api/set-role</code> — change role (super-admin flag required)</li><li><code>/api/calendar</code> — calendar sync</li><li><code>/api/birthday-check</code> — create birthday calendar events for all users; on birthday: post announcement + notify Headcoaches. Runs daily via Vercel cron (06:00 UTC) and can be triggered manually by GM/Headcoach.</li><li><code>/api/request-account</code> — new account request flow</li></ul>' },
+    ja:{ title:'APIルート', body:'<ul style="line-height:2;padding-left:16px"><li><code>/api/chat</code> — Claude AIチャットバックエンド</li><li><code>/api/translate</code> — AI翻訳（英・独・日）</li><li><code>/api/parse-vert</code> — Claude vision APIがVERTジャンプPDFを解析</li><li><code>/api/notify-email</code> — Gmail SMTPカレンダー通知</li><li><code>/api/lookup-username</code> — @usernameのメールアドレス解決（DM用）</li><li><code>/api/invite</code> — 新規アカウント申請承認（サーバー側メール確認）</li><li><code>/api/delete-user</code> — ユーザー削除＋全データカスケード</li><li><code>/api/set-role</code> — ロール変更（スーパー管理者フラグ必要）</li><li><code>/api/calendar</code> — カレンダー同期</li><li><code>/api/birthday-check</code> — 全ユーザーの誕生日カレンダーイベント作成；当日はアナウンス投稿＋ヘッドコーチ通知。Vercel cron（06:00 UTC）で毎日実行。GM/ヘッドコーチが手動実行も可能。</li><li><code>/api/request-account</code> — 新規アカウント申請フロー</li></ul>' },
+  },
+  {
+    icon:'✨', warn:false,
+    en:{ title:'Recent Features — May 2026', body:'<ul style="line-height:2;padding-left:16px"><li><strong>Calendar:</strong> Auto-invite all on Ball-Practice / Weightlifting; Players see only their invited events; Birthday category with yearly recurring events.</li><li><strong>Birthday system:</strong> Daily Vercel cron creates calendar events for all users; on birthday: public announcement + Headcoach notification. Admin setup button in RoleManager.</li><li><strong>Chat DMs:</strong> Sidebar now shows full names and position/role subtitle.</li><li><strong>Notification bell:</strong> Chat unread count merged into badge; task deadline alerts; birthday notifications for Headcoach.</li><li><strong>Tasks:</strong> Column ← back button; isStaff bug fixed (staff roles now see all team tasks); task assignors see their assigned tasks.</li><li><strong>Dashboard:</strong> Tasks auto-hide after 3 days or "Noticed" click; player upload count chips (wellness/RPE/nutrition).</li><li><strong>Wellness:</strong> Week view toggle 🗓/📊 between Heatmap and per-question Values table.</li><li><strong>Medical:</strong> New "Pain & Medical" tab — player list with expandable body map (colour-coded by status) + all treatment records. Availability tab now shows player photo, jersey number, and position grouping.</li><li><strong>Global Select component:</strong> Unified custom dropdown used in Calendar, Tasks, everywhere — no more transparent native selects.</li></ul>' },
+    ja:{ title:'最近の新機能 — 2026年5月', body:'<ul style="line-height:2;padding-left:16px"><li><strong>カレンダー：</strong>ボール練習・ウエイトリフティングに全員自動招待；選手は招待イベントのみ表示；誕生日カテゴリ＆年次繰り返しイベント。</li><li><strong>誕生日システム：</strong>日次Vercel cronで全ユーザーのカレンダーイベント生成；当日：全体アナウンス＋ヘッドコーチ通知。RoleManagerに管理者セットアップボタン。</li><li><strong>チャットDM：</strong>サイドバーにフルネームと役職/ポジション表示。</li><li><strong>通知ベル：</strong>チャット未読数をバッジに統合；タスク期限アラート；誕生日通知（ヘッドコーチ）。</li><li><strong>タスク：</strong>列← 戻るボタン；isStaffバグ修正（スタッフロールが全チームタスクを正しく表示）；タスク作成者は作成タスクを常に表示。</li><li><strong>ダッシュボード：</strong>タスクが3日後またはNoticed（確認）クリックで非表示；選手向けアップロード集計チップ（ウェルネス・RPE・栄養）。</li><li><strong>ウェルネス：</strong>週ビュー切替 🗓/📊（ヒートマップ ↔ 質問別数値テーブル）。</li><li><strong>メディカル：</strong>新「痛み＆メディカル」タブ — ボディマップ付き選手リスト（ステータス別カラーコード）＋処置記録。参加可否タブに写真・背番号・ポジション別グループ追加。</li><li><strong>グローバルSelectコンポーネント：</strong>カレンダー・タスク等で統一カスタムドロップダウンを使用 — 透明なネイティブselectを廃止。</li></ul>' },
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+let currentLang = 'en';
+
+function t(obj) { return obj[currentLang] ?? obj.en ?? ''; }
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.en').forEach(el => el.style.display = lang === 'en' ? '' : 'none');
+  document.querySelectorAll('.ja').forEach(el => el.style.display = lang === 'ja' ? '' : 'none');
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent.trim() === (lang === 'en' ? 'EN' : '日本語'))
+  );
+  renderAll();
+}
+
+function openTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+function accessIcon(val) {
+  if (val === true)     return '<span class="ic-yes">✓</span>';
+  if (val === false)    return '<span class="ic-no">·</span>';
+  if (val === 'popup')  return '<span class="ic-popup">▲</span>';
+  if (val === 'unique') return '<span class="ic-unique">★</span>';
+  if (val === 'upload') return '<span class="ic-upload">⬆</span>';
+  if (val === 'super')  return '<span class="ic-super">⚑</span>';
+  if (val === 'view')   return '<span class="ic-view">👁</span>';
+  if (val === 'edit')   return '<span class="ic-edit">✎</span>';
+  return '<span class="ic-no">·</span>';
+}
+
+function renderRoles() {
+  const grid = document.getElementById('roles-grid');
+  grid.innerHTML = ROLES.map(r => {
+    const d = t(r);
+    const tags = currentLang === 'ja' ? r.tags_ja : r.tags_en;
+    return `<div class="role-card">
+      <div class="role-card-top">
+        <span class="role-dot" style="background:${r.color}"></span>
+        <span class="role-name" style="color:${r.color}">${d.name}</span>
+      </div>
+      <div class="role-sub">${d.sub}</div>
+      <div class="role-tags">${(tags||[]).map(tg => `<span class="role-tag">${tg}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMatrix() {
+  const thead = document.querySelector('#matrix-table thead tr');
+  while (thead.children.length > 1) thead.removeChild(thead.lastChild);
+  ROLES.forEach(r => {
+    const th = document.createElement('th');
+    th.innerHTML = `<span style="color:${r.color}">${t(r).name}</span>`;
+    thead.appendChild(th);
+  });
+
+  const tbody = document.getElementById('matrix-body');
+  let lastGroup = null;
+  tbody.innerHTML = '';
+  FEATURES.forEach(f => {
+    if (f.group !== lastGroup) {
+      lastGroup = f.group;
+      const g = FEATURE_GROUPS[f.group];
+      const tr = document.createElement('tr');
+      tr.className = 'group-row';
+      const td = document.createElement('td');
+      td.colSpan = ROLES.length + 1;
+      td.textContent = g ? t(g) : f.group;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
+    const tr = document.createElement('tr');
+    const label = currentLang === 'ja' ? f.ja : f.en;
+    const note = f.note ? `<div class="td-note">${t(f.note)}</div>` : '';
+    let html = `<td><div>${label}</div>${note}</td>`;
+    ROLES.forEach(r => {
+      html += `<td>${accessIcon((f.access||{})[r.id])}</td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderPopups() {
+  document.getElementById('popup-grid').innerHTML = POPUPS.map(p => {
+    const d = t(p);
+    const stepsHtml = p.steps.map(s => {
+      const sd = t(s);
+      const condHtml = sd.cond ? `<span class="popup-cond">${sd.cond}</span>` : '';
+      const qHtml = s.questions.map(q => {
+        const qd = t(q);
+        return `<div class="popup-q">
+          <span class="popup-q-icon">›</span>
+          <span class="popup-q-text">${qd.q}${qd.note ? `<div class="popup-q-note">${qd.note}</div>` : ''}</span>
+          <span class="popup-q-type">${qd.type}</span>
+        </div>`;
+      }).join('');
+      return `<div class="popup-step">
+        <div class="popup-step-label">${sd.label}${condHtml}</div>
+        ${qHtml}
+      </div>`;
+    }).join('');
+    return `<div class="popup-card">
+      <div class="popup-card-head">
+        <span class="pe">${p.emoji}</span>${d.title}
+        <div class="popup-trigger">⏱ ${d.trigger}</div>
+        <div class="popup-privacy">${t(p.privacy)}</div>
+      </div>
+      <div class="popup-card-body">${stepsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashboard() {
+  const statusMap = {
+    done:    { cls:'done',    icon:'✓', en:'Done',    ja:'実装済' },
+    partial: { cls:'partial', icon:'~', en:'Partial', ja:'一部実装' },
+    pending: { cls:'pending', icon:'○', en:'Pending', ja:'未実装' },
+    bug:     { cls:'bug',     icon:'!', en:'Bug',     ja:'バグ' },
+  };
+  document.getElementById('dashboard-grid').innerHTML = DASHBOARD_CARDS.map(c => {
+    const features = (c.features||[]).map(f => {
+      const s = statusMap[f.status] || statusMap.pending;
+      const label = currentLang === 'ja' ? f.ja : f.en;
+      return `<li>
+        <span class="dash-status ${s.cls}">[${s.icon}]</span>
+        <span>${label}</span>
+      </li>`;
+    }).join('');
+    return `<div class="dash-card">
+      <div class="dash-card-title">${t(c.title)}</div>
+      <div class="dash-card-body">${t(c.body)}</div>
+      ${features ? `<ul class="dash-feature-list">${features}</ul>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderNotes() {
+  document.getElementById('notes-grid').innerHTML = NOTES.map(n => {
+    const d = t(n);
+    return `<div class="note-card${n.warn ? ' warn' : ''}">
+      <div class="note-card-head"><span>${n.icon}</span> ${d.title}</div>
+      <div class="note-card-body">${d.body}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderRoles();
+  renderMatrix();
+  renderPopups();
+  renderDashboard();
+  renderNotes();
+}
+
+renderAll();
+</script>
+</body>
+</html>
