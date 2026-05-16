@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendPush } from '@/lib/push';
 import { timeAgo } from '@/lib/date';
 import { useToast } from '@/lib/toast';
 import { useTranslated } from '@/lib/translate';
@@ -238,7 +239,17 @@ export default function Announcements({ lang = 'en', currentUserName = 'Team Mem
           nav_target: 'feed',
           ref_id:     ann?.id ?? null,
         }));
-      if (notifs.length) await supabase.from('notifications').insert(notifs);
+      if (notifs.length) {
+        await supabase.from('notifications').insert(notifs);
+        const recipientIds = notifs.map(n => n.user_id);
+        sendPush(recipientIds, {
+          title:   `📢 ${title}`,
+          body:    content?.slice(0, 80) || '',
+          url:     '/feed',
+          tag:     `ann-${ann?.id}`,
+          prefKey: 'announcements',
+        });
+      }
     }
   }, [currentUserName]);
 

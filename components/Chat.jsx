@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendPush } from '@/lib/push';
 import { translate } from '@/lib/translate';
 import { SkeletonList } from './Skeleton';
 import styles from './Chat.module.css';
@@ -646,7 +647,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       });
     }
 
-    // Send notification to recipient for DMs
+    // Send notification + push to recipient for DMs
     if (!insertError && isDM(activeChannel)) {
       const inner = activeChannel.slice(3);
       const sep = inner.indexOf('_');
@@ -660,6 +661,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         body:       text,
         nav_target: 'chat',
       }).then();
+      sendPush([recipientId], {
+        title:   currentUser.name,
+        body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+        url:     '/chat',
+        tag:     `dm-${activeChannel}`,
+        prefKey: 'chat_dm',
+      });
     }
 
     if (insertError) {

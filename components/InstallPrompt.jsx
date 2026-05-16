@@ -1,17 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import styles from './InstallPrompt.module.css';
 
+const PREFS = [
+  { key: 'chat_dm',       en: 'Direct messages',        ja: 'ダイレクトメッセージ' },
+  { key: 'calendar',      en: 'Calendar changes',        ja: 'カレンダー変更・追加' },
+  { key: 'tasks',         en: 'Task assignments',        ja: 'タスクの割り当て' },
+  { key: 'announcements', en: 'Announcements',           ja: 'お知らせ' },
+  { key: 'birthday',      en: 'Birthdays',               ja: '誕生日' },
+];
+
 export default function InstallPrompt({ userId, lang }) {
-  const [installable,    setInstallable]    = useState(false); // Android/desktop deferred prompt
+  const [installable,    setInstallable]    = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS,          setIsIOS]          = useState(false);
   const [isStandalone,   setIsStandalone]   = useState(false);
-  const [notifState,     setNotifState]     = useState('default'); // 'default' | 'granted' | 'denied'
+  const [notifState,     setNotifState]     = useState('default');
   const [subscribing,    setSubscribing]    = useState(false);
   const [showIOSGuide,   setShowIOSGuide]   = useState(false);
   const [subError,       setSubError]       = useState(null);
+  const [prefs,          setPrefs]          = useState(null); // null = loading
+  const [savingPrefs,    setSavingPrefs]    = useState(false);
 
   useEffect(() => {
     setIsIOS(/iphone|ipad|ipod/i.test(navigator.userAgent));
@@ -22,6 +33,13 @@ export default function InstallPrompt({ userId, lang }) {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Load prefs from Supabase
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from('profiles').select('notif_prefs').eq('id', userId).single()
+      .then(({ data }) => setPrefs(data?.notif_prefs ?? {}));
+  }, [userId]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -50,7 +68,6 @@ export default function InstallPrompt({ userId, lang }) {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
       });
-
       await fetch('/api/push-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,9 +99,17 @@ export default function InstallPrompt({ userId, lang }) {
     setSubscribing(false);
   };
 
+  const togglePref = async (key) => {
+    const current = prefs?.[key] ?? true;
+    const updated  = { ...prefs, [key]: !current };
+    setPrefs(updated);
+    setSavingPrefs(true);
+    await supabase.from('profiles').update({ notif_prefs: updated }).eq('id', userId);
+    setSavingPrefs(false);
+  };
+
   const notifSupported = typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
-  // iOS push is only supported in standalone (home screen) mode on iOS 16.4+
-  const iosCanPush = isIOS && isStandalone;
+  const isGranted      = notifState === 'granted';
 
   return (
     <div className={styles.wrap}>
@@ -110,9 +135,7 @@ export default function InstallPrompt({ userId, lang }) {
                 : 'Open in Safari, tap the Share button, then "Add to Home Screen".'}
             </p>
             <button className={styles.btn} onClick={() => setShowIOSGuide(v => !v)}>
-              {showIOSGuide
-                ? (lang === 'ja' ? '閉じる' : 'Close guide')
-                : (lang === 'ja' ? '手順を見る' : 'Show me how')}
+              {showIOSGuide ? (lang === 'ja' ? '閉じる' : 'Close guide') : (lang === 'ja' ? '手順を見る' : 'Show me how')}
             </button>
             {showIOSGuide && (
               <div className={styles.iosGuide}>
@@ -130,13 +153,13 @@ export default function InstallPrompt({ userId, lang }) {
         ) : (
           <p className={styles.hint}>
             {lang === 'ja'
-              ? 'このブラウザはインストールプロンプトをサポートしていないか、すでにインストール済みです。'
-              : 'Your browser doesn\'t support install prompts, or the app is already installed.'}
+              ? 'このブラウザはインストールをサポートしていないか、すでにインストール済みです。'
+              : 'Already installed or browser doesn\'t support install prompts.'}
           </p>
         )}
       </div>
 
-      {/* ── Notifications section ── */}
+      {/* ── Notifications toggle ── */}
       <div className={styles.section}>
         <div className={styles.sectionLabel}>
           🔔 {lang === 'ja' ? 'プッシュ通知' : 'Push notifications'}
@@ -145,46 +168,57 @@ export default function InstallPrompt({ userId, lang }) {
         {isIOS && !isStandalone ? (
           <p className={styles.hint}>
             {lang === 'ja'
-              ? 'iOSでプッシュ通知を受け取るには、まずホーム画面に追加してください。'
-              : 'On iPhone, add the app to your Home Screen first to enable push notifications.'}
+              ? 'iOSでは、まずホーム画面に追加してからアプリを開いてください。'
+              : 'On iPhone, add the app to your Home Screen first, then open it from there.'}
           </p>
         ) : !notifSupported ? (
-          <p className={styles.hint}>
-            {lang === 'ja' ? 'このブラウザは通知をサポートしていません。' : 'Notifications not supported in this browser.'}
-          </p>
-        ) : notifState === 'granted' ? (
-          <div>
-            <div className={styles.statusRow}>
-              <span className={styles.checkIcon}>✓</span>
-              <span className={styles.statusText}>
-                {lang === 'ja' ? '通知が有効です。' : 'Notifications are enabled.'}
-              </span>
-            </div>
-            <button className={styles.btnSecondary} onClick={handleUnsubscribe} disabled={subscribing}>
-              {subscribing ? '…' : (lang === 'ja' ? '通知を無効にする' : 'Disable notifications')}
+          <p className={styles.hint}>{lang === 'ja' ? 'このブラウザは通知をサポートしていません。' : 'Notifications not supported in this browser.'}</p>
+        ) : isGranted ? (
+          <div className={styles.statusRow}>
+            <span className={styles.checkIcon}>✓</span>
+            <span className={styles.statusText}>{lang === 'ja' ? '通知が有効です。' : 'Notifications enabled.'}</span>
+            <button className={styles.btnTiny} onClick={handleUnsubscribe} disabled={subscribing} style={{ marginLeft: 'auto' }}>
+              {subscribing ? '…' : (lang === 'ja' ? '無効' : 'Disable')}
             </button>
           </div>
         ) : notifState === 'denied' ? (
           <p className={styles.hint} style={{ color: '#b91c1c' }}>
-            {lang === 'ja'
-              ? '通知がブロックされています。ブラウザの設定から許可してください。'
-              : 'Notifications are blocked. Please allow them in your browser settings.'}
+            {lang === 'ja' ? '通知がブロックされています。ブラウザ設定から許可してください。' : 'Blocked in browser settings — allow notifications there first.'}
           </p>
         ) : (
-          <div>
+          <>
             <p className={styles.hint}>
-              {lang === 'ja'
-                ? 'チャット、カレンダー変更、タスクなどのリアルタイム通知を受け取れます。'
-                : 'Get notified about chat messages, calendar changes, tasks, and more — even when the app is closed.'}
+              {lang === 'ja' ? 'チャット、カレンダー、タスクなどの通知をリアルタイムで受け取れます。' : 'Get notified about chats, calendar changes, tasks and more — even when the app is closed.'}
             </p>
             <button className={styles.btn} onClick={handleNotifications} disabled={subscribing}>
               {subscribing ? '…' : (lang === 'ja' ? '通知を有効にする' : 'Enable notifications')}
             </button>
-          </div>
+          </>
         )}
 
         {subError && <p className={styles.error}>{subError}</p>}
       </div>
+
+      {/* ── Notification preferences (only when granted) ── */}
+      {isGranted && prefs !== null && (
+        <div className={styles.section}>
+          <div className={styles.sectionLabel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{lang === 'ja' ? '通知の種類' : 'What to notify me about'}</span>
+            {savingPrefs && <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 400 }}>saving…</span>}
+          </div>
+          {PREFS.map(p => {
+            const enabled = prefs[p.key] ?? true;
+            return (
+              <button key={p.key} className={styles.prefRow} onClick={() => togglePref(p.key)}>
+                <span className={styles.prefLabel}>{lang === 'ja' ? p.ja : p.en}</span>
+                <span className={`${styles.toggle} ${enabled ? styles.toggleOn : styles.toggleOff}`}>
+                  <span className={styles.toggleKnob} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );

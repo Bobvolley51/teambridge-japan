@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendPush } from '@/lib/push';
 import { useToast } from '@/lib/toast';
 import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock } from './Skeleton';
@@ -411,6 +412,15 @@ export default function Tasks({ lang = 'en', profile }) {
         return;
       }
       toast(lang === 'ja' ? 'タスクを作成しました' : 'Task created', 'success');
+      if (payload.assigned_to) {
+        sendPush([payload.assigned_to], {
+          title:   lang === 'ja' ? '新しいタスクが割り当てられました' : 'New task assigned',
+          body:    payload.title,
+          url:     '/tasks',
+          tag:     'task-assigned',
+          prefKey: 'tasks',
+        });
+      }
     }
     setEditingTask(null);
   }, [profiles, lang, toast]);

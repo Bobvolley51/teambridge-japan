@@ -88,5 +88,18 @@ export async function POST(req) {
 
   const failed = results.filter(r => r.status === 'rejected');
   const errors = failed.map(r => r.reason?.message ?? String(r.reason));
+
+  // Fire-and-forget push notification to participants
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+  if (appUrl) {
+    const pushTitle = isUpdate ? `⚠ Schedule changed: ${eventTitle}` : `📅 Added to event: ${eventTitle}`;
+    const pushBody  = `${fmtDate}${eventLocation ? ` · ${eventLocation}` : ''}`;
+    fetch(`${appUrl}/api/push`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ userIds: participantIds, title: pushTitle, body: pushBody, url: '/calendar', tag: 'calendar-notif', prefKey: 'calendar' }),
+    }).catch(() => {});
+  }
+
   return Response.json({ ok: true, sent: emails.length - failed.length, failed: failed.length, errors });
 }

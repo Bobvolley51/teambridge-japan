@@ -145,6 +145,16 @@ export async function GET(request) {
         author_name: 'TeamBridge',
       });
       log.push({ person: name, action: 'announcement_created' });
+
+      // Push birthday notification to everyone
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+      if (appUrl && allProfileIds.length) {
+        fetch(`${appUrl}/api/push`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ userIds: allProfileIds, title: annTitle, body: annContent.slice(0, 80), url: '/feed', tag: `birthday-${person.id}`, prefKey: 'birthday' }),
+        }).catch(() => {});
+      }
     }
 
     // Headcoach notifications — one per person per day
