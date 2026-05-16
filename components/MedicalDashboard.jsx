@@ -28,6 +28,29 @@ const INJURY_TYPES = [
   'Overuse', 'Post-surgery', 'Illness', 'Fatigue', 'Other',
 ];
 
+// Body regions: maps wellness_body_pain keys + medical_records body_part strings to display
+const BODY_REGIONS = [
+  { id: 'shoulder_l', side: 'left',   en: 'L Shoulder', ja: '左肩',         medPart: 'Shoulder L', wellnessKey: 'shoulder_l' },
+  { id: 'shoulder_r', side: 'right',  en: 'R Shoulder', ja: '右肩',         medPart: 'Shoulder R', wellnessKey: 'shoulder_r' },
+  { id: 'elbow_l',    side: 'left',   en: 'L Elbow',    ja: '左肘',         medPart: 'Elbow L',    wellnessKey: null },
+  { id: 'elbow_r',    side: 'right',  en: 'R Elbow',    ja: '右肘',         medPart: 'Elbow R',    wellnessKey: null },
+  { id: 'wrist_l',    side: 'left',   en: 'L Wrist',    ja: '左手首',       medPart: 'Wrist L',    wellnessKey: null },
+  { id: 'wrist_r',    side: 'right',  en: 'R Wrist',    ja: '右手首',       medPart: 'Wrist R',    wellnessKey: null },
+  { id: 'lower_back', side: 'center', en: 'Lower Back', ja: '腰',           medPart: 'Lower Back', wellnessKey: 'lower_back' },
+  { id: 'hip_l',      side: 'left',   en: 'L Hip',      ja: '左股関節',     medPart: 'Hip L',      wellnessKey: null },
+  { id: 'hip_r',      side: 'right',  en: 'R Hip',      ja: '右股関節',     medPart: 'Hip R',      wellnessKey: null },
+  { id: 'quad_l',     side: 'left',   en: 'L Quad',     ja: '左大腿',       medPart: 'Quad L',     wellnessKey: 'quad_l' },
+  { id: 'quad_r',     side: 'right',  en: 'R Quad',     ja: '右大腿',       medPart: 'Quad R',     wellnessKey: 'quad_r' },
+  { id: 'ham_l',      side: 'left',   en: 'L Hamstring',ja: '左ハム',       medPart: 'Hamstring L',wellnessKey: 'hamstring_l' },
+  { id: 'ham_r',      side: 'right',  en: 'R Hamstring',ja: '右ハム',       medPart: 'Hamstring R',wellnessKey: 'hamstring_r' },
+  { id: 'knee_l',     side: 'left',   en: 'L Knee',     ja: '左膝',         medPart: 'Knee L',     wellnessKey: 'knee_l' },
+  { id: 'knee_r',     side: 'right',  en: 'R Knee',     ja: '右膝',         medPart: 'Knee R',     wellnessKey: 'knee_r' },
+  { id: 'calf_l',     side: 'left',   en: 'L Calf',     ja: '左ふくらはぎ', medPart: 'Calf L',     wellnessKey: null },
+  { id: 'calf_r',     side: 'right',  en: 'R Calf',     ja: '右ふくらはぎ', medPart: 'Calf R',     wellnessKey: null },
+  { id: 'ankle_l',    side: 'left',   en: 'L Ankle',    ja: '左足首',       medPart: 'Ankle L',    wellnessKey: 'ankle_l' },
+  { id: 'ankle_r',    side: 'right',  en: 'R Ankle',    ja: '右足首',       medPart: 'Ankle R',    wellnessKey: 'ankle_r' },
+];
+
 function pad(n) { return String(n).padStart(2, '0'); }
 function fmtDate(ds) {
   const d = new Date(ds + 'T00:00:00');
@@ -292,6 +315,190 @@ function CommForm({ lang, currentUserName, onSave, onClose, prefill }) {
   );
 }
 
+// ── Body Map ──────────────────────────────────────────────────────────────────
+
+function BodyMap({ medStatusMap, wellnessCounts, lang }) {
+  // medStatusMap: { medPart: 'active'|'monitoring' }
+  // wellnessCounts: { wellnessKey: count }
+
+  function regionStatus(region) {
+    if (medStatusMap[region.medPart] === 'active')      return 'active';
+    if (medStatusMap[region.medPart] === 'monitoring')  return 'monitoring';
+    if (region.wellnessKey && wellnessCounts[region.wellnessKey] > 0) return 'pain';
+    return 'clear';
+  }
+
+  const STATUS_STYLE = {
+    active:     { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+    monitoring: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+    pain:       { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' },
+    clear:      { bg: '#f9fafb', color: '#d1d5db', border: '#e5e7eb' },
+  };
+
+  // Group regions into rows for a body-shaped grid
+  const rows = [];
+  const leftRegions  = BODY_REGIONS.filter(r => r.side === 'left');
+  const rightRegions = BODY_REGIONS.filter(r => r.side === 'right');
+  const centerRegions = BODY_REGIONS.filter(r => r.side === 'center');
+  const maxRows = Math.max(leftRegions.length, rightRegions.length);
+
+  for (let i = 0; i < maxRows; i++) {
+    const left   = leftRegions[i];
+    const right  = rightRegions[i];
+    rows.push({ left, right });
+  }
+
+  return (
+    <div className={styles.bodyMapWrap}>
+      <div className={styles.bodyMapGrid}>
+        {rows.map((row, i) => {
+          // Check if a center region should appear between this row and next (after row 2 = wrist row → lower back)
+          const insertCenter = centerRegions.find(c => c.id === 'lower_back') && i === 2;
+          return (
+            <div key={i}>
+              <div className={styles.bodyMapRow}>
+                {[row.left, row.right].map(region => {
+                  if (!region) return null;
+                  const st = regionStatus(region);
+                  const s  = STATUS_STYLE[st];
+                  const cnt = region.wellnessKey ? wellnessCounts[region.wellnessKey] : 0;
+                  return (
+                    <div key={region.id} className={styles.bodyRegion}
+                      style={{ background: s.bg, color: s.color, borderColor: s.border }}
+                      title={cnt > 0 ? `${lang === 'ja' ? region.ja : region.en}: ${cnt}x` : undefined}>
+                      {lang === 'ja' ? region.ja : region.en}
+                      {cnt > 1 && <span className={styles.bodyRegionCount}>{cnt}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              {insertCenter && (() => {
+                const cr = centerRegions[0];
+                const st = regionStatus(cr);
+                const s  = STATUS_STYLE[st];
+                return (
+                  <div className={`${styles.bodyMapRow} ${styles.bodyMapRowCenter}`}>
+                    <div className={`${styles.bodyRegion} ${styles.bodyRegionCenter}`}
+                      style={{ background: s.bg, color: s.color, borderColor: s.border }}>
+                      {lang === 'ja' ? cr.ja : cr.en}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.bodyMapLegend}>
+        <span style={{ color: '#b91c1c' }}>● {lang === 'ja' ? '治療中' : 'Active'}</span>
+        <span style={{ color: '#92400e' }}>● {lang === 'ja' ? '経過観察' : 'Monitor'}</span>
+        <span style={{ color: '#c2410c' }}>● {lang === 'ja' ? '痛み報告' : 'Pain'}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Player Pain Card ──────────────────────────────────────────────────────────
+
+function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTherapist, onEditRecord, onPushRecord }) {
+  const [open, setOpen] = useState(false);
+
+  const avStatus = availability?.status ?? 'full';
+  const avCfg = STATUS_CFG[avStatus] ?? STATUS_CFG.full;
+
+  const activeRecs    = medRecords.filter(r => r.status === 'active');
+  const monitorRecs   = medRecords.filter(r => r.status === 'monitoring');
+  const hasConcern    = activeRecs.length > 0 || monitorRecs.length > 0 || painRows.length > 0;
+
+  // Build maps for BodyMap
+  const medStatusMap = {};
+  for (const r of medRecords) {
+    if (r.body_part && (r.status === 'active' || r.status === 'monitoring')) {
+      // Keep worst status (active > monitoring)
+      if (!medStatusMap[r.body_part] || r.status === 'active') {
+        medStatusMap[r.body_part] = r.status;
+      }
+    }
+  }
+  const wellnessCounts = {};
+  for (const r of painRows) {
+    wellnessCounts[r.body_part] = (wellnessCounts[r.body_part] ?? 0) + 1;
+  }
+
+  if (!hasConcern) return null; // Only show players with something to report
+
+  return (
+    <div className={`${styles.painCard} ${activeRecs.length > 0 ? styles.painCardActive : monitorRecs.length > 0 ? styles.painCardMonitor : styles.painCardPain}`}>
+      <button className={styles.painCardHead} onClick={() => setOpen(o => !o)}>
+        <div className={styles.painCardLeft}>
+          <span className={styles.painCardName}>{player.player_name}</span>
+          <span className={styles.avSmallBadge} style={{ color: avCfg.color, background: avCfg.bg, borderColor: avCfg.border }}>
+            {lang === 'ja' ? avCfg.ja : avCfg.en}
+          </span>
+        </div>
+        <div className={styles.painCardMeta}>
+          {activeRecs.length > 0 && (
+            <span className={styles.painMetaBadge} style={{ background: '#fee2e2', color: '#b91c1c' }}>
+              {activeRecs.length} {lang === 'ja' ? '治療中' : 'active'}
+            </span>
+          )}
+          {monitorRecs.length > 0 && (
+            <span className={styles.painMetaBadge} style={{ background: '#fef3c7', color: '#92400e' }}>
+              {monitorRecs.length} {lang === 'ja' ? '観察' : 'monitor'}
+            </span>
+          )}
+          {painRows.length > 0 && (
+            <span className={styles.painMetaBadge} style={{ background: '#fff7ed', color: '#c2410c' }}>
+              {painRows.length}× {lang === 'ja' ? '痛み報告' : 'pain reports'}
+            </span>
+          )}
+          <span className={styles.painChevron}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className={styles.painCardBody}>
+          <div className={styles.painCardContent}>
+            <BodyMap medStatusMap={medStatusMap} wellnessCounts={wellnessCounts} lang={lang} />
+            <div className={styles.painRecordsSection}>
+              {medRecords.length === 0 && painRows.length > 0 && (
+                <div className={styles.painOnlyNote}>
+                  {lang === 'ja' ? '処置記録なし。ウェルネスによる痛み報告のみ。' : 'No treatment records. Wellness pain reports only.'}
+                </div>
+              )}
+              {medRecords.map(r => {
+                const cfg = REC_STATUS_CFG[r.status] ?? REC_STATUS_CFG.active;
+                return (
+                  <div key={r.id} className={styles.painRecordItem}>
+                    <div className={styles.painRecordHead}>
+                      <span className={styles.painRecordDate}>{r.record_date}</span>
+                      <span className={styles.painRecordStatus} style={{ color: cfg.color }}>
+                        {lang === 'ja' ? cfg.ja : cfg.en}
+                      </span>
+                      {r.body_part && <span className={styles.painRecordPart}>{r.body_part}</span>}
+                      {r.injury_type && <span className={styles.painRecordType}>{r.injury_type}</span>}
+                      {isTherapist && (
+                        <div className={styles.painRecordActions}>
+                          <button className={styles.editBtn} onClick={() => onEditRecord(r)} title={lang === 'ja' ? '編集' : 'Edit'}>✏️</button>
+                          <button className={styles.pushBtn} onClick={() => onPushRecord(r)} title={lang === 'ja' ? 'コーチに共有' : 'Push to coaches'}>📢</button>
+                        </div>
+                      )}
+                    </div>
+                    {r.treatment && <div className={styles.painRecordTreatment}>{r.treatment}</div>}
+                    {isTherapist && r.private_notes && (
+                      <div className={styles.painRecordPrivate}>🔒 {r.private_notes}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const THERAPIST_ROLES = ['Therapist'];
@@ -307,23 +514,29 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   const [availability, setAvailability] = useState([]);
   const [records,      setRecords]      = useState([]);
   const [comms,        setComms]        = useState([]);
+  const [painData,     setPainData]     = useState([]);
   const [loading,      setLoading]      = useState(true);
 
-  const [avModal,      setAvModal]      = useState(null);  // player obj
-  const [recForm,      setRecForm]      = useState(null);  // record obj or 'new'
-  const [commForm,     setCommForm]     = useState(false);
-  const [commPrefill,  setCommPrefill]  = useState(null);  // prefill obj from record push
+  const [avModal,        setAvModal]        = useState(null);
+  const [recForm,        setRecForm]        = useState(null);
+  const [commForm,       setCommForm]       = useState(false);
+  const [commPrefill,    setCommPrefill]    = useState(null);
 
   const [recFilter,    setRecFilter]    = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: profData }, { data: avData }, { data: commData }] = await Promise.all([
+    const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+    const thirtyAgoStr = `${d30.getFullYear()}-${pad(d30.getMonth()+1)}-${pad(d30.getDate())}`;
+
+    const [{ data: profData }, { data: avData }, { data: commData }, { data: painRows }] = await Promise.all([
       supabase.from('profiles').select('id, display_name, role').eq('role', 'Player').order('display_name'),
       supabase.from('player_availability').select('*').order('player_name'),
       supabase.from('medical_comms').select('*').order('created_at', { ascending: false }).limit(30),
+      supabase.from('wellness_body_pain').select('user_name, body_part, response_date').gte('response_date', thirtyAgoStr),
     ]);
     setPlayers(profData ?? []);
+    setPainData(painRows ?? []);
 
     // Merge players with availability — show every player even if no row yet
     const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
@@ -333,14 +546,15 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     setAvailability(merged);
     setComms(commData ?? []);
 
-    if (isTherapist) {
-      const { data: recData } = await supabase
-        .from('medical_records')
-        .select('*')
-        .order('record_date', { ascending: false })
-        .limit(200);
-      setRecords(recData ?? []);
-    }
+    // Load medical records for all SHARED_ROLES; therapists get private_notes too
+    const recCols = isTherapist ? '*' : 'id, player_name, player_id, record_date, body_part, injury_type, treatment, status, created_by';
+    const { data: recData } = await supabase
+      .from('medical_records')
+      .select(recCols)
+      .order('record_date', { ascending: false })
+      .limit(200);
+    setRecords(recData ?? []);
+
     setLoading(false);
   }, [isTherapist]);
 
@@ -402,6 +616,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
 
   const tabs = [
     { id: 'availability', en: 'Availability',    ja: '出場可否'          },
+    { id: 'pain',         en: 'Pain & Medical',  ja: '痛み・メディカル'  },
     { id: 'updates',      en: 'Coach Updates',   ja: 'コーチへの連絡'    },
     ...(isTherapist ? [{ id: 'records', en: 'Treatment Log', ja: '治療記録' }] : []),
   ];
@@ -468,8 +683,98 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
               )}
             </div>
 
+          /* ── PAIN & MEDICAL ── */
+          ) : tab === 'pain' ? (() => {
+            // Build per-player data
+            const avMap = Object.fromEntries(availability.map(a => [a.player_name, a]));
+            const painByPlayer = {};
+            for (const r of painData) {
+              if (!painByPlayer[r.user_name]) painByPlayer[r.user_name] = [];
+              painByPlayer[r.user_name].push(r);
+            }
+            const recsByPlayer = {};
+            for (const r of records) {
+              if (!recsByPlayer[r.player_name]) recsByPlayer[r.player_name] = [];
+              recsByPlayer[r.player_name].push(r);
+            }
+
+            // All unique player names across availability, pain data, records
+            const allNames = [...new Set([
+              ...availability.map(a => a.player_name),
+              ...Object.keys(painByPlayer),
+              ...Object.keys(recsByPlayer),
+            ])].sort();
+
+            // Sort: active records first, then monitoring, then pain, then alphabetical
+            const sorted = allNames.sort((a, b) => {
+              const aActive = (recsByPlayer[a] ?? []).some(r => r.status === 'active');
+              const bActive = (recsByPlayer[b] ?? []).some(r => r.status === 'active');
+              if (aActive !== bActive) return aActive ? -1 : 1;
+              const aMon = (recsByPlayer[a] ?? []).some(r => r.status === 'monitoring');
+              const bMon = (recsByPlayer[b] ?? []).some(r => r.status === 'monitoring');
+              if (aMon !== bMon) return aMon ? -1 : 1;
+              const aPain = (painByPlayer[a] ?? []).length;
+              const bPain = (painByPlayer[b] ?? []).length;
+              return bPain - aPain || a.localeCompare(b);
+            });
+
+            const concerned = sorted.filter(name =>
+              (recsByPlayer[name] ?? []).some(r => r.status === 'active' || r.status === 'monitoring') ||
+              (painByPlayer[name] ?? []).length > 0
+            );
+
+            return (
+              <div>
+                {isTherapist && (
+                  <div className={styles.addBar}>
+                    <button className={styles.btnAdd} onClick={() => setRecForm('new')}>
+                      + {lang === 'ja' ? '新規記録' : 'New record'}
+                    </button>
+                  </div>
+                )}
+                {concerned.length === 0 ? (
+                  <div className={styles.empty}>
+                    {lang === 'ja' ? '現在、痛みや医療記録はありません。' : 'No pain reports or medical records currently.'}
+                  </div>
+                ) : (
+                  <div className={styles.painList}>
+                    {concerned.map(name => (
+                      <PlayerPainCard
+                        key={name}
+                        player={{ player_name: name }}
+                        painRows={painByPlayer[name] ?? []}
+                        medRecords={recsByPlayer[name] ?? []}
+                        availability={avMap[name]}
+                        lang={lang}
+                        isTherapist={isTherapist}
+                        onEditRecord={setRecForm}
+                        onPushRecord={pushRecordToCoaches}
+                      />
+                    ))}
+                  </div>
+                )}
+                {recForm && (
+                  <RecordForm
+                    record={recForm === 'new' ? null : recForm}
+                    players={players}
+                    lang={lang}
+                    currentUserName={currentUserName}
+                    onSave={() => { load(); toast(lang === 'ja' ? '保存しました' : 'Record saved', 'success'); }}
+                    onClose={() => setRecForm(null)}
+                  />
+                )}
+                {commForm && (
+                  <CommForm lang={lang} currentUserName={currentUserName}
+                    prefill={commPrefill}
+                    onSave={() => { load(); toast(lang === 'ja' ? '送信しました' : 'Update sent', 'success'); setTab('updates'); }}
+                    onClose={() => { setCommForm(false); setCommPrefill(null); }} />
+                )}
+              </div>
+            );
+          })()
+
           /* ── COACH UPDATES ── */
-          ) : tab === 'updates' ? (
+          : tab === 'updates' ? (
             <div>
               {isTherapist && (
                 <div className={styles.addBar}>
