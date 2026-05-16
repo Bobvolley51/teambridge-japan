@@ -96,6 +96,46 @@
 }
 .avEditBtn:hover { border-color: var(--tb-accent); color: var(--tb-accent); }
 
+.avReasonPrompt {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--tb-accent-soft);
+  border: 1px solid var(--tb-accent-line);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.avReasonInput {
+  width: 100%;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--tb-accent-line);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--tb-fg);
+  outline: none;
+  box-sizing: border-box;
+}
+.avReasonInput:focus { border-color: var(--tb-accent); }
+.avReasonBtns { display: flex; gap: 5px; justify-content: flex-end; }
+.avReasonCancel {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  border: 1px solid var(--tb-line); border-radius: 5px;
+  background: #fff; color: var(--tb-fg-muted);
+  cursor: pointer; font-family: inherit;
+}
+.avReasonConfirm {
+  font-size: 11px; font-weight: 700; padding: 4px 12px;
+  border: none; border-radius: 5px;
+  background: var(--tb-accent); color: #fff;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.1s;
+}
+.avReasonConfirm:hover:not(:disabled) { background: var(--tb-accent-deep); }
+.avReasonConfirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* Comm cards */
 .addBar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .btnAdd {

@@ -62,14 +62,25 @@ function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getM
 
 function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
   const cfg = STATUS_CFG[player.status] ?? STATUS_CFG.full;
-  const [saving, setSaving] = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [pendingReason, setPendingReason] = useState('');
 
-  const quickSet = async (newStatus) => {
+  const quickSet = (newStatus) => {
     if (saving || newStatus === player.status) return;
+    setPendingStatus(newStatus);
+    setPendingReason('');
+  };
+
+  const confirmStatus = async () => {
     setSaving(true);
-    await onQuickStatus(player, newStatus);
+    await onQuickStatus(player, pendingStatus, pendingReason);
+    setPendingStatus(null);
+    setPendingReason('');
     setSaving(false);
   };
+
+  const cancelPending = () => { setPendingStatus(null); setPendingReason(''); };
 
   const initials = (player.player_name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -89,17 +100,39 @@ function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
         </div>
       </div>
       {canEdit ? (
-        <div className={styles.avStatusRow}>
-          {Object.entries(STATUS_CFG).map(([key, c]) => (
-            <button key={key}
-              className={`${styles.avStatusChip} ${player.status === key ? styles.avStatusChipActive : ''}`}
-              style={player.status === key ? { background: c.color, color: '#fff', borderColor: c.color } : { borderColor: c.border, color: c.color }}
-              onClick={() => quickSet(key)}
-              disabled={saving}>
-              {lang === 'ja' ? c.ja : c.en}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className={styles.avStatusRow}>
+            {Object.entries(STATUS_CFG).map(([key, c]) => (
+              <button key={key}
+                className={`${styles.avStatusChip} ${(pendingStatus ?? player.status) === key ? styles.avStatusChipActive : ''}`}
+                style={(pendingStatus ?? player.status) === key ? { background: c.color, color: '#fff', borderColor: c.color } : { borderColor: c.border, color: c.color }}
+                onClick={() => quickSet(key)}
+                disabled={saving}>
+                {lang === 'ja' ? c.ja : c.en}
+              </button>
+            ))}
+          </div>
+          {pendingStatus && (
+            <div className={styles.avReasonPrompt}>
+              <input
+                className={styles.avReasonInput}
+                value={pendingReason}
+                onChange={e => setPendingReason(e.target.value)}
+                placeholder={lang === 'ja' ? '理由を入力（例：右膝の痛み）' : 'Reason (e.g. Right knee pain)'}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmStatus(); } if (e.key === 'Escape') cancelPending(); }}
+              />
+              <div className={styles.avReasonBtns}>
+                <button type="button" className={styles.avReasonCancel} onClick={cancelPending}>
+                  {lang === 'ja' ? 'キャンセル' : 'Cancel'}
+                </button>
+                <button type="button" className={styles.avReasonConfirm} onClick={confirmStatus} disabled={saving}>
+                  {saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <span className={styles.avBadge} style={{ color: cfg.color, borderColor: cfg.border }}>
           {lang === 'ja' ? cfg.ja : cfg.en}
@@ -702,28 +735,32 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     ? records
     : records.filter(r => r.status === recFilter);
 
-  const quickSetStatus = async (player, newStatus) => {
+  const quickSetStatus = async (player, newStatus, reason) => {
+    const reasonTrimmed = reason?.trim() || null;
     await supabase.from('player_availability').upsert({
       player_id:   player.player_id,
       player_name: player.player_name,
       status:      newStatus,
-      reason:      player.reason ?? null,
+      reason:      reasonTrimmed,
       updated_by:  currentUserName,
       updated_at:  new Date().toISOString(),
     }, { onConflict: 'player_id' });
 
-    // Auto-notify coaches when a player drops below full training
-    if (player.status === 'full' && newStatus !== 'full') {
-      const cfg = STATUS_CFG[newStatus];
-      const statusLabel = lang === 'ja' ? cfg.ja : cfg.en;
-      await supabase.from('medical_comms').insert({
-        title:      `⚠️ ${player.player_name} — ${statusLabel}`,
-        content:    lang === 'ja'
-          ? `${player.player_name} のステータスが「全体練習可」から「${statusLabel}」に変更されました。\n更新者：${currentUserName}`
-          : `${player.player_name}'s availability has changed from Full Training to ${statusLabel}.\nUpdated by: ${currentUserName}`,
-        created_by: currentUserName,
-      });
-    }
+    // Auto-notify coaches on any status change
+    const cfg = STATUS_CFG[newStatus];
+    const prevCfg = STATUS_CFG[player.status] ?? STATUS_CFG.full;
+    const statusLabel = lang === 'ja' ? cfg.ja : cfg.en;
+    const prevLabel   = lang === 'ja' ? prevCfg.ja : prevCfg.en;
+    const reasonLine  = reasonTrimmed
+      ? (lang === 'ja' ? `\n理由：${reasonTrimmed}` : `\nReason: ${reasonTrimmed}`)
+      : '';
+    await supabase.from('medical_comms').insert({
+      title:      `${player.player_name} — ${prevLabel} → ${statusLabel}`,
+      content:    lang === 'ja'
+        ? `${player.player_name} のステータスが「${prevLabel}」から「${statusLabel}」に変更されました。\n更新者：${currentUserName}${reasonLine}`
+        : `${player.player_name}'s availability changed from ${prevLabel} to ${statusLabel}.\nUpdated by: ${currentUserName}${reasonLine}`,
+      created_by: currentUserName,
+    });
 
     await load();
     toast(lang === 'ja' ? '更新しました' : 'Status updated', 'success');
