@@ -254,6 +254,7 @@ export default function Dashboard({
   const [tasks,             setTasks]             = useState([]);
   const [wellnessAlerts,    setWellnessAlerts]    = useState([]);
   const [wellnessProgress,  setWellnessProgress]  = useState(null); // { submitted, total }
+  const [nutritionProgress, setNutritionProgress] = useState(null); // { submitted, total }
   const [acwrAlerts,        setAcwrAlerts]        = useState([]);
   const [overlapAlerts,     setOverlapAlerts]     = useState([]);
   const [calChanges,        setCalChanges]        = useState([]);
@@ -307,6 +308,7 @@ export default function Dashboard({
       { data: myWellnessData },
       { data: myRpeCountData },
       { data: myNutritionCountData },
+      { data: nutriSubmittedData },
     ] = await Promise.all([
       // My participation events — no date filter so recurring base events are included
       currentUserId
@@ -413,6 +415,10 @@ export default function Dashboard({
       isPlayer && currentUserId
         ? supabase.from('nutrition_entries').select('meal_date').eq('user_id', currentUserId).gte('meal_date', week7AgoStr)
         : Promise.resolve({ data: [] }),
+      // Nutrition submission count today (staff view)
+      canSeeWellness
+        ? supabase.from('nutrition_entries').select('user_id').eq('meal_date', todayDateStr)
+        : Promise.resolve({ data: [] }),
     ]);
 
     // ── Events merge (recurring-aware) ──
@@ -481,6 +487,8 @@ export default function Dashboard({
     if (canSeeWellness) {
       const uniqueSubmitted = new Set((wellSubmittedData ?? []).map(r => r.user_id)).size;
       setWellnessProgress({ submitted: uniqueSubmitted, total: (playerCountData ?? []).length });
+      const nutriUnique = new Set((nutriSubmittedData ?? []).map(r => r.user_id)).size;
+      setNutritionProgress({ submitted: nutriUnique, total: (playerCountData ?? []).length });
     }
 
     // ACWR
@@ -889,6 +897,19 @@ export default function Dashboard({
                       <div className={styles.wellnessProgressBar}>
                         <div className={styles.wellnessProgressFill}
                           style={{ width: wellnessProgress.total > 0 ? `${Math.round(wellnessProgress.submitted / wellnessProgress.total * 100)}%` : '0%' }} />
+                      </div>
+                    </div>
+                  )}
+                  {/* Nutrition submission counter */}
+                  {nutritionProgress && (
+                    <div className={styles.wellnessProgressWrap}>
+                      <div className={styles.wellnessProgressLabel}>
+                        <span>{lang === 'ja' ? '栄養提出' : 'Nutrition submitted'}</span>
+                        <strong>{nutritionProgress.submitted} / {nutritionProgress.total}</strong>
+                      </div>
+                      <div className={styles.wellnessProgressBar}>
+                        <div className={styles.wellnessProgressFill}
+                          style={{ width: nutritionProgress.total > 0 ? `${Math.round(nutritionProgress.submitted / nutritionProgress.total * 100)}%` : '0%', background: '#d97706' }} />
                       </div>
                     </div>
                   )}
