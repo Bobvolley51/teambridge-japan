@@ -456,6 +456,9 @@ export default function Home() {
               </div>
             );
           })}
+          <div className={styles.sidebarBrand}>
+            <img src="/logo-white.png" alt="" className={styles.sidebarBrandMark} />
+          </div>
         </aside>
         <main className={styles.main}>
           {/* Mobile calendar sub-nav strip */}

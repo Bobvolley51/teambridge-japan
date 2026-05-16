@@ -230,6 +230,21 @@
   margin-top: 1px;
 }
 
+.sidebarBrand {
+  margin-top: auto;
+  padding: 14px 0 6px;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebarBrandMark {
+  width: 28px;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.18;
+  filter: brightness(0) invert(1);
+}
+
 .navIcon {
   display: flex;
   align-items: center;

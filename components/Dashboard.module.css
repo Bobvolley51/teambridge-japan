@@ -104,9 +104,9 @@
 }
 
 .card {
-  background: #fff; border-radius: 12px;
+  background: #fff; border-radius: 6px;
   border: 1px solid #e5e7eb; display: flex; flex-direction: column;
-  overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  overflow: hidden; box-shadow: var(--tb-shadow-card);
 }
 
 .cardHead {

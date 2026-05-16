@@ -35,16 +35,16 @@ const DECIMAL_FIELDS = new Set(['avg_hi_jump_cm', 'jpam', 'avg_hi_jump_power', '
 
 // sum: totalled across sessions in avg mode; avg: averaged across sessions
 const STAT_COLS = [
-  { key: 'jumps',             label: 'Total\nJumps',   unit: '',    sum: true  },
-  { key: 'avg_hi_jump_cm',    label: 'Avg Hi\nJump',   unit: ' cm', sum: false },
-  { key: 'jpam',              label: 'JPAM\n(avg)',     unit: '',    sum: false },
-  { key: 'avg_hi_jump_power', label: 'Jump\nPower',    unit: '',    sum: false },
-  { key: 'high_impact_pct',   label: 'Hi\nImpact',     unit: '%',   sum: false },
-  { key: 'alert_impact_pct',  label: 'Alert\n%',       unit: '%',   sum: false },
-  { key: 'elevated_pct',      label: 'Elevated\n%',    unit: '%',   sum: false },
-  { key: 'energy',            label: 'Total\nEnergy',  unit: '',    sum: true  },
-  { key: 'sets_by_energy',    label: 'Sets\n(avg)',    unit: '',    sum: false },
-  { key: 'intensity',         label: 'Intensity\n(avg)',unit: '',   sum: false },
+  { key: 'jumps',             label: { en: 'Total\nJumps',     ja: '総\nジャンプ' },     unit: '',    sum: true  },
+  { key: 'avg_hi_jump_cm',    label: { en: 'Avg Hi\nJump',     ja: '最高\n到達点' },     unit: ' cm', sum: false },
+  { key: 'jpam',              label: { en: 'JPAM\n(avg)',       ja: 'JPAM\n(avg)' },     unit: '',    sum: false },
+  { key: 'avg_hi_jump_power', label: { en: 'Jump\nPower',      ja: '跳躍\nパワー' },    unit: '',    sum: false },
+  { key: 'high_impact_pct',   label: { en: 'Hi\nImpact',       ja: '高衝撃\n%' },       unit: '%',   sum: false },
+  { key: 'alert_impact_pct',  label: { en: 'Alert\n%',         ja: 'アラート\n%' },     unit: '%',   sum: false },
+  { key: 'elevated_pct',      label: { en: 'Elevated\n%',      ja: '上昇\n%' },         unit: '%',   sum: false },
+  { key: 'energy',            label: { en: 'Total\nEnergy',    ja: '総\nエネルギー' },  unit: '',    sum: true  },
+  { key: 'sets_by_energy',    label: { en: 'Sets\n(avg)',      ja: 'セット\n(avg)' },   unit: '',    sum: false },
+  { key: 'intensity',         label: { en: 'Intensity\n(avg)', ja: '強度\n(avg)' },     unit: '',    sum: false },
 ];
 
 const SUM_FIELDS = new Set(STAT_COLS.filter(c => c.sum).map(c => c.key));
@@ -425,7 +425,7 @@ export default function VertDashboard({ lang, profile }) {
                   <tr>
                     <SortTh col="name"  label={isJa ? '選手' : 'Player'} className={styles.thSticky} />
                     <SortTh col="count" label="n" />
-                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={c.label} />)}
+                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={isJa ? c.label.ja : c.label.en} />)}
                   </tr>
                 </thead>
                 <tbody>
@@ -456,7 +456,7 @@ export default function VertDashboard({ lang, profile }) {
                     <SortTh col="session_date" label={isJa ? '日付' : 'Date'} className={styles.thSticky} />
                     {!isPlayer && <SortTh col="name" label={isJa ? '選手' : 'Player'} />}
                     <SortTh col="session_name" label={isJa ? 'セッション' : 'Session'} />
-                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={c.label} />)}
+                    {STAT_COLS.map(c => <SortTh key={c.key} col={c.key} label={isJa ? c.label.ja : c.label.en} />)}
                   </tr>
                 </thead>
                 <tbody>
@@ -508,16 +508,16 @@ export default function VertDashboard({ lang, profile }) {
                 </thead>
                 <tbody>
                   {[
-                    { label: 'Jumps (OH/M)',       desc: 'Total jumps counted',                           low: '<90',    mid: '90–119',     hi: '≥120' },
-                    { label: 'Avg High Jump',       desc: 'Average of top 25% of jump heights',           low: '<40 cm', mid: '40–49 cm',   hi: '≥50 cm' },
-                    { label: 'JPAM',               desc: 'Jumps per active minute',                       low: '<0.7',   mid: '0.7–1.2',    hi: '≥1.2' },
-                    { label: 'Avg High Jump Power', desc: 'Jump quickness (jumps over 38 cm)',            low: '<40',    mid: '40–54',      hi: '≥55' },
-                    { label: 'Energy',             desc: 'How hard the athlete works their body (J/kg)',  low: '<4500',  mid: '4500–6499',  hi: '≥6500' },
-                    { label: 'Sets by Energy',     desc: 'Equivalent sets played based on energy',        low: '<2',     mid: '2–4',        hi: '≥5' },
-                    { label: 'Intensity',          desc: 'Workload per minute (J/kg/min)',                low: '<55',    mid: '55–89',      hi: '≥90' },
-                    { label: 'Hi Impact %',        desc: 'Peak acceleration ≥15 G & <20 G — hard landings (lower is better)',    low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
-                    { label: 'Alert %',            desc: 'Peak acceleration ≥20 G — harder landings (lower is better)',          low: '≥10%', mid: '5–9%',   hi: '<5%',  inv: true },
-                    { label: 'Elevated %',         desc: 'Hi Impact + Alert combined (lower is better)',                          low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
+                    { label: isJa ? 'ジャンプ数 (OH/M)'  : 'Jumps (OH/M)',       desc: isJa ? '計測されたジャンプ総数'                          : 'Total jumps counted',                           low: '<90',    mid: '90–119',     hi: '≥120' },
+                    { label: isJa ? '最高到達点'          : 'Avg High Jump',       desc: isJa ? '上位25%のジャンプ高さの平均'                    : 'Average of top 25% of jump heights',           low: '<40 cm', mid: '40–49 cm',   hi: '≥50 cm' },
+                    { label: 'JPAM',                                               desc: isJa ? 'アクティブな1分あたりのジャンプ数'              : 'Jumps per active minute',                       low: '<0.7',   mid: '0.7–1.2',    hi: '≥1.2' },
+                    { label: isJa ? '跳躍パワー'          : 'Avg High Jump Power', desc: isJa ? '跳躍の素早さ（38cm超のジャンプ）'              : 'Jump quickness (jumps over 38 cm)',            low: '<40',    mid: '40–54',      hi: '≥55' },
+                    { label: isJa ? 'エネルギー'          : 'Energy',             desc: isJa ? '体への負荷量（J/kg）'                            : 'How hard the athlete works their body (J/kg)',  low: '<4500',  mid: '4500–6499',  hi: '≥6500' },
+                    { label: isJa ? 'セット数(avg)'       : 'Sets by Energy',     desc: isJa ? 'エネルギーに基づく換算セット数'                  : 'Equivalent sets played based on energy',        low: '<2',     mid: '2–4',        hi: '≥5' },
+                    { label: isJa ? '強度'                : 'Intensity',          desc: isJa ? '1分あたりの負荷（J/kg/分）'                      : 'Workload per minute (J/kg/min)',                low: '<55',    mid: '55–89',      hi: '≥90' },
+                    { label: isJa ? '高衝撃%'             : 'Hi Impact %',        desc: isJa ? 'ピーク加速度≥15G & <20G — 強い着地（低いほど良い）' : 'Peak acceleration ≥15 G & <20 G — hard landings (lower is better)',    low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
+                    { label: isJa ? 'アラート%'           : 'Alert %',            desc: isJa ? 'ピーク加速度≥20G — より強い着地（低いほど良い）' : 'Peak acceleration ≥20 G — harder landings (lower is better)',          low: '≥10%', mid: '5–9%',   hi: '<5%',  inv: true },
+                    { label: isJa ? '上昇%'               : 'Elevated %',         desc: isJa ? '高衝撃+アラート合計（低いほど良い）'             : 'Hi Impact + Alert combined (lower is better)',                          low: '≥20%', mid: '10–19%', hi: '<10%', inv: true },
                   ].map(r => (
                     <tr key={r.label} className={styles.lgRow}>
                       <td className={styles.lgTdMetric}>{r.label}</td>
@@ -564,9 +564,9 @@ export default function VertDashboard({ lang, profile }) {
         }
 
         const TREND_COLS = [
-          { key: 'avg_hi_jump_cm', label: 'Hi Jump',   unit: ' cm', inv: false },
-          { key: 'elevated_pct',   label: 'Elevated%', unit: '%',   inv: true  },
-          { key: 'intensity',      label: 'Intensity',  unit: '',    inv: false },
+          { key: 'avg_hi_jump_cm', label: isJa ? '到達点'  : 'Hi Jump',   unit: ' cm', inv: false },
+          { key: 'elevated_pct',   label: isJa ? '上昇%'   : 'Elevated%', unit: '%',   inv: true  },
+          { key: 'intensity',      label: isJa ? '強度'    : 'Intensity',  unit: '',    inv: false },
         ];
 
         const SUB_TABS = [
@@ -731,12 +731,13 @@ export default function VertDashboard({ lang, profile }) {
             {/* ── BENCHMARK: position comparison ── */}
             {trendsTab === 'benchmark' && (() => {
               const BENCH_COLS = [
-                { key: 'avg_hi_jump_cm',  label: 'Hi Jump',  unit: ' cm', inv: false },
-                { key: 'jumps',           label: 'Jumps',    unit: '',    inv: false },
-                { key: 'elevated_pct',    label: 'Elevated%',unit: '%',   inv: true  },
-                { key: 'intensity',       label: 'Intensity',unit: '',    inv: false },
+                { key: 'avg_hi_jump_cm',  label: isJa ? '到達点'   : 'Hi Jump',   unit: ' cm', inv: false },
+                { key: 'jumps',           label: isJa ? 'ジャンプ' : 'Jumps',    unit: '',    inv: false },
+                { key: 'elevated_pct',    label: isJa ? '上昇%'    : 'Elevated%', unit: '%',   inv: true  },
+                { key: 'intensity',       label: isJa ? '強度'     : 'Intensity', unit: '',    inv: false },
               ];
               const POS_ORDER = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Other'];
+              const POS_LABEL = { Setter: isJa ? 'セッター' : 'Setter', Middle: isJa ? 'ミドル' : 'Middle', Outside: isJa ? 'アウトサイド' : 'Outside', Opposite: isJa ? 'オポジット' : 'Opposite', Libero: isJa ? 'リベロ' : 'Libero', Other: isJa ? 'その他' : 'Other' };
               const byPos = {};
               for (const row of avgRows) {
                 const pos = row.position || 'Other';
@@ -766,7 +767,7 @@ export default function VertDashboard({ lang, profile }) {
                   {posGroups.map(({ pos, members, avg }) => (
                     <div key={pos} className={styles.benchSection}>
                       <div className={styles.benchPosHeader}>
-                        <span className={styles.benchPosName}>{pos}</span>
+                        <span className={styles.benchPosName}>{POS_LABEL[pos] || pos}</span>
                         <span className={styles.benchPosCount}>{members.length} {isJa ? '名' : 'players'}</span>
                       </div>
                       <div className={styles.benchTableWrap}>
@@ -825,9 +826,9 @@ export default function VertDashboard({ lang, profile }) {
             {/* ── LANDING: landing load monitoring ── */}
             {trendsTab === 'landing' && (() => {
               const LAND_COLS = [
-                { key: 'elevated_pct',    label: 'Elevated%',  unit: '%', inv: true },
-                { key: 'alert_impact_pct',label: 'Alert%',     unit: '%', inv: true },
-                { key: 'high_impact_pct', label: 'Hi Impact%', unit: '%', inv: true },
+                { key: 'elevated_pct',    label: isJa ? '上昇%'    : 'Elevated%',  unit: '%', inv: true },
+                { key: 'alert_impact_pct',label: isJa ? 'アラート%': 'Alert%',    unit: '%', inv: true },
+                { key: 'high_impact_pct', label: isJa ? '高衝撃%'  : 'Hi Impact%', unit: '%', inv: true },
               ];
               if (!trendPlayers.length) return <div className={styles.trendEmpty}>{isJa ? 'データなし' : 'No data for the selected time range'}</div>;
               return (
@@ -895,10 +896,10 @@ export default function VertDashboard({ lang, profile }) {
                 .sort(([a], [b]) => b.localeCompare(a));
 
               const GAME_COLS = [
-                { key: 'avg_hi_jump_cm', label: 'Hi Jump',  unit: ' cm', inv: false },
-                { key: 'intensity',      label: 'Intensity', unit: '',    inv: false },
-                { key: 'elevated_pct',   label: 'Elevated%', unit: '%',   inv: true  },
-                { key: 'jumps',          label: 'Jumps',     unit: '',    inv: false },
+                { key: 'avg_hi_jump_cm', label: isJa ? '到達点'   : 'Hi Jump',   unit: ' cm', inv: false },
+                { key: 'intensity',      label: isJa ? '強度'     : 'Intensity', unit: '',    inv: false },
+                { key: 'elevated_pct',   label: isJa ? '上昇%'    : 'Elevated%', unit: '%',   inv: true  },
+                { key: 'jumps',          label: isJa ? 'ジャンプ' : 'Jumps',     unit: '',    inv: false },
               ];
 
               if (!gameDays.length) return (

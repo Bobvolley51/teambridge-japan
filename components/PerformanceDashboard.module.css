@@ -1,6 +1,6 @@
 /* components/PerformanceDashboard.module.css — Tridents Red pass */
 
-.wrapper { height: 100%; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; background: #fff; }
+.wrapper { height: 100%; display: flex; flex-direction: column; font-family: var(--tb-font-sans); overflow: hidden; background: #fff; }
 
 .topBar {
   display: flex; align-items: center; justify-content: space-between;
@@ -9,7 +9,7 @@
   background: #fdf2f4;
   flex-shrink: 0; gap: 12px; flex-wrap: wrap;
 }
-.heading { font-size: 16px; font-weight: 700; color: #5c001a; }
+.heading { font-family: var(--tb-font-display); font-size: 16px; font-weight: 700; color: #5c001a; letter-spacing: 0.06em; text-transform: uppercase; }
 
 .tabs { display: flex; border: 1px solid #7e0027; border-radius: 8px; overflow: hidden; }
 .tab {
@@ -68,8 +68,8 @@
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table thead { position: sticky; top: 0; background: #fdf2f4; z-index: 1; }
 
-.thName { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #7e0027; white-space: pre-line; }
-.th     { text-align: center; padding: 10px 8px; font-size: 11px; font-weight: 700; color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #7e0027; white-space: pre-line; }
+.thName { font-family: var(--tb-font-display); text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #7e0027; white-space: pre-line; }
+.th     { font-family: var(--tb-font-display); text-align: center; padding: 10px 8px; font-size: 11px; font-weight: 700; color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #7e0027; white-space: pre-line; }
 
 .tr:hover { background: #fdf2f4; }
 .tr + .tr { border-top: 1px solid #f3f4f6; }
@@ -144,8 +144,9 @@
 
 .sessionCard {
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #fff;
+  box-shadow: var(--tb-shadow-card);
 }
 
 /* Header: two rows — top = title row, bottom = stat pills */
