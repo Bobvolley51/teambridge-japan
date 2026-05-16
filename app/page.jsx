@@ -549,11 +549,20 @@ export default function Home() {
           <button key={item.id}
             className={`${styles.mobileNavItem} ${nav===item.id || (item.id==='players' && PLAYERS_IDS.has(nav)) ? styles.mobileNavActive : ''}`}
             onClick={() => {
-              if (item.id === 'players') { if (!PLAYERS_IDS.has(nav)) navigate(playersSubs[0]?.id); }
-              else { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }
+              if (item.id === 'players') {
+                if (!PLAYERS_IDS.has(nav)) {
+                  navigate(playersSubs[0]?.id);
+                } else {
+                  const idx = playersSubs.findIndex(s => s.id === nav);
+                  navigate(playersSubs[(idx + 1) % playersSubs.length]?.id);
+                }
+              } else {
+                navigate(item.id);
+                if (item.id === 'chat') setUnreadChat(0);
+              }
             }}>
             <span className={styles.mobileNavIconWrap}>
-              <MIcon size={24} />
+              <MIcon size={26} />
               {item.id === 'performance' && perfAlertCount > 0 && (
                 <span className={styles.mobileNavBadge}>{perfAlertCount}</span>
               )}

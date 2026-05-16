@@ -555,8 +555,9 @@ export default function Dashboard({
       ev.id === eventId ? { ...ev, _myStatus: newStatus } : ev
     ));
     await supabase.from('event_participants')
-      .upsert({ profile_id: currentUserId, event_id: eventId, status: newStatus },
-               { onConflict: 'profile_id,event_id' });
+      .update({ status: newStatus })
+      .eq('event_id', eventId)
+      .eq('profile_id', currentUserId);
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────────
