@@ -6,7 +6,8 @@ import styles from './UserMenu.module.css';
 
 export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
   const [open,       setOpen]       = useState(false);
-  const [view,       setView]       = useState('menu'); // 'menu' | 'password' | 'profile' | 'delete'
+  const [view,       setView]       = useState('menu'); // 'menu' | 'password' | 'profile' | 'delete' | 'calendar'
+  const [calCopied,  setCalCopied]  = useState(false);
   const [deleting,   setDeleting]   = useState(false);
   const [newPw,      setNewPw]      = useState('');
   const [confirmPw,  setConfirmPw]  = useState('');
@@ -36,6 +37,15 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
   }, []);
 
   const reset = () => { setView('menu'); setMsg(null); setNewPw(''); setConfirmPw(''); };
+
+  const personalIcsUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/calendar?uid=${user.id}`
+    : `/api/calendar?uid=${user.id}`;
+  const copyCalUrl = () => {
+    navigator.clipboard.writeText(personalIcsUrl);
+    setCalCopied(true);
+    setTimeout(() => setCalCopied(false), 2000);
+  };
 
   // ── Save display name ───────────────────────────────────────────────────
   const handleSaveProfile = async (e) => {
@@ -196,6 +206,9 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
               <button className={styles.menuItem} onClick={() => setView('password')}>
                 🔑 {lang === 'ja' ? 'パスワード変更' : 'Change password'}
               </button>
+              <button className={styles.menuItem} onClick={() => setView('calendar')}>
+                📅 {lang === 'ja' ? 'カレンダー購読URL' : 'Calendar subscription'}
+              </button>
               <div className={styles.divider} />
               <button className={`${styles.menuItem} ${styles.signOut}`} onClick={handleSignOut}>
                 → {lang === 'ja' ? 'ログアウト' : 'Sign out'}
@@ -263,6 +276,31 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Calendar subscription */}
+          {view === 'calendar' && (
+            <div className={styles.pwForm}>
+              <div className={styles.calSubSection}>
+                <div className={styles.calSubLabel}>📅 {lang === 'ja' ? 'カレンダー購読URL' : 'Your personal calendar URL'}</div>
+                <div className={styles.calSubHint}>
+                  {lang === 'ja'
+                    ? 'Googleカレンダー「他のカレンダー → URLから追加」に貼り付けてください。招待されたイベントのみ表示され、「不参加」にしたイベントは自動的に非表示になります。'
+                    : 'Paste in Google Calendar → "Other calendars → From URL". Shows only your invited events. Events you mark "Out" will disappear automatically.'}
+                </div>
+                <div className={styles.calSubRow}>
+                  <span className={styles.calSubUrl}>{personalIcsUrl}</span>
+                  <button className={styles.calCopyBtn} onClick={copyCalUrl}>
+                    {calCopied ? '✓' : (lang === 'ja' ? 'コピー' : 'Copy')}
+                  </button>
+                </div>
+              </div>
+              <div className={styles.pwActions}>
+                <button type="button" className={styles.cancelBtn} onClick={reset}>
+                  {lang === 'ja' ? '戻る' : 'Back'}
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Change password */}

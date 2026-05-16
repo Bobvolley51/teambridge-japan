@@ -961,7 +961,9 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
     else if (canEdit) { setFormDate(date); setShowForm(true); }
   };
 
-  const icsUrl  = typeof window !== 'undefined' ? `${window.location.origin}/api/calendar` : '/api/calendar';
+  const icsUrl  = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/calendar${currentUserId ? `?uid=${currentUserId}` : ''}`
+    : '/api/calendar';
   const copyUrl = () => { navigator.clipboard.writeText(icsUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const weekStart     = getWeekStart(current);
@@ -1037,8 +1039,8 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
           <div className={styles.subTitle}>📅 {lang === 'ja' ? 'Googleカレンダーで購読' : 'Subscribe in Google Calendar'}</div>
           <p className={styles.subSub}>
             {lang === 'ja'
-              ? '「他のカレンダー → URLから追加」にこのURLを貼り付けてください。'
-              : 'Google Calendar → "Other calendars → From URL"'}
+              ? '「他のカレンダー → URLから追加」にこのURLを貼り付けてください。招待されたイベントのみ表示され、「不参加」にしたイベントは非表示になります。'
+              : 'Google Calendar → "Other calendars → From URL". Shows only your events — "Out" entries disappear automatically.'}
           </p>
           <div className={styles.icsRow}>
             <code className={styles.icsUrl}>{icsUrl}</code>

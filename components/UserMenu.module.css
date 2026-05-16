@@ -284,3 +284,66 @@
 
 .saveBtn:hover:not(:disabled) { background: #6b001f; }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Calendar subscription section */
+.calSubSection {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.calSubLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.calSubHint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.calSubRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.calSubUrl {
+  flex: 1;
+  font-size: 10px;
+  font-family: monospace;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  padding: 4px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+
+.calCopyBtn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #7e0027;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.calCopyBtn:hover { background: #6b001f; }

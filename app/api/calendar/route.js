@@ -1,16 +1,49 @@
 // app/api/calendar/route.js
-// Public ICS feed — subscribe this URL in Google Calendar / Apple Calendar / Outlook
+// Personal ICS feed — /api/calendar?uid=<profile_id>
+// Returns only events the user is invited to, excluding ones they marked "Out".
 
-export async function GET() {
+import { createClient } from '@supabase/supabase-js';
+
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const uid = searchParams.get('uid');
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/events?select=*&order=start_time.asc`,
-    { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
-  );
+  let events = [];
 
-  const events = res.ok ? await res.json() : [];
+  if (uid && serviceKey) {
+    // Personal feed: only events this user is participating in (status != 'out')
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: parts } = await admin
+      .from('event_participants')
+      .select('event_id, status')
+      .eq('profile_id', uid)
+      .neq('status', 'out');
+
+    const eventIds = (parts ?? []).map(p => p.event_id);
+
+    if (eventIds.length > 0) {
+      const { data } = await admin
+        .from('events')
+        .select('*')
+        .in('id', eventIds)
+        .order('start_time');
+      events = data ?? [];
+    }
+  } else {
+    // Fallback: public feed with all events (for backwards compat)
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/events?select=*&order=start_time.asc`,
+      { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } }
+    );
+    events = res.ok ? await res.json() : [];
+  }
 
   const lines = [
     'BEGIN:VCALENDAR',
@@ -24,13 +57,13 @@ export async function GET() {
   ];
 
   for (const ev of events) {
-    const uid     = `${ev.id}@teambridge-japan`;
-    const created = formatDT(ev.created_at);
-    const start   = ev.all_day ? formatDate(ev.start_time) : formatDT(ev.start_time);
-    const end     = ev.all_day ? formatDate(ev.end_time)   : formatDT(ev.end_time);
+    const uid_val  = `${ev.id}@teambridge-japan`;
+    const created  = formatDT(ev.created_at);
+    const start    = ev.all_day ? formatDate(ev.start_time) : formatDT(ev.start_time);
+    const end      = ev.all_day ? formatDate(ev.end_time)   : formatDT(ev.end_time);
 
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${uid}`);
+    lines.push(`UID:${uid_val}`);
     lines.push(`DTSTAMP:${created}`);
     if (ev.all_day) {
       lines.push(`DTSTART;VALUE=DATE:${start}`);
@@ -53,7 +86,7 @@ export async function GET() {
     headers: {
       'Content-Type':        'text/calendar; charset=utf-8',
       'Content-Disposition': 'inline; filename="teambridge.ics"',
-      'Cache-Control':       'no-cache',
+      'Cache-Control':       'no-cache, no-store',
     },
   });
 }
