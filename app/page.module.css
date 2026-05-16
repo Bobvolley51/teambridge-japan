@@ -351,3 +351,77 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Inactivity logout warning */
+.idleOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.idleBox {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  text-align: center;
+}
+
+.idleIcon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.idleTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.idleMsg {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.idleStayBtn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 11px 0;
+  background: #7e0027;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.idleStayBtn:hover { background: #6b001f; }
+
+.idleSignOutBtn {
+  width: 100%;
+  padding: 8px 0;
+  background: none;
+  color: #9ca3af;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.idleSignOutBtn:hover { color: #374151; }

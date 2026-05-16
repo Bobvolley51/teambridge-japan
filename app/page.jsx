@@ -2,7 +2,7 @@
 
 // app/page.jsx — Full TeamBridge Japan App
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase }          from '@/lib/supabase';
 import Login                 from '@/components/Login';
 import Dashboard             from '@/components/Dashboard';
@@ -83,6 +83,48 @@ export default function Home() {
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
   const [unreadChat,       setUnreadChat]       = useState(0);
   const [showSearch,       setShowSearch]       = useState(false);
+  const [showIdleWarning,  setShowIdleWarning]  = useState(false);
+  const [idleCountdown,    setIdleCountdown]    = useState(120);
+  const idleTimer   = useRef(null);
+  const warnTimer   = useRef(null);
+
+  const IDLE_MS      = 60 * 60 * 1000; // 1 hour
+  const WARN_BEFORE  = 2  * 60 * 1000; // warn 2 min before
+
+  const resetIdleTimer = useCallback(() => {
+    setShowIdleWarning(false);
+    setIdleCountdown(120);
+    clearTimeout(idleTimer.current);
+    clearInterval(warnTimer.current);
+    idleTimer.current = setTimeout(() => {
+      setShowIdleWarning(true);
+      setIdleCountdown(120);
+      warnTimer.current = setInterval(() => {
+        setIdleCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(warnTimer.current);
+            supabase.auth.signOut();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, IDLE_MS - WARN_BEFORE);
+  }, []);
+
+  // Start/reset idle timer whenever the user is logged in
+  useEffect(() => {
+    if (!session) return;
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    const handler = () => resetIdleTimer();
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    resetIdleTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler));
+      clearTimeout(idleTimer.current);
+      clearInterval(warnTimer.current);
+    };
+  }, [session, resetIdleTimer]);
 
   // Auth listener
   useEffect(() => {
@@ -513,6 +555,27 @@ export default function Home() {
           lang={lang}
           onComplete={handleBodyWeightDone}
         />
+      )}
+      {showIdleWarning && (
+        <div className={styles.idleOverlay}>
+          <div className={styles.idleBox}>
+            <div className={styles.idleIcon}>⏱</div>
+            <div className={styles.idleTitle}>
+              {lang === 'ja' ? 'まだいますか？' : 'Still there?'}
+            </div>
+            <div className={styles.idleMsg}>
+              {lang === 'ja'
+                ? `操作がないため、${idleCountdown}秒後に自動ログアウトします。`
+                : `You'll be logged out in ${idleCountdown}s due to inactivity.`}
+            </div>
+            <button className={styles.idleStayBtn} onClick={resetIdleTimer}>
+              {lang === 'ja' ? 'ログイン継続' : 'Stay logged in'}
+            </button>
+            <button className={styles.idleSignOutBtn} onClick={() => supabase.auth.signOut()}>
+              {lang === 'ja' ? '今すぐログアウト' : 'Log out now'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
     </ToastProvider>
