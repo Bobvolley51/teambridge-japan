@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
 import { SkeletonLine } from './Skeleton';
+import Select from './Select';
 import styles from './Calendar.module.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -429,8 +430,9 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
             </div>
           </div>
 
-          <select className={styles.fi} value={category} onChange={e => {
-              const val = e.target.value;
+          <Select
+            value={category}
+            onChange={val => {
               setCategory(val);
               if (!isEditing) {
                 const startDate = new Date(start);
@@ -438,9 +440,9 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
                 if (AUTO_INVITE_CATS.includes(val)) setParticipantIds(profiles.map(p => p.id));
               }
             }}
-            style={{ borderLeft: `4px solid ${catColor(category).solid}` }}>
-            {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[lang]?.[c] ?? c}</option>)}
-          </select>
+            accentColor={catColor(category).solid}
+            options={CATEGORIES.map(c => ({ value: c, label: CAT_LABEL[lang]?.[c] ?? c }))}
+          />
 
           <input className={styles.fi} placeholder={lang === 'ja' ? '場所' : 'Location'}
             value={location} onChange={e => setLocation(e.target.value)} />
@@ -450,13 +452,17 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           {/* Recurrence */}
           <div className={styles.tf}>
             <label className={styles.tl}>{lang === 'ja' ? '繰り返し' : 'Repeat'}</label>
-            <select className={styles.fi} value={recurrence} onChange={e => handleRecurrenceChange(e.target.value)}>
-              <option value="">{lang === 'ja' ? 'なし' : 'None'}</option>
-              <option value="daily">{lang === 'ja' ? '毎日' : 'Daily'}</option>
-              <option value="weekly">{lang === 'ja' ? '毎週（曜日を選択）' : 'Weekly (pick days)'}</option>
-              <option value="monthly">{lang === 'ja' ? '毎月' : 'Monthly'}</option>
-              <option value="yearly">{lang === 'ja' ? '毎年' : 'Yearly'}</option>
-            </select>
+            <Select
+              value={recurrence}
+              onChange={handleRecurrenceChange}
+              placeholder={lang === 'ja' ? 'なし' : 'None'}
+              options={[
+                { value: 'daily',   label: lang === 'ja' ? '毎日' : 'Daily' },
+                { value: 'weekly',  label: lang === 'ja' ? '毎週（曜日を選択）' : 'Weekly (pick days)' },
+                { value: 'monthly', label: lang === 'ja' ? '毎月' : 'Monthly' },
+                { value: 'yearly',  label: lang === 'ja' ? '毎年' : 'Yearly' },
+              ]}
+            />
           </div>
 
           {recurrence === 'weekly' && (

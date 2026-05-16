@@ -1,0 +1,158 @@
+.wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 34px;
+}
+
+.trigger:hover:not(:disabled) { border-color: #9ca3af; }
+
+.trigger:focus {
+  outline: none;
+  border-color: #9b0030;
+  box-shadow: 0 0 0 3px rgba(155, 0, 48, 0.08);
+}
+
+.trigger:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.triggerValue {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.triggerPlaceholder {
+  flex: 1;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  font-size: 10px;
+  color: #6b7280;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  line-height: 1;
+}
+
+.chevronOpen { transform: rotate(180deg); }
+
+/* ── Dropdown panel ─────────────────────────────────────────────────────────── */
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  z-index: 9999;
+  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* scrollbar */
+.dropdown::-webkit-scrollbar { width: 4px; }
+.dropdown::-webkit-scrollbar-track { background: transparent; }
+.dropdown::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+
+.option {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #111827;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option:hover { background: #f9fafb; }
+
+.optionActive {
+  background: #fdf2f4;
+  color: #9b0030;
+  font-weight: 600;
+}
+
+.optionActive:hover { background: #fce7eb; }
+
+.optionDisabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.optionDisabled:hover { background: transparent; }
+
+.optionAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.optionMeta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 2px 0;
+}
+
+/* ── Size variants ──────────────────────────────────────────────────────────── */
+
+.sm .trigger { padding: 4px 8px; font-size: 12px; min-height: 28px; }
+.sm .option  { padding: 6px 10px; font-size: 12px; }
+
+.lg .trigger { padding: 10px 12px; font-size: 14px; min-height: 40px; }
+.lg .option  { padding: 10px 14px; font-size: 14px; }
+
+/* ── With left color accent (calendar category) ─────────────────────────────── */
+
+.accentLeft .trigger { border-left-width: 4px; }

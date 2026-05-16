@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
 import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock } from './Skeleton';
+import Select from './Select';
 import styles from './Tasks.module.css';
 
 const COLUMNS = [
@@ -243,15 +244,11 @@ function TaskModal({ task, colId, profiles, lang, onSave, onDelete, onClose }) {
           <div className={styles.modalRow}>
             <div className={styles.modalField}>
               <label className={styles.label}>{tr('priority', lang)}</label>
-              <select
-                className={styles.modalSelect}
+              <Select
                 value={form.priority}
-                onChange={e => set('priority', e.target.value)}
-              >
-                {PRIORITIES.map(p => (
-                  <option key={p} value={p}>{PRIORITY_LABELS[p][lang]}</option>
-                ))}
-              </select>
+                onChange={v => set('priority', v)}
+                options={PRIORITIES.map(p => ({ value: p, label: PRIORITY_LABELS[p][lang] }))}
+              />
             </div>
             <div className={styles.modalField}>
               <label className={styles.label}>{tr('dueDate', lang)}</label>
@@ -265,29 +262,21 @@ function TaskModal({ task, colId, profiles, lang, onSave, onDelete, onClose }) {
           </div>
 
           <label className={styles.label}>{tr('assignTo', lang)}</label>
-          <select
-            className={styles.modalSelect}
+          <Select
             value={form.assigned_to}
-            onChange={e => set('assigned_to', e.target.value)}
-          >
-            <option value="">{tr('unassigned', lang)}</option>
-            {profiles.map(p => (
-              <option key={p.id} value={p.id}>{profileName(p)}</option>
-            ))}
-          </select>
+            onChange={v => set('assigned_to', v)}
+            placeholder={tr('unassigned', lang)}
+            options={profiles.map(p => ({ value: p.id, label: profileName(p), initials: profileName(p).slice(0, 2).toUpperCase() }))}
+          />
 
           {!isNew && (
             <>
               <label className={styles.label}>{tr('column', lang)}</label>
-              <select
-                className={styles.modalSelect}
+              <Select
                 value={form.status}
-                onChange={e => set('status', e.target.value)}
-              >
-                {COLUMNS.map(c => (
-                  <option key={c.id} value={c.id}>{c.label[lang]}</option>
-                ))}
-              </select>
+                onChange={v => set('status', v)}
+                options={COLUMNS.map(c => ({ value: c.id, label: c.label[lang] }))}
+              />
             </>
           )}
         </div>
@@ -315,31 +304,27 @@ function TaskModal({ task, colId, profiles, lang, onSave, onDelete, onClose }) {
 
 // ── Filter bar ────────────────────────────────────────────────────────────────
 
-function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onChange, isCoach }) {
+function FilterBar({ lang, profiles, filterPriority, filterAssignee, sortBy, onChange, isStaff }) {
   return (
     <div className={styles.filterBar}>
-      <select
+      <Select
         className={styles.filterSelect}
+        size="sm"
         value={filterPriority}
-        onChange={e => onChange('priority', e.target.value)}
-      >
-        <option value="all">{tr('allPriorities', lang)}</option>
-        {PRIORITIES.map(p => (
-          <option key={p} value={p}>{PRIORITY_LABELS[p][lang]}</option>
-        ))}
-      </select>
+        onChange={v => onChange('priority', v)}
+        placeholder={tr('allPriorities', lang)}
+        options={PRIORITIES.map(p => ({ value: p, label: PRIORITY_LABELS[p][lang] }))}
+      />
 
-      {isCoach && (
-        <select
+      {isStaff && (
+        <Select
           className={styles.filterSelect}
+          size="sm"
           value={filterAssignee}
-          onChange={e => onChange('assignee', e.target.value)}
-        >
-          <option value="all">{tr('allMembers', lang)}</option>
-          {profiles.map(p => (
-            <option key={p.id} value={p.id}>{profileName(p)}</option>
-          ))}
-        </select>
+          onChange={v => onChange('assignee', v)}
+          placeholder={tr('allMembers', lang)}
+          options={profiles.map(p => ({ value: p.id, label: profileName(p), initials: profileName(p).slice(0, 2).toUpperCase() }))}
+        />
       )}
 
       <button
@@ -494,7 +479,7 @@ export default function Tasks({ lang = 'en', profile }) {
         filterAssignee={filterAssignee}
         sortBy={sortBy}
         onChange={handleFilterChange}
-        isCoach={isCoach}
+        isStaff={isStaff}
       />
 
       <div className={styles.kanban}>
