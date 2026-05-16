@@ -204,6 +204,7 @@ function TaskItem({ task, lang, priColor, onNavigate, onDismiss }) {
         <div className={styles.alertSub}>
           {task.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}
           {task.priority === 'medium' ? ` · ${lang === 'ja' ? '中' : 'Medium'}` : ''}
+          {task.due_date ? ` · ${lang === 'ja' ? '期限: ' : 'Due: '}${task.due_date}` : ''}
         </div>
       </div>
       <button className={styles.noticedBtn} onClick={() => onDismiss(task.id)}>
@@ -343,12 +344,10 @@ export default function Dashboard({
       // #6: Tasks by UUID
       currentUserId
         ? supabase.from('tasks')
-            .select('id, title, status, priority, created_at')
+            .select('id, title, status, priority, due_date, created_at')
             .eq('assigned_to', currentUserId)
             .neq('status', 'done')
-            .order('priority', { ascending: true })
-            .order('created_at', { ascending: false })
-            .limit(20)
+            .limit(50)
         : Promise.resolve({ data: [] }),
       // Wellness low-score alerts
       canSeeWellness
@@ -588,10 +587,18 @@ export default function Dashboard({
   const dismissedTaskIds = typeof window !== 'undefined'
     ? new Set(JSON.parse(localStorage.getItem(`task_dismissed_${currentUserId}`) || '[]'))
     : new Set();
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-  const visibleDashTasks   = tasks.filter(t => !dismissedTaskIds.has(t.id) && t.created_at >= threeDaysAgo);
-  const urgentTasks        = visibleDashTasks.filter(t => t.priority === 'high');
-  const weekTasks          = visibleDashTasks.filter(t => t.priority !== 'high');
+  const TASK_PRI_ORDER = { high: 0, medium: 1, low: 2 };
+  const visibleDashTasks = tasks
+    .filter(t => !dismissedTaskIds.has(t.id))
+    .sort((a, b) => {
+      const pa = TASK_PRI_ORDER[a.priority] ?? 1;
+      const pb = TASK_PRI_ORDER[b.priority] ?? 1;
+      if (pa !== pb) return pa - pb;
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return a.due_date < b.due_date ? -1 : 1;
+    });
   const canSeeWellness     = WELLNESS_ALERT_ROLES.includes(profile?.role);
   const canSeeAvailability = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
   const avIssues           = availability.filter(p => p.status !== 'full');
@@ -1011,24 +1018,11 @@ export default function Dashboard({
                 {visibleDashTasks.length === 0 ? (
                   <EmptyState>{lang === 'ja' ? '✓ 未完了のタスクはありません。' : '✓ No open tasks.'}</EmptyState>
                 ) : (
-                  <>
-                    {urgentTasks.length > 0 && (
-                      <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '🔴 緊急' : '🔴 Urgent'}</SectionLabel>
-                        {urgentTasks.map(t => (
-                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} onDismiss={dismissTask} />
-                        ))}
-                      </div>
-                    )}
-                    {weekTasks.length > 0 && (
-                      <div className={styles.alertSection}>
-                        <SectionLabel>{lang === 'ja' ? '📋 タスク' : '📋 Tasks'}</SectionLabel>
-                        {weekTasks.map(t => (
-                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} onDismiss={dismissTask} />
-                        ))}
-                      </div>
-                    )}
-                  </>
+                  <div className={styles.alertSection}>
+                    {visibleDashTasks.map(t => (
+                      <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} onDismiss={dismissTask} />
+                    ))}
+                  </div>
                 )}
               </div>
               <div className={styles.cardFoot}>

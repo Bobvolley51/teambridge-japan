@@ -502,7 +502,7 @@ export default function Home() {
             className={`${styles.mobileNavItem} ${nav===item.id?styles.mobileNavActive:''}`}
             onClick={() => { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
             <span className={styles.mobileNavIconWrap}>
-              <MIcon size={20} />
+              <MIcon size={24} />
               {item.id === 'performance' && perfAlertCount > 0 && (
                 <span className={styles.mobileNavBadge}>{perfAlertCount}</span>
               )}
