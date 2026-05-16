@@ -9,14 +9,14 @@ import styles from './Calendar.module.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Ball-Practice', 'Weightlifting', 'Game', 'Meeting', 'Travel', 'Medical', 'Other'];
+const CATEGORIES = ['Ball-Practice', 'Weightlifting', 'Game', 'Meeting', 'Travel', 'Medical', 'Birthday', 'Other'];
 
 const CAT_LABEL = {
-  en: { 'Ball-Practice': 'Ball Practice', Weightlifting: 'Weightlifting / Athletic', Game: 'Game', Meeting: 'Meeting', Travel: 'Travel', Medical: 'Medical/Physio', Other: 'Other' },
-  ja: { 'Ball-Practice': 'ボール練習', Weightlifting: 'ウェイト・アスレチック', Game: '試合', Meeting: 'ミーティング', Travel: '旅行', Medical: 'メディカル/フィジオ', Other: 'その他' },
+  en: { 'Ball-Practice': 'Ball Practice', Weightlifting: 'Weightlifting / Athletic', Game: 'Game', Meeting: 'Meeting', Travel: 'Travel', Medical: 'Medical/Physio', Birthday: '🎂 Birthday', Other: 'Other' },
+  ja: { 'Ball-Practice': 'ボール練習', Weightlifting: 'ウェイト・アスレチック', Game: '試合', Meeting: 'ミーティング', Travel: '旅行', Medical: 'メディカル/フィジオ', Birthday: '🎂 誕生日', Other: 'その他' },
 };
 
-const DEFAULT_DURATION = { 'Ball-Practice': 120, Weightlifting: 75, Game: 240, Meeting: 30, Travel: 300, Medical: 60, Other: 300 };
+const DEFAULT_DURATION = { 'Ball-Practice': 120, Weightlifting: 75, Game: 240, Meeting: 30, Travel: 300, Medical: 60, Birthday: 1440, Other: 300 };
 
 const CAT = {
   'Ball-Practice': { bg: '#dbeafe', text: '#1e40af', solid: '#2563eb' },
@@ -25,6 +25,7 @@ const CAT = {
   Meeting:  { bg: '#d1fae5', text: '#065f46', solid: '#059669' },
   Travel:   { bg: '#ede9fe', text: '#4c1d95', solid: '#7c3aed' },
   Medical:  { bg: '#fef3c7', text: '#92400e', solid: '#d97706' },
+  Birthday: { bg: '#fce7f3', text: '#9d174d', solid: '#ec4899' },
   Other:    { bg: '#f3f4f6', text: '#374151', solid: '#6b7280' },
 };
 

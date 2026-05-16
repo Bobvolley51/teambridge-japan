@@ -11,6 +11,7 @@ const TYPE_ICONS = {
   task_deadline:   '✅',
   dm:              '💬',
   wellness_other:  '🩺',
+  birthday:        '🎂',
 };
 
 function typeIcon(type) { return TYPE_ICONS[type] ?? '🔔'; }

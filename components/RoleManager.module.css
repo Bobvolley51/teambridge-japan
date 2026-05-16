@@ -675,6 +675,15 @@
 .tabBtn:hover { background: #e5e7eb; color: #374151; }
 .tabBtnActive { background: #fff; color: #111827; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
+.birthdayInitBtn {
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  background: #fce7f3; border: 1px solid #fbcfe8; color: #9d174d;
+  transition: background 0.15s;
+}
+.birthdayInitBtn:hover:not(:disabled) { background: #fbb6ce; }
+.birthdayInitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ── Stats section ──────────────────────────────────── */
 
 .statsSection {

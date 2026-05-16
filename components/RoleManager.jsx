@@ -432,6 +432,19 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
   const [delProfile,  setDelProfile]  = useState(null);
   const [activeTab,   setActiveTab]   = useState('users');
   const isHeadcoach = ['Headcoach', 'GM'].includes(currentUserRole);
+  const [birthdayInit, setBirthdayInit] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
+
+  const handleBirthdayInit = async () => {
+    setBirthdayInit('loading');
+    try {
+      const res = await fetch('/api/birthday-check');
+      if (res.ok) setBirthdayInit('done');
+      else setBirthdayInit('error');
+    } catch {
+      setBirthdayInit('error');
+    }
+    setTimeout(() => setBirthdayInit('idle'), 4000);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -514,6 +527,16 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                 📈 {lang === 'ja' ? '統計' : 'Stats'}
               </button>
             </div>
+          )}
+          {isHeadcoach && (
+            <button
+              className={styles.birthdayInitBtn}
+              onClick={handleBirthdayInit}
+              disabled={birthdayInit === 'loading'}
+              title={lang === 'ja' ? '全員の誕生日をカレンダーに登録' : 'Create birthday events for all users'}
+            >
+              {birthdayInit === 'loading' ? '…' : birthdayInit === 'done' ? '✓ Done' : birthdayInit === 'error' ? '✗ Error' : '🎂 Setup Birthdays'}
+            </button>
           )}
           <span className={styles.headerSub}>{lang === 'ja' ? `${profiles.length}名` : `${profiles.length} users`}</span>
         </div>
