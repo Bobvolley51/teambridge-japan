@@ -30,7 +30,7 @@ import NutritionDashboard   from '@/components/NutritionDashboard';
 import styles                from './page.module.css';
 import {
   IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
-  IconMega, IconPlane, IconUsers, IconHeart, IconChart, IconStats, IconSearch, IconPin,
+  IconMega, IconPlane, IconUsers, IconHeart, IconChart, IconStats, IconSearch, IconPin, IconActivity,
 } from '@/components/icons';
 
 const NAV_BASE = [
@@ -46,12 +46,14 @@ const NAV_CAL_SUBS = [
   { id: 'travel', Icon: IconPlane, label: { en: 'Travel', ja: '旅程'     } },
 ];
 
-const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,  label: { en: 'Users',   ja: 'ユーザー'   } };
-const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,  label: { en: 'Wellness',   ja: '健康'  } };
-const NAV_NUTRITION   = { id: 'nutrition',  Icon: IconCheck,  label: { en: 'Nutrition',  ja: '栄養'  } };
-const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,  label: { en: 'Load',    ja: '負荷'       } };
-const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,  label: { en: 'Stats',   ja: 'データ'     } };
-const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,    label: { en: 'Medical', ja: 'メディカル' } };
+const NAV_ADMIN       = { id: 'admin',       Icon: IconUsers,    label: { en: 'Users',     ja: 'ユーザー'   } };
+const NAV_PLAYERS     = { id: 'players',     Icon: IconActivity, label: { en: 'Players',   ja: '選手'       } };
+const NAV_WELLNESS    = { id: 'wellness',    Icon: IconHeart,    label: { en: 'Wellness',  ja: '健康'       } };
+const NAV_NUTRITION   = { id: 'nutrition',   Icon: IconCheck,    label: { en: 'Nutrition', ja: '栄養'       } };
+const NAV_PERFORMANCE = { id: 'performance', Icon: IconChart,    label: { en: 'Load',      ja: '負荷'       } };
+const NAV_MYSTATS     = { id: 'mystats',     Icon: IconStats,    label: { en: 'Stats',     ja: 'データ'     } };
+const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,      label: { en: 'Medical',   ja: 'メディカル' } };
+const PLAYERS_IDS     = new Set(['wellness', 'nutrition', 'performance', 'medical']);
 
 // Roles that can view the wellness dashboard
 const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
@@ -70,6 +72,11 @@ export default function Home() {
 
   const [calGroupOpen,     setCalGroupOpen]     = useState(() =>
     ['calendar', 'tasks', 'feed', 'travel'].includes(
+      typeof window !== 'undefined' ? localStorage.getItem('tb_nav') || 'dashboard' : 'dashboard'
+    )
+  );
+  const [playersGroupOpen, setPlayersGroupOpen] = useState(() =>
+    PLAYERS_IDS.has(
       typeof window !== 'undefined' ? localStorage.getItem('tb_nav') || 'dashboard' : 'dashboard'
     )
   );
@@ -385,15 +392,19 @@ export default function Home() {
   const canMedical     = MEDICAL_VIEWERS.includes(profile?.role);
   const canTactics     = TACTICS_VIEWERS.includes(profile?.role);
 
-  const nav_items = [
-    ...NAV_BASE,
-    ...(canTactics     ? [NAV_TACTICS]     : []),
-    ...(isPlayer       ? [NAV_MYSTATS]     : []),
+  const playersSubs = [
     ...(canWellness    ? [NAV_WELLNESS]    : []),
     ...(canNutrition   ? [NAV_NUTRITION]   : []),
     ...(canPerformance ? [NAV_PERFORMANCE] : []),
     ...(canMedical     ? [NAV_MEDICAL]     : []),
-    ...(isAdmin        ? [NAV_ADMIN]       : []),
+  ];
+
+  const nav_items = [
+    ...NAV_BASE,
+    ...(canTactics           ? [NAV_TACTICS]  : []),
+    ...(isPlayer             ? [NAV_MYSTATS]  : []),
+    ...(playersSubs.length   ? [NAV_PLAYERS]  : []),
+    ...(isAdmin              ? [NAV_ADMIN]    : []),
   ];
 
   return (
@@ -421,21 +432,28 @@ export default function Home() {
       <div className={styles.body}>
         <aside className={styles.sidebar}>
           {nav_items.map(item => {
-            const isCalGroup = item.id === 'calendar';
-            const calActive  = isCalGroup && (['calendar', ...NAV_CAL_SUBS.map(s => s.id)].includes(nav));
-            const ItemIcon   = item.Icon;
+            const isCalGroup     = item.id === 'calendar';
+            const isPlayersGroup = item.id === 'players';
+            const calActive      = isCalGroup && (['calendar', ...NAV_CAL_SUBS.map(s => s.id)].includes(nav));
+            const playersActive  = isPlayersGroup && PLAYERS_IDS.has(nav);
+            const ItemIcon       = item.Icon;
             return (
               <div key={item.id}>
                 <button
-                  className={`${styles.navItem} ${(nav===item.id || (isCalGroup && calActive)) ? styles.navActive : ''}`}
+                  className={`${styles.navItem} ${(nav===item.id || (isCalGroup && calActive) || (isPlayersGroup && playersActive)) ? styles.navActive : ''}`}
                   onClick={() => {
-                    navigate(item.id);
-                    if (item.id === 'chat') setUnreadChat(0);
-                    if (isCalGroup) setCalGroupOpen(o => !o);
+                    if (isPlayersGroup) {
+                      setPlayersGroupOpen(o => !o);
+                      if (!PLAYERS_IDS.has(nav)) navigate(playersSubs[0]?.id);
+                    } else {
+                      navigate(item.id);
+                      if (item.id === 'chat') setUnreadChat(0);
+                      if (isCalGroup) setCalGroupOpen(o => !o);
+                    }
                   }}>
                   <span className={styles.navIcon}><ItemIcon size={18} /></span>
                   {item.label[lang]}
-                  {item.id === 'performance' && perfAlertCount > 0 && (
+                  {isPlayersGroup && perfAlertCount > 0 && !playersActive && (
                     <span className={styles.navBadge}>{perfAlertCount}</span>
                   )}
                   {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
@@ -453,6 +471,20 @@ export default function Home() {
                     </button>
                   );
                 })}
+                {isPlayersGroup && playersGroupOpen && playersSubs.map(sub => {
+                  const SubIcon = sub.Icon;
+                  return (
+                    <button key={sub.id}
+                      className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
+                      onClick={() => navigate(sub.id)}>
+                      <span className={styles.navIcon}><SubIcon size={16} /></span>
+                      {sub.label[lang]}
+                      {sub.id === 'performance' && perfAlertCount > 0 && (
+                        <span className={styles.navBadge}>{perfAlertCount}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
@@ -465,6 +497,22 @@ export default function Home() {
           {['calendar','tasks','feed','travel'].includes(nav) && (
             <nav className={styles.calSubNav}>
               {[{ id: 'calendar', Icon: IconCalendar, label: { en: 'Calendar', ja: 'カレンダー' } }, ...NAV_CAL_SUBS].map(sub => {
+                const SubIcon = sub.Icon;
+                return (
+                  <button key={sub.id}
+                    className={`${styles.calSubBtn} ${nav === sub.id ? styles.calSubBtnActive : ''}`}
+                    onClick={() => navigate(sub.id)}>
+                    <SubIcon size={15} />
+                    {sub.label[lang]}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+          {/* Mobile players sub-nav strip */}
+          {PLAYERS_IDS.has(nav) && playersSubs.length > 1 && (
+            <nav className={styles.calSubNav}>
+              {playersSubs.map(sub => {
                 const SubIcon = sub.Icon;
                 return (
                   <button key={sub.id}
@@ -499,8 +547,11 @@ export default function Home() {
           const MIcon = item.Icon;
           return (
           <button key={item.id}
-            className={`${styles.mobileNavItem} ${nav===item.id?styles.mobileNavActive:''}`}
-            onClick={() => { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }}>
+            className={`${styles.mobileNavItem} ${nav===item.id || (item.id==='players' && PLAYERS_IDS.has(nav)) ? styles.mobileNavActive : ''}`}
+            onClick={() => {
+              if (item.id === 'players') { if (!PLAYERS_IDS.has(nav)) navigate(playersSubs[0]?.id); }
+              else { navigate(item.id); if (item.id === 'chat') setUnreadChat(0); }
+            }}>
             <span className={styles.mobileNavIconWrap}>
               <MIcon size={24} />
               {item.id === 'performance' && perfAlertCount > 0 && (

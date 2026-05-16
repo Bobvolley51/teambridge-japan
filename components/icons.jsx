@@ -97,3 +97,7 @@ export function IconMore({ size = 16 }) {
 export function IconRefresh({ size = 14 }) {
   return <Icon size={size}><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></Icon>;
 }
+
+export function IconActivity({ size = 18 }) {
+  return <Icon size={size}><path d="M3 12h4l3-7 4 14 3-7h4"/></Icon>;
+}
