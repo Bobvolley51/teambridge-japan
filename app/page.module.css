@@ -278,11 +278,11 @@
   display: flex; align-items: center; gap: 5px;
   font-size: 12px; font-weight: 600; font-family: inherit;
   padding: 6px 12px; border: none; background: none;
-  color: #6b7280; cursor: pointer; white-space: nowrap;
+  color: rgba(255,255,255,0.5); cursor: pointer; white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition: color 0.1s, border-color 0.1s;
 }
-.calSubBtnActive { color: #7e0027; border-bottom-color: #7e0027; }
+.calSubBtnActive { color: #ffffff; border-bottom-color: var(--tb-accent); }
 
 /* ── Mobile bottom nav ───────────────────────────── */
 
@@ -300,7 +300,7 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: rgba(255,255,255,0.45);
   font-size: 9px;
   font-weight: 500;
   font-family: inherit;
@@ -308,7 +308,7 @@
   transition: color 0.1s;
   position: relative;
 }
-.mobileNavItem:active { background: var(--tb-accent-soft); }
+.mobileNavItem:active { background: rgba(255,255,255,0.06); }
 .mobileNavActive { color: var(--tb-accent); font-weight: 700; }
 
 .mobileNavIconWrap {
@@ -355,8 +355,8 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     flex-shrink: 0;
-    border-bottom: 1px solid #f3f4f6;
-    background: #fff;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: var(--tb-night);
   }
   .calSubNav::-webkit-scrollbar { display: none; }
 
@@ -366,7 +366,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: #ffffff;
+    background: var(--tb-night);
     border-top: 2px solid var(--tb-accent);
     padding-bottom: env(safe-area-inset-bottom);
     z-index: 100;

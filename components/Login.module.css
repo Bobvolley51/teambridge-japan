@@ -7,12 +7,12 @@
   justify-content: center;
   background: linear-gradient(135deg, #fdf2f4 0%, #f5f3ff 100%);
   padding: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--tb-font-sans);
 }
 
 .card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
   padding: 36px 32px;
   width: 100%;
@@ -53,9 +53,12 @@
 }
 
 .title {
-  font-size: 20px;
+  font-family: var(--tb-font-display);
+  font-size: 22px;
   font-weight: 700;
   color: #111827;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   margin: 0;
 }
 
@@ -90,7 +93,7 @@
   font-size: 14px;
   font-family: inherit;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #f9fafb;
   color: #111827;
   outline: none;
@@ -107,7 +110,7 @@
 .message {
   font-size: 13px;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   line-height: 1.5;
 }
 
@@ -127,12 +130,14 @@
   width: 100%;
   padding: 10px;
   font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
+  font-weight: 700;
+  font-family: var(--tb-font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   background: #7e0027;
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
   margin-top: 2px;
@@ -180,7 +185,7 @@
   font-size: 13px;
   font-family: inherit;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #f9fafb;
   color: #111827;
   outline: none;
