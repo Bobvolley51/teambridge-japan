@@ -513,6 +513,106 @@ function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTh
   );
 }
 
+// ── Alert Panel ───────────────────────────────────────────────────────────────
+
+function buildAlerts({ records, painData, availability }) {
+  const now = Date.now();
+  const CUTOFF_MS = 48 * 60 * 60 * 1000;
+  const alerts = [];
+
+  // New / recently-created medical records (last 48h)
+  for (const r of records) {
+    const ts = r.created_at ? new Date(r.created_at).getTime() : new Date(r.record_date + 'T00:00:00').getTime();
+    if (now - ts <= CUTOFF_MS) {
+      const parts = [r.body_part, r.injury_type].filter(Boolean).join(' · ');
+      alerts.push({
+        id:         `rec_${r.id}`,
+        type:       'record',
+        playerName: r.player_name,
+        detail:     parts || (r.treatment ? r.treatment.slice(0, 60) : ''),
+        date:       r.record_date,
+        severity:   r.status === 'active' ? 0 : r.status === 'monitoring' ? 1 : 2,
+      });
+    }
+  }
+
+  // New wellness pain reports (last 48h, grouped per player per day)
+  const seenPain = new Set();
+  for (const r of painData) {
+    const ts = new Date(r.response_date + 'T00:00:00').getTime();
+    if (now - ts <= CUTOFF_MS) {
+      const key = `${r.user_name}__${r.response_date}`;
+      if (!seenPain.has(key)) {
+        seenPain.add(key);
+        const dayParts = painData.filter(p => p.user_name === r.user_name && p.response_date === r.response_date).map(p => p.body_part);
+        alerts.push({
+          id:         `pain_${r.user_name}_${r.response_date}`,
+          type:       'pain',
+          playerName: r.user_name,
+          detail:     [...new Set(dayParts)].join(', '),
+          date:       r.response_date,
+          severity:   3,
+        });
+      }
+    }
+  }
+
+  // Availability changes in last 48h (only non-full = concerning)
+  for (const a of availability) {
+    if (!a.updated_at) continue;
+    const ts = new Date(a.updated_at).getTime();
+    if (now - ts <= CUTOFF_MS && a.status !== 'full') {
+      const cfg = STATUS_CFG[a.status] ?? STATUS_CFG.full;
+      alerts.push({
+        id:         `av_${a.player_id}_${a.updated_at}`,
+        type:       'availability',
+        playerName: a.player_name,
+        detail:     (cfg.en) + (a.reason ? ` — ${a.reason}` : ''),
+        date:       a.updated_at.slice(0, 10),
+        severity:   a.status === 'out' ? 0 : 1,
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => a.severity - b.severity || a.playerName.localeCompare(b.playerName));
+}
+
+function AlertPanel({ records, painData, availability, noticedIds, onNotice, lang }) {
+  const alerts = buildAlerts({ records, painData, availability });
+  const unnoticed = alerts.filter(a => !noticedIds.has(a.id));
+  if (unnoticed.length === 0) return null;
+
+  const TYPE_ICON = { record: '🩹', pain: '💊', availability: '🏃' };
+  const TYPE_LABEL = {
+    record:       { en: 'new treatment record',    ja: '新規処置記録' },
+    pain:         { en: 'pain report',             ja: '痛み報告' },
+    availability: { en: 'availability changed',    ja: '参加可否変更' },
+  };
+
+  return (
+    <div className={styles.alertPanel}>
+      <div className={styles.alertPanelHead}>
+        ⚠️ {unnoticed.length}{lang === 'ja' ? '件の新しい変更' : ` new change${unnoticed.length > 1 ? 's' : ''} (last 48h)`}
+      </div>
+      {unnoticed.map(a => (
+        <div key={a.id} className={styles.alertItem}>
+          <span className={styles.alertTypeIcon}>{TYPE_ICON[a.type]}</span>
+          <div className={styles.alertBody}>
+            <span className={styles.alertPlayerName}>{a.playerName}</span>
+            <span className={styles.alertTypeLabel}>{lang === 'ja' ? TYPE_LABEL[a.type].ja : TYPE_LABEL[a.type].en}</span>
+            {a.detail && <span className={styles.alertDetail}>{a.detail}</span>}
+            <span className={styles.alertDate}>{a.date}</span>
+          </div>
+          <button className={styles.alertNoticeBtn} onClick={() => onNotice(a.id)}>
+            <span className={styles.alertCheckbox}>☐</span>
+            {lang === 'ja' ? '確認済み' : 'Noticed'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const THERAPIST_ROLES = ['Therapist'];
@@ -535,6 +635,18 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   const [recForm,        setRecForm]        = useState(null);
   const [commForm,       setCommForm]       = useState(false);
   const [commPrefill,    setCommPrefill]    = useState(null);
+
+  const lsKey = `medical_noticed_${profile?.id ?? 'anon'}`;
+  const [noticedIds, setNoticedIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(lsKey) ?? '[]')); } catch { return new Set(); }
+  });
+  const markNoticed = (id) => {
+    setNoticedIds(prev => {
+      const next = new Set(prev); next.add(id);
+      try { localStorage.setItem(lsKey, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
 
   const [recFilter,    setRecFilter]    = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
 
@@ -566,7 +678,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     setComms(commData ?? []);
 
     // Load medical records for all SHARED_ROLES; therapists get private_notes too
-    const recCols = isTherapist ? '*' : 'id, player_name, player_id, record_date, body_part, injury_type, treatment, status, created_by';
+    const recCols = isTherapist ? '*' : 'id, player_name, player_id, record_date, body_part, injury_type, treatment, status, created_by, created_at';
     const { data: recData } = await supabase
       .from('medical_records')
       .select(recCols)
@@ -747,8 +859,12 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
               ...Object.keys(recsByPlayer),
             ])].sort();
 
-            // Sort: active records first, then monitoring, then pain, then alphabetical
+            const AV_RANK = { out: 0, limited: 1, full: 2 };
+            // Sort: Out first, then Limited, then Full; within each: active records > monitoring > pain > alphabetical
             const sorted = allNames.sort((a, b) => {
+              const aAv = AV_RANK[avMap[a]?.status ?? 'full'] ?? 2;
+              const bAv = AV_RANK[avMap[b]?.status ?? 'full'] ?? 2;
+              if (aAv !== bAv) return aAv - bAv;
               const aActive = (recsByPlayer[a] ?? []).some(r => r.status === 'active');
               const bActive = (recsByPlayer[b] ?? []).some(r => r.status === 'active');
               if (aActive !== bActive) return aActive ? -1 : 1;
@@ -767,6 +883,14 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
 
             return (
               <div>
+                <AlertPanel
+                  records={records}
+                  painData={painData}
+                  availability={availability}
+                  noticedIds={noticedIds}
+                  onNotice={markNoticed}
+                  lang={lang}
+                />
                 {isTherapist && (
                   <div className={styles.addBar}>
                     <button className={styles.btnAdd} onClick={() => setRecForm('new')}>
