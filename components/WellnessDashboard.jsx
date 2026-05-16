@@ -159,6 +159,7 @@ export default function WellnessDashboard({ lang, profile }) {
   const [date,       setDate]       = useState(todayStr);
   const [weekOffset, setWeekOffset] = useState(0);
   const [weekDays,   setWeekDays]   = useState(7);
+  const [viewMode,   setViewMode]   = useState('heatmap'); // 'heatmap' | 'values'
   const [rows,       setRows]       = useState([]);
   const [weekRows,   setWeekRows]   = useState([]);
   const [todayPain,  setTodayPain]  = useState([]);
@@ -437,6 +438,20 @@ export default function WellnessDashboard({ lang, profile }) {
                 </button>
               ))}
             </div>
+            <div className={styles.viewToggle}>
+              <button
+                className={`${styles.dayRangeBtn} ${viewMode === 'heatmap' ? styles.dayRangeBtnActive : ''}`}
+                onClick={() => setViewMode('heatmap')}
+                title={lang === 'ja' ? 'ヒートマップ表示' : 'Heatmap view'}>
+                🗓
+              </button>
+              <button
+                className={`${styles.dayRangeBtn} ${viewMode === 'values' ? styles.dayRangeBtnActive : ''}`}
+                onClick={() => setViewMode('values')}
+                title={lang === 'ja' ? '数値表示' : 'Values view'}>
+                📊
+              </button>
+            </div>
           </div>
 
           {alarmedWeek.length > 0 && (
@@ -456,6 +471,7 @@ export default function WellnessDashboard({ lang, profile }) {
                 <div className={styles.weekContent}>
 
                   {/* Player heatmap */}
+                  {viewMode === 'heatmap' && (
                   <div className={styles.chartCard}>
                     <div className={styles.chartTitle}>
                       {lang === 'ja' ? '選手別 ウェルネス ヒートマップ' : 'Player Wellness Heatmap'}
@@ -478,8 +494,10 @@ export default function WellnessDashboard({ lang, profile }) {
                       <span className={styles.legendScale}>{lang === 'ja' ? '最悪スコアの選手が上位' : 'Lowest avg shown first'}</span>
                     </div>
                   </div>
+                  )}
 
                   {/* Weekly player summary table */}
+                  {viewMode === 'values' && (
                   <div className={styles.tableWrap}>
                     <table className={styles.table}>
                       <thead>
@@ -541,6 +559,7 @@ export default function WellnessDashboard({ lang, profile }) {
                       </tfoot>
                     </table>
                   </div>
+                  )}
 
                   {/* Body pain frequency */}
                   {weekPain.length > 0 && (() => {

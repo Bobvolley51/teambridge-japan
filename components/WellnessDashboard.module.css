@@ -50,6 +50,7 @@
 .currentWeekBtn:hover { background: #fdf2f4; }
 
 .dayRangeBtns { display: flex; gap: 3px; margin-left: 4px; }
+.viewToggle { display: flex; gap: 3px; margin-left: 12px; border-left: 1px solid #e5e7eb; padding-left: 12px; }
 .dayRangeBtn {
   padding: 3px 9px; font-size: 11px; font-weight: 600;
   background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
