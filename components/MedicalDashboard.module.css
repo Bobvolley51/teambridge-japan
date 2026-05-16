@@ -217,6 +217,27 @@
 .row { display: flex; gap: 10px; }
 .col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 
+.partGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+.partChip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border: 1.5px solid var(--tb-line);
+  border-radius: 6px;
+  background: var(--tb-surface-2);
+  color: var(--tb-fg-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+}
+.partChip:hover { border-color: var(--tb-accent-line); color: var(--tb-accent); background: var(--tb-accent-soft); }
+.partChipActive { background: var(--tb-accent) !important; color: #fff !important; border-color: var(--tb-accent) !important; }
+
 .statusGrid { display: flex; gap: 6px; }
 .statusBtn {
   flex: 1; padding: 8px 4px; border: 1.5px solid var(--tb-line);

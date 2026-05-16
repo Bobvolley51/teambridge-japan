@@ -182,7 +182,7 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
   const [playerName,    setPlayerName]    = useState(record?.player_name ?? '');
   const [playerId,      setPlayerId]      = useState(record?.player_id   ?? '');
   const [date,          setDate]          = useState(record?.record_date  ?? today());
-  const [bodyPart,      setBodyPart]      = useState(record?.body_part    ?? '');
+  const [bodyParts,     setBodyParts]     = useState(() => { const v = record?.body_part; if (!v) return []; return Array.isArray(v) ? v : [v]; });
   const [injuryType,    setInjuryType]    = useState(record?.injury_type  ?? '');
   const [treatment,     setTreatment]     = useState(record?.treatment     ?? '');
   const [recStatus,     setRecStatus]     = useState(record?.status        ?? 'active');
@@ -201,7 +201,7 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
     setSaving(true);
     const payload = {
       player_id: playerId || null, player_name: playerName.trim(),
-      record_date: date, body_part: bodyPart || null, injury_type: injuryType || null,
+      record_date: date, body_part: bodyParts.length ? bodyParts : null, injury_type: injuryType || null,
       treatment: treatment.trim() || null, status: recStatus,
       private_notes: privateNotes.trim() || null, created_by: currentUserName,
     };
@@ -248,22 +248,22 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
             </div>
           </div>
 
-          <div className={styles.row}>
-            <div className={styles.col}>
-              <label className={styles.label}>{lang === 'ja' ? '部位' : 'Body Part'}</label>
-              <select className={styles.input} value={bodyPart} onChange={e => setBodyPart(e.target.value)}>
-                <option value="">—</option>
-                {BODY_PARTS.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div className={styles.col}>
-              <label className={styles.label}>{lang === 'ja' ? '傷病種別' : 'Injury Type'}</label>
-              <select className={styles.input} value={injuryType} onChange={e => setInjuryType(e.target.value)}>
-                <option value="">—</option>
-                {INJURY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
+          <label className={styles.label}>{lang === 'ja' ? '部位（複数選択可）' : 'Body Part(s)'}</label>
+          <div className={styles.partGrid}>
+            {BODY_PARTS.map(b => (
+              <button type="button" key={b}
+                className={`${styles.partChip} ${bodyParts.includes(b) ? styles.partChipActive : ''}`}
+                onClick={() => setBodyParts(p => p.includes(b) ? p.filter(x => x !== b) : [...p, b])}>
+                {b}
+              </button>
+            ))}
           </div>
+
+          <label className={styles.label}>{lang === 'ja' ? '傷病種別' : 'Injury Type'}</label>
+          <select className={styles.input} value={injuryType} onChange={e => setInjuryType(e.target.value)}>
+            <option value="">—</option>
+            {INJURY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
 
           <label className={styles.label}>{lang === 'ja' ? '処置内容' : 'Treatment'}</label>
           <textarea className={styles.textarea} value={treatment} onChange={e => setTreatment(e.target.value)}
@@ -428,9 +428,9 @@ function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTh
   const medStatusMap = {};
   for (const r of medRecords) {
     if (r.body_part && (r.status === 'active' || r.status === 'monitoring')) {
-      // Keep worst status (active > monitoring)
-      if (!medStatusMap[r.body_part] || r.status === 'active') {
-        medStatusMap[r.body_part] = r.status;
+      const parts = Array.isArray(r.body_part) ? r.body_part : [r.body_part];
+      for (const part of parts) {
+        if (!medStatusMap[part] || r.status === 'active') medStatusMap[part] = r.status;
       }
     }
   }
@@ -524,7 +524,8 @@ function buildAlerts({ records, painData, availability }) {
   for (const r of records) {
     const ts = r.created_at ? new Date(r.created_at).getTime() : new Date(r.record_date + 'T00:00:00').getTime();
     if (now - ts <= CUTOFF_MS) {
-      const parts = [r.body_part, r.injury_type].filter(Boolean).join(' · ');
+      const bodyStr = Array.isArray(r.body_part) ? r.body_part.join(', ') : (r.body_part || '');
+      const parts = [bodyStr, r.injury_type].filter(Boolean).join(' · ');
       alerts.push({
         id:         `rec_${r.id}`,
         type:       'record',
@@ -733,13 +734,13 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     const statusLabel = lang === 'ja' ? cfg.ja : cfg.en;
     const lines = [
       `${lang === 'ja' ? '選手' : 'Player'}: ${r.player_name}`,
-      r.body_part   ? `${lang === 'ja' ? '部位' : 'Body Part'}: ${r.body_part}`     : null,
+      r.body_part   ? `${lang === 'ja' ? '部位' : 'Body Part'}: ${Array.isArray(r.body_part) ? r.body_part.join(', ') : r.body_part}` : null,
       r.injury_type ? `${lang === 'ja' ? '傷病' : 'Injury'}: ${r.injury_type}`      : null,
       r.treatment   ? `${lang === 'ja' ? '処置' : 'Treatment'}: ${r.treatment}`     : null,
       `${lang === 'ja' ? 'ステータス' : 'Status'}: ${statusLabel}`,
     ].filter(Boolean);
     setCommPrefill({
-      title:   `${r.player_name} — ${r.body_part || (lang === 'ja' ? 'メディカルアップデート' : 'medical update')}`,
+      title:   `${r.player_name} — ${(Array.isArray(r.body_part) ? r.body_part.join(', ') : r.body_part) || (lang === 'ja' ? 'メディカルアップデート' : 'medical update')}`,
       content: lines.join('\n'),
     });
     setCommForm(true);
@@ -1015,7 +1016,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                             <tr key={r.id} className={styles.tr}>
                               <td className={styles.td}>{r.record_date}</td>
                               <td className={styles.td}><strong>{r.player_name}</strong></td>
-                              <td className={styles.td}>{r.body_part || '—'}</td>
+                              <td className={styles.td}>{Array.isArray(r.body_part) ? r.body_part.join(' · ') : (r.body_part || '—')}</td>
                               <td className={styles.td}>{r.injury_type || '—'}</td>
                               <td className={styles.tdWide}>{r.treatment || '—'}</td>
                               <td className={styles.td}>
