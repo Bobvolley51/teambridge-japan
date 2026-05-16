@@ -329,8 +329,7 @@ export default function WellnessDashboard({ lang, profile }) {
             ? <p className={styles.hint}>{lang === 'ja' ? '読込中…' : 'Loading…'}</p>
             : todayList.length === 0
               ? <p className={styles.hint}>{lang === 'ja' ? 'この日のデータはありません。' : 'No check-ins for this date.'}</p>
-              : (
-                {(() => {
+              : (() => {
                   const hasAnyFever = todayList.some(([, qs]) => tempColor(qs['temperature']) != null);
                   return (
                   <div className={styles.tableWrap}>
@@ -403,8 +402,7 @@ export default function WellnessDashboard({ lang, profile }) {
                   </table>
                   </div>
                   );
-                })()}
-              )
+                })()
           }
 
           {/* Score legend */}
