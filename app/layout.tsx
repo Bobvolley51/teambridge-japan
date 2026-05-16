@@ -19,8 +19,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Teambridge Tridents",
-  description: "Team management for volleyball",
+  title: "TeamBridge Japan",
+  description: "Team management · Shinshu Matsumoto Tridents",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

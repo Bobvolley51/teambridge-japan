@@ -402,6 +402,10 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.logo}>
           <img src="/logo-white.png" alt="Tridents" className={styles.logoImg} />
+          <div className={styles.logoTextBlock}>
+            <span className={styles.logoName}>TeamBridge</span>
+            <span className={styles.logoSub}>Shinshu Matsumoto Tridents</span>
+          </div>
         </div>
         <div className={styles.headerRight}>
           <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">

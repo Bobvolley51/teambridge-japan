@@ -17,8 +17,8 @@
   justify-content: space-between;
   padding: 0 20px;
   height: 52px;
-  background: #0a0a0a;
-  border-bottom: 1px solid #1a1a1a;
+  background: var(--tb-night);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
   z-index: 10;
 }
@@ -27,10 +27,32 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #ffffff;
+}
+
+.logoTextBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1;
+}
+
+.logoName {
+  font-family: var(--tb-font-display);
   font-size: 14px;
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.logoSub {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.42);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 1px;
 }
 
 .logoDot {
@@ -130,7 +152,8 @@
 .sidebar {
   width: 72px;
   flex-shrink: 0;
-  background: #0a0a0a;
+  background: var(--tb-night);
+  border-right: 1px solid rgba(255,255,255,0.05);
   padding: 14px 8px;
   display: flex;
   flex-direction: column;

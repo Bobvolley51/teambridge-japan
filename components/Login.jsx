@@ -21,8 +21,8 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
 
   const t = {
     en: {
-      title:           'Teambridge Tridents',
-      subtitle:        'Sign in to your account',
+      title:           'TeamBridge Japan',
+      subtitle:        'Shinshu Matsumoto Tridents',
       reqSubtitle:     'Request a new account',
       identifier:      'Email or username',
       email:           'Email address',
@@ -45,8 +45,8 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
       usernameInvalid: 'Only letters, numbers and underscores (3–20 chars).',
     },
     ja: {
-      title:              'Teambridge Tridents',
-      subtitle:           'アカウントにサインイン',
+      title:              'TeamBridge Japan',
+      subtitle:           '信州松本トライデンツ',
       reqSubtitle:        '新規アカウントを申請',
       identifier:         'メールまたはユーザー名',
       email:              'メールアドレス',
