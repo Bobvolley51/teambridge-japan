@@ -316,7 +316,6 @@ export default function Dashboard({
         ? supabase.from('event_participants')
             .select('status, events(id, title, start_time, end_time, all_day, category, location, recurrence, recurrence_end)')
             .eq('profile_id', currentUserId)
-            .neq('status', 'out')
         : Promise.resolve({ data: [] }),
       // All team events (admin roles) — only upper bound so old recurring events are included
       isAdminSchedule

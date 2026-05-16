@@ -332,6 +332,37 @@
   border-style: solid;
 }
 
+/* Per-body-part pain level ratings */
+.partRatings {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #fee2e2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.partRatingsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.partRatingRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.partRatingLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  width: 110px;
+  flex-shrink: 0;
+}
+
 /* Page 3 — free-text message */
 .otherMessageBlock {
   display: flex;

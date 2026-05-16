@@ -7,12 +7,12 @@ import styles from './WellnessDashboard.module.css';
 // ── Constants ─────────────────────────────────────────────────
 
 const QUESTIONS = [
-  { key: 'fatigue',     en: 'Fatigue',      ja: '疲労' },
-  { key: 'sleep',       en: 'Sleep',        ja: '睡眠' },
-  { key: 'appetite',    en: 'Appetite',     ja: '食欲' },
-  { key: 'temperature', en: 'Temperature',  ja: '体温' },
-  { key: 'pain',        en: 'Body Pain',    ja: '痛み' },
+  { key: 'fatigue',  en: 'Fatigue',  ja: '疲労' },
+  { key: 'sleep',    en: 'Sleep',    ja: '睡眠' },
+  { key: 'appetite', en: 'Appetite', ja: '食欲' },
 ];
+
+const FEVER_THRESHOLD = 37.0; // above this = show; ≥38.0 = red
 
 const BODY_PARTS = [
   { key: 'shoulder_l',  en: 'Left Shoulder',   ja: '左肩' },
@@ -53,6 +53,11 @@ function colorOf(score) {
   if (score < 5)     return '#ef4444';
   if (score < 7)     return '#f59e0b';
   return '#10b981';
+}
+
+function tempColor(val) {
+  if (val == null || val <= FEVER_THRESHOLD) return null;
+  return val >= 38.0 ? '#ef4444' : '#f59e0b';
 }
 
 function avg(arr) {
@@ -150,6 +155,16 @@ function ScoreBadge({ score, alarm }) {
   );
 }
 
+function TempBadge({ val }) {
+  const tc = tempColor(val);
+  if (tc == null) return <span className={styles.noData}>—</span>;
+  return (
+    <span className={styles.badge} style={{ background: tc, fontSize: '11px' }}>
+      🌡 {val?.toFixed(1)}°C
+    </span>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────
 
 export default function WellnessDashboard({ lang, profile }) {
@@ -174,7 +189,7 @@ export default function WellnessDashboard({ lang, profile }) {
     const prevWeek = prevWeekStartOf(date);
     const [{ data }, { data: pain }, { data: bw }] = await Promise.all([
       supabase.from('wellness_responses').select('*').eq('response_date', date).order('user_name'),
-      supabase.from('wellness_body_pain').select('user_name, body_part').eq('response_date', date),
+      supabase.from('wellness_body_pain').select('user_name, body_part, pain_level').eq('response_date', date),
       supabase.from('player_bodyweight').select('user_name, weight_kg, week_start').in('week_start', [curWeek, prevWeek]),
     ]);
     setRows(data ?? []);
@@ -194,7 +209,7 @@ export default function WellnessDashboard({ lang, profile }) {
     const prevWeek = prevWeekStartOf(dates[0]);
     const [{ data }, { data: pain }, { data: bw }] = await Promise.all([
       supabase.from('wellness_responses').select('*').in('response_date', dates).order('user_name'),
-      supabase.from('wellness_body_pain').select('user_name, body_part, response_date').in('response_date', dates),
+      supabase.from('wellness_body_pain').select('user_name, body_part, pain_level, response_date').in('response_date', dates),
       supabase.from('player_bodyweight').select('user_name, weight_kg, week_start').in('week_start', [curWeek, prevWeek]),
     ]);
     setWeekRows(data ?? []);
@@ -221,6 +236,8 @@ export default function WellnessDashboard({ lang, profile }) {
   const weekCurWeek  = getWeekStart(weekDates0);
   const weekPrevWeek = prevWeekStartOf(weekDates0);
 
+  const MAIN_KEYS = new Set(QUESTIONS.map(q => q.key));
+
   // ── Today: derived data ─────────────────────────────────────
   const todayPlayers = {};
   for (const r of rows) {
@@ -228,7 +245,7 @@ export default function WellnessDashboard({ lang, profile }) {
     todayPlayers[r.user_name][r.question_key] = r.score;
   }
   const todayList    = Object.entries(todayPlayers);
-  const alarmedToday = [...new Set(rows.filter(r => r.score < 5).map(r => r.user_name))];
+  const alarmedToday = [...new Set(rows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 5).map(r => r.user_name))];
 
   // ── Week: derived data ──────────────────────────────────────
   const weekDates = Array.from({ length: weekDays }, (_, i) => {
@@ -241,8 +258,10 @@ export default function WellnessDashboard({ lang, profile }) {
   };
 
   // Build player-day map for heatmap: { playerName: { dateStr: [scores] } }
+  // Only include the 3 main wellness scores (not temperature which is in °C)
   const playerDayMap = {};
   for (const r of weekRows) {
+    if (!MAIN_KEYS.has(r.question_key)) continue;
     if (!playerDayMap[r.user_name]) playerDayMap[r.user_name] = {};
     if (!playerDayMap[r.user_name][r.response_date]) playerDayMap[r.user_name][r.response_date] = [];
     playerDayMap[r.user_name][r.response_date].push(r.score);
@@ -265,7 +284,7 @@ export default function WellnessDashboard({ lang, profile }) {
     avgs: Object.fromEntries(QUESTIONS.map(q => [q.key, avg(qs[q.key] ?? [])])),
   }));
 
-  const alarmedWeek  = [...new Set(weekRows.filter(r => r.score < 5).map(r => r.user_name))];
+  const alarmedWeek  = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 5).map(r => r.user_name))];
   const weekLabel    = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
 
   // ── Render ──────────────────────────────────────────────────
@@ -311,20 +330,24 @@ export default function WellnessDashboard({ lang, profile }) {
             : todayList.length === 0
               ? <p className={styles.hint}>{lang === 'ja' ? 'この日のデータはありません。' : 'No check-ins for this date.'}</p>
               : (
-                <div className={styles.tableWrap}>
+                {(() => {
+                  const hasAnyFever = todayList.some(([, qs]) => tempColor(qs['temperature']) != null);
+                  return (
+                  <div className={styles.tableWrap}>
                   <table className={styles.table}>
                     <thead>
                       <tr>
                         <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
                         {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
+                        {hasAnyFever && <th className={styles.th}>🌡 {lang === 'ja' ? '体温' : 'Temp'}</th>}
                         <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
                         <th className={styles.th}>{lang === 'ja' ? '平均' : 'Avg'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {todayList.map(([name, qs]) => {
-                        const scores = QUESTIONS.map(q => qs[q.key]);
-                        const a = avg(scores);
+                        const mainScores = QUESTIONS.map(q => qs[q.key]);
+                        const a = avg(mainScores);
                         const curBw  = bwMap[name]?.[todayCurWeek];
                         const prevBw = bwMap[name]?.[todayPrevWeek];
                         const pct    = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
@@ -336,6 +359,11 @@ export default function WellnessDashboard({ lang, profile }) {
                                 <ScoreBadge score={qs[q.key]} alarm={qs[q.key] != null && qs[q.key] < 5} />
                               </td>
                             ))}
+                            {hasAnyFever && (
+                              <td className={`${styles.td} ${tempColor(qs['temperature']) === '#ef4444' ? styles.lowCell : ''}`}>
+                                <TempBadge val={qs['temperature']} />
+                              </td>
+                            )}
                             <td className={styles.td}>
                               {curBw != null
                                 ? <div className={styles.bwCell}>
@@ -367,12 +395,15 @@ export default function WellnessDashboard({ lang, profile }) {
                             </td>
                           );
                         })}
+                        {hasAnyFever && <td className={styles.td} />}
                         <td className={styles.td} />
                         <td className={styles.td} />
                       </tr>
                     </tfoot>
                   </table>
-                </div>
+                  </div>
+                  );
+                })()}
               )
           }
 
@@ -395,16 +426,25 @@ export default function WellnessDashboard({ lang, profile }) {
               {Object.entries(
                 todayPain.reduce((acc, r) => {
                   if (!acc[r.user_name]) acc[r.user_name] = [];
-                  acc[r.user_name].push(r.body_part);
+                  acc[r.user_name].push(r);
                   return acc;
                 }, {})
-              ).map(([name, parts]) => (
+              ).map(([name, entries]) => (
                 <div key={name} className={styles.painRow}>
                   <span className={styles.painName}>{name}</span>
                   <div className={styles.painParts}>
-                    {parts.map(p => {
-                      const label = BODY_PARTS.find(b => b.key === p);
-                      return <span key={p} className={styles.painChip}>{label ? (lang === 'ja' ? label.ja : label.en) : p}</span>;
+                    {entries.map(r => {
+                      const label = BODY_PARTS.find(b => b.key === r.body_part);
+                      const chipLabel = label ? (lang === 'ja' ? label.ja : label.en) : r.body_part;
+                      const level = r.pain_level;
+                      const chipColor = level == null ? undefined
+                        : level >= 7 ? '#ef4444' : level >= 4 ? '#f59e0b' : '#10b981';
+                      return (
+                        <span key={r.body_part} className={styles.painChip}
+                          style={chipColor ? { background: chipColor, color: '#fff', borderColor: chipColor } : undefined}>
+                          {chipLabel}{level != null ? ` ${level}/10` : ''}
+                        </span>
+                      );
                     })}
                   </div>
                 </div>

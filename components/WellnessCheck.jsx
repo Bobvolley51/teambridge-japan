@@ -77,27 +77,38 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [step,            setStep]            = useState(1);
   const [scores,          setScores]          = useState({});
   const [illness,         setIllness]         = useState(null);
-  const [painScore,       setPainScore]       = useState(null);
+  const [hasPain,         setHasPain]         = useState(null);
   const [illnessSymptoms, setIllnessSymptoms] = useState([]);
   const [bodyTemp,        setBodyTemp]        = useState('');
   const [painParts,       setPainParts]       = useState([]);
+  const [painLevels,      setPainLevels]      = useState({});
   const [otherMessage,    setOtherMessage]    = useState('');
   const [saving,          setSaving]          = useState(false);
 
-  const allAnswered   = QUESTIONS.every(q => scores[q.key] != null) && illness !== null && painScore !== null;
-  const answeredCount = Object.keys(scores).length + (illness !== null ? 1 : 0) + (painScore !== null ? 1 : 0);
+  const allAnswered   = QUESTIONS.every(q => scores[q.key] != null) && illness !== null && hasPain !== null;
+  const answeredCount = Object.keys(scores).length + (illness !== null ? 1 : 0) + (hasPain !== null ? 1 : 0);
   const totalQ        = QUESTIONS.length + 2;
 
-  const needsPage2 = illness === 'yes' || painScore >= 4;
+  const needsPage2 = illness === 'yes' || hasPain === 'yes';
   const needsPage3 = painParts.includes('other');
 
   const totalSteps = needsPage2 ? (needsPage3 ? 3 : 2) : 1;
+
+  // All selected non-"other" parts must have a pain level rated
+  const ratedParts   = painParts.filter(k => k !== 'other');
+  const allPartsRated = hasPain !== 'yes' || (ratedParts.length > 0 && ratedParts.every(k => painLevels[k] != null));
 
   const toggleIllnessSymptom = (key) =>
     setIllnessSymptoms(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
 
   const togglePart = (key) => {
-    setPainParts(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    setPainParts(prev => {
+      if (prev.includes(key)) {
+        setPainLevels(l => { const c = { ...l }; delete c[key]; return c; });
+        return prev.filter(k => k !== key);
+      }
+      return [...prev, key];
+    });
   };
 
   const handleNext = () => needsPage2 ? setStep(2) : handleSubmit();
@@ -111,17 +122,16 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       user_id: userId, user_name: userName,
       question_key: q.key, score: scores[q.key], response_date: today,
     }));
-    const tempVal = illness === 'yes' && bodyTemp !== '' ? parseFloat(bodyTemp) : null;
-    if (tempVal != null && !isNaN(tempVal)) {
+
+    // Temperature: only save when fever is selected AND value is above normal
+    const hasFever = illnessSymptoms.includes('illness_fever');
+    const tempVal  = hasFever && bodyTemp !== '' ? parseFloat(bodyTemp) : null;
+    if (tempVal != null && !isNaN(tempVal) && tempVal > 37.0) {
       wellnessRows.push({
         user_id: userId, user_name: userName,
         question_key: 'temperature', score: tempVal, response_date: today,
       });
     }
-    wellnessRows.push({
-      user_id: userId, user_name: userName,
-      question_key: 'pain', score: 11 - painScore, response_date: today,
-    });
 
     await supabase.from('wellness_responses').upsert(wellnessRows, {
       onConflict: 'user_id,question_key,response_date',
@@ -131,8 +141,15 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       .delete().eq('user_id', userId).eq('response_date', today);
 
     const painRows = [
-      ...painParts.map(part => ({ user_id: userId, user_name: userName, response_date: today, body_part: part })),
-      ...illnessSymptoms.map(sym => ({ user_id: userId, user_name: userName, response_date: today, body_part: sym })),
+      ...painParts.map(part => ({
+        user_id: userId, user_name: userName, response_date: today,
+        body_part: part,
+        pain_level: part === 'other' ? null : (painLevels[part] ?? null),
+      })),
+      ...illnessSymptoms.map(sym => ({
+        user_id: userId, user_name: userName, response_date: today,
+        body_part: sym, pain_level: null,
+      })),
     ];
     if (painRows.length > 0) {
       await supabase.from('wellness_body_pain').insert(painRows);
@@ -173,9 +190,11 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       alerts.push(`🤒 Illness reported${symptomList ? `: ${symptomList}` : ''}${tempStr}`);
     }
 
-    if (painScore >= 7) {
-      const partList = painParts.filter(k => k !== 'other').map(k => BODY_PART_LABELS[k] ?? k).join(', ');
-      alerts.push(`🩹 High pain level: ${painScore}/10${partList ? ` — ${partList}` : ''}`);
+    // Per-body-part high pain alerts
+    const highPainParts = ratedParts.filter(k => (painLevels[k] ?? 0) >= 7);
+    if (highPainParts.length > 0) {
+      const partList = highPainParts.map(k => `${BODY_PART_LABELS[k] ?? k} (${painLevels[k]}/10)`).join(', ');
+      alerts.push(`🩹 High pain: ${partList}`);
     }
 
     if (alerts.length > 0) {
@@ -258,20 +277,19 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
               <div className={styles.qBlock}>
                 <div className={styles.qText}>
                   <span className={styles.qNum}>{QUESTIONS.length + 2}</span>
-                  {lang === 'ja' ? '全身の痛みレベルは？（1が最高、10が最悪）' : 'Overall body pain level (1 = no pain, 10 = worst)'}
+                  {lang === 'ja' ? '体の痛みや違和感はありますか？' : 'Any body pain or soreness today?'}
                 </div>
-                <div className={styles.scale}>
-                  <span className={styles.scaleLabel}>{lang === 'ja' ? '痛みなし' : 'No pain'}</span>
-                  <div className={styles.scaleBtns}>
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                      <button key={n} className={styles.scaleBtn}
-                        style={painBtnStyle(n, painScore === n)}
-                        onClick={() => setPainScore(n)}>
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                  <span className={styles.scaleLabel}>{lang === 'ja' ? '最悪' : 'Worst'}</span>
+                <div className={styles.yesNoRow}>
+                  <button
+                    className={`${styles.yesNoBtn} ${hasPain === 'no' ? styles.yesNoBtnNo : ''}`}
+                    onClick={() => setHasPain('no')}>
+                    {lang === 'ja' ? 'いいえ' : 'No'}
+                  </button>
+                  <button
+                    className={`${styles.yesNoBtn} ${hasPain === 'yes' ? styles.yesNoBtnYes : ''}`}
+                    onClick={() => setHasPain('yes')}>
+                    {lang === 'ja' ? 'はい' : 'Yes'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -295,7 +313,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
         {step === 2 && (
           <>
             <div className={styles.header}>
-              <span className={styles.headerEmoji}>{illness === 'yes' && painScore < 4 ? '🤒' : '🦵'}</span>
+              <span className={styles.headerEmoji}>{illness === 'yes' && hasPain !== 'yes' ? '🤒' : '🦵'}</span>
               <div>
                 <div className={styles.title}>
                   {lang === 'ja' ? `詳細 (${stepLabel(2)})` : `Details (${stepLabel(2)})`}
@@ -328,25 +346,30 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                       );
                     })}
                   </div>
-                  <div className={styles.tempRow}>
-                    <label className={styles.tempLabel}>
-                      🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
-                    </label>
-                    <input
-                      className={styles.tempInput}
-                      type="number"
-                      step="0.1"
-                      min="35"
-                      max="42"
-                      value={bodyTemp}
-                      onChange={e => setBodyTemp(e.target.value)}
-                      placeholder="e.g. 37.2"
-                    />
-                  </div>
+
+                  {/* Temperature — only when Fever is selected */}
+                  {illnessSymptoms.includes('illness_fever') && (
+                    <div className={styles.tempRow}>
+                      <label className={styles.tempLabel}>
+                        🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
+                      </label>
+                      <input
+                        className={styles.tempInput}
+                        type="number"
+                        step="0.1"
+                        min="37"
+                        max="42"
+                        value={bodyTemp}
+                        onChange={e => setBodyTemp(e.target.value)}
+                        placeholder="e.g. 38.5"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
-              {painScore >= 4 && (
+              {hasPain === 'yes' && (
                 <div className={styles.followUpSection}>
                   <div className={styles.followUpTitle}>
                     {lang === 'ja' ? '痛みや張りがある箇所を選んでください' : 'Where do you have pain or tightness?'}
@@ -364,6 +387,36 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                       );
                     })}
                   </div>
+
+                  {/* Per-part pain level rating */}
+                  {ratedParts.length > 0 && (
+                    <div className={styles.partRatings}>
+                      <div className={styles.partRatingsTitle}>
+                        {lang === 'ja'
+                          ? '各部位の痛みの強さ（1＝軽い・10＝最悪）'
+                          : 'Rate pain in each area — 1 (mild) to 10 (worst)'}
+                      </div>
+                      {ratedParts.map(partKey => {
+                        const part = BODY_PARTS.find(p => p.key === partKey);
+                        return (
+                          <div key={partKey} className={styles.partRatingRow}>
+                            <div className={styles.partRatingLabel}>
+                              {lang === 'ja' ? part.ja : part.en}
+                            </div>
+                            <div className={styles.scaleBtns}>
+                              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                                <button key={n} className={styles.scaleBtn}
+                                  style={painBtnStyle(n, painLevels[partKey] === n)}
+                                  onClick={() => setPainLevels(prev => ({ ...prev, [partKey]: n }))}>
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -372,7 +425,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
               <button className={styles.backBtn} onClick={() => setStep(1)}>
                 ← {lang === 'ja' ? '戻る' : 'Back'}
               </button>
-              <button className={styles.submitBtn} disabled={saving} onClick={handleNextPage2}>
+              <button className={styles.submitBtn} disabled={saving || !allPartsRated} onClick={handleNextPage2}>
                 {needsPage3
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
                   : (saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit'))}
