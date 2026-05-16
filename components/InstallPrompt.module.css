@@ -1,0 +1,122 @@
+/* components/InstallPrompt.module.css */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.section {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section:last-child { border-bottom: none; }
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checkIcon {
+  font-size: 13px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.statusText {
+  font-size: 12px;
+  color: #374151;
+}
+
+.btn {
+  padding: 8px 14px;
+  background: #7e0027;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.btn:hover:not(:disabled) { background: #6b001f; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btnSecondary {
+  padding: 6px 12px;
+  background: none;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+
+.btnSecondary:hover:not(:disabled) { background: #f3f4f6; }
+.btnSecondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error {
+  font-size: 11px;
+  color: #b91c1c;
+  margin: 0;
+}
+
+/* iOS step-by-step guide */
+.iosGuide {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.iosStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.iosNum {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: #7e0027;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

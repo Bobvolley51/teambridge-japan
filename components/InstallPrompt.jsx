@@ -1,0 +1,198 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import styles from './InstallPrompt.module.css';
+
+export default function InstallPrompt({ userId, lang }) {
+  const [installable,    setInstallable]    = useState(false); // Android/desktop deferred prompt
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIOS,          setIsIOS]          = useState(false);
+  const [isStandalone,   setIsStandalone]   = useState(false);
+  const [notifState,     setNotifState]     = useState('default'); // 'default' | 'granted' | 'denied'
+  const [subscribing,    setSubscribing]    = useState(false);
+  const [showIOSGuide,   setShowIOSGuide]   = useState(false);
+  const [subError,       setSubError]       = useState(null);
+
+  useEffect(() => {
+    setIsIOS(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+    if ('Notification' in window) setNotifState(Notification.permission);
+
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); setInstallable(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') { setInstallable(false); setDeferredPrompt(null); }
+  };
+
+  const handleNotifications = async () => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      setSubError(lang === 'ja' ? 'このブラウザは通知をサポートしていません。' : 'Notifications not supported in this browser.');
+      return;
+    }
+    setSubscribing(true);
+    setSubError(null);
+    try {
+      const permission = await Notification.requestPermission();
+      setNotifState(permission);
+      if (permission !== 'granted') { setSubscribing(false); return; }
+
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) { setSubscribing(false); return; }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
+      });
+
+      await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, subscription: sub.toJSON() }),
+      });
+    } catch (err) {
+      setSubError(err.message);
+    }
+    setSubscribing(false);
+  };
+
+  const handleUnsubscribe = async () => {
+    setSubscribing(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/api/push-subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setNotifState('default');
+    } catch (err) {
+      setSubError(err.message);
+    }
+    setSubscribing(false);
+  };
+
+  const notifSupported = typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
+  // iOS push is only supported in standalone (home screen) mode on iOS 16.4+
+  const iosCanPush = isIOS && isStandalone;
+
+  return (
+    <div className={styles.wrap}>
+
+      {/* ── Install section ── */}
+      <div className={styles.section}>
+        <div className={styles.sectionLabel}>
+          📱 {lang === 'ja' ? 'アプリとしてインストール' : 'Install as app'}
+        </div>
+
+        {isStandalone ? (
+          <div className={styles.statusRow}>
+            <span className={styles.checkIcon}>✓</span>
+            <span className={styles.statusText}>
+              {lang === 'ja' ? 'すでにアプリとして起動しています。' : 'Running as installed app.'}
+            </span>
+          </div>
+        ) : isIOS ? (
+          <>
+            <p className={styles.hint}>
+              {lang === 'ja'
+                ? 'Safariで開いて「共有 → ホーム画面に追加」をタップしてください。'
+                : 'Open in Safari, tap the Share button, then "Add to Home Screen".'}
+            </p>
+            <button className={styles.btn} onClick={() => setShowIOSGuide(v => !v)}>
+              {showIOSGuide
+                ? (lang === 'ja' ? '閉じる' : 'Close guide')
+                : (lang === 'ja' ? '手順を見る' : 'Show me how')}
+            </button>
+            {showIOSGuide && (
+              <div className={styles.iosGuide}>
+                <div className={styles.iosStep}><span className={styles.iosNum}>1</span>{lang === 'ja' ? 'Safariでこのページを開く' : 'Open this page in Safari'}</div>
+                <div className={styles.iosStep}><span className={styles.iosNum}>2</span>{lang === 'ja' ? '下部の共有ボタン（四角＋矢印）をタップ' : 'Tap the Share button at the bottom (box with arrow)'}</div>
+                <div className={styles.iosStep}><span className={styles.iosNum}>3</span>{lang === 'ja' ? '「ホーム画面に追加」を選択' : 'Select "Add to Home Screen"'}</div>
+                <div className={styles.iosStep}><span className={styles.iosNum}>4</span>{lang === 'ja' ? '「追加」をタップして完了！' : 'Tap "Add" — done!'}</div>
+              </div>
+            )}
+          </>
+        ) : installable ? (
+          <button className={styles.btn} onClick={handleInstall}>
+            {lang === 'ja' ? 'アプリをインストール' : 'Install app'}
+          </button>
+        ) : (
+          <p className={styles.hint}>
+            {lang === 'ja'
+              ? 'このブラウザはインストールプロンプトをサポートしていないか、すでにインストール済みです。'
+              : 'Your browser doesn\'t support install prompts, or the app is already installed.'}
+          </p>
+        )}
+      </div>
+
+      {/* ── Notifications section ── */}
+      <div className={styles.section}>
+        <div className={styles.sectionLabel}>
+          🔔 {lang === 'ja' ? 'プッシュ通知' : 'Push notifications'}
+        </div>
+
+        {isIOS && !isStandalone ? (
+          <p className={styles.hint}>
+            {lang === 'ja'
+              ? 'iOSでプッシュ通知を受け取るには、まずホーム画面に追加してください。'
+              : 'On iPhone, add the app to your Home Screen first to enable push notifications.'}
+          </p>
+        ) : !notifSupported ? (
+          <p className={styles.hint}>
+            {lang === 'ja' ? 'このブラウザは通知をサポートしていません。' : 'Notifications not supported in this browser.'}
+          </p>
+        ) : notifState === 'granted' ? (
+          <div>
+            <div className={styles.statusRow}>
+              <span className={styles.checkIcon}>✓</span>
+              <span className={styles.statusText}>
+                {lang === 'ja' ? '通知が有効です。' : 'Notifications are enabled.'}
+              </span>
+            </div>
+            <button className={styles.btnSecondary} onClick={handleUnsubscribe} disabled={subscribing}>
+              {subscribing ? '…' : (lang === 'ja' ? '通知を無効にする' : 'Disable notifications')}
+            </button>
+          </div>
+        ) : notifState === 'denied' ? (
+          <p className={styles.hint} style={{ color: '#b91c1c' }}>
+            {lang === 'ja'
+              ? '通知がブロックされています。ブラウザの設定から許可してください。'
+              : 'Notifications are blocked. Please allow them in your browser settings.'}
+          </p>
+        ) : (
+          <div>
+            <p className={styles.hint}>
+              {lang === 'ja'
+                ? 'チャット、カレンダー変更、タスクなどのリアルタイム通知を受け取れます。'
+                : 'Get notified about chat messages, calendar changes, tasks, and more — even when the app is closed.'}
+            </p>
+            <button className={styles.btn} onClick={handleNotifications} disabled={subscribing}>
+              {subscribing ? '…' : (lang === 'ja' ? '通知を有効にする' : 'Enable notifications')}
+            </button>
+          </div>
+        )}
+
+        {subError && <p className={styles.error}>{subError}</p>}
+      </div>
+
+    </div>
+  );
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}

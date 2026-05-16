@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import InstallPrompt from './InstallPrompt';
 import styles from './UserMenu.module.css';
 
 const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
 
 export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
   const [open,        setOpen]        = useState(false);
-  const [view,        setView]        = useState('menu'); // 'menu' | 'profile' | 'calendar'
+  const [view,        setView]        = useState('menu'); // 'menu' | 'profile' | 'calendar' | 'install'
   const [calCopied,   setCalCopied]   = useState(false);
   const [showPwForm,  setShowPwForm]  = useState(false);
   const [oldPw,       setOldPw]       = useState('');
@@ -237,6 +238,9 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
               <button className={styles.menuItem} onClick={() => setView('calendar')}>
                 📅 {lang === 'ja' ? 'カレンダー購読URL' : 'Calendar subscription'}
               </button>
+              <button className={styles.menuItem} onClick={() => setView('install')}>
+                📲 {lang === 'ja' ? 'アプリ・通知設定' : 'App & notifications'}
+              </button>
               <div className={styles.divider} />
               <button className={`${styles.menuItem} ${styles.signOut}`} onClick={handleSignOut}>
                 → {lang === 'ja' ? 'ログアウト' : 'Sign out'}
@@ -386,6 +390,21 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
               </div>
 
             </form>
+          )}
+
+          {/* ── App & notifications ── */}
+          {view === 'install' && (
+            <div className={styles.pwForm} style={{ padding: 0, gap: 0 }}>
+              <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                  {lang === 'ja' ? 'アプリ・通知設定' : 'App & notifications'}
+                </span>
+                <button type="button" className={styles.cancelBtn} onClick={reset} style={{ padding: '3px 10px' }}>
+                  {lang === 'ja' ? '戻る' : 'Back'}
+                </button>
+              </div>
+              <InstallPrompt userId={user.id} lang={lang} />
+            </div>
           )}
 
           {/* ── Calendar subscription ── */}

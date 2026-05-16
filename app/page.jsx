@@ -147,6 +147,13 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Register Service Worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  }, []);
+
   // Global search keyboard shortcut
   useEffect(() => {
     const handler = (e) => {
