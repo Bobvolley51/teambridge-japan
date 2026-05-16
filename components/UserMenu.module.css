@@ -39,13 +39,16 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 260px;
+  width: 300px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.10);
   z-index: 100;
   overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* User info header */
@@ -220,6 +223,9 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .pwInput {
@@ -347,3 +353,82 @@
 }
 
 .calCopyBtn:hover { background: #6b001f; }
+
+/* Profile form field layout */
+.fieldRow {
+  display: flex;
+  gap: 6px;
+}
+
+.field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fieldInput {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.fieldInput:focus { border-color: #7e0027; background: #fff; }
+
+/* Danger zone */
+.dangerZone {
+  margin-top: 6px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff5f5;
+}
+
+.dangerZoneLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b91c1c;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.dangerZoneBtn {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.dangerZoneBtn:hover { background: #fef2f2; }
+
+.dangerConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
