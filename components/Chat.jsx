@@ -8,6 +8,19 @@ import styles from './Chat.module.css';
 
 const MAX_HISTORY = 50;
 
+function profileFullName(p) {
+  if (!p) return '';
+  if (p.first_name && p.last_name) return `${p.first_name} ${p.last_name}`;
+  return p.display_name || p.email || '';
+}
+
+function profileInitials(p) {
+  const name = profileFullName(p);
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase() || '?';
+}
+
 function slugify(str) {
   return (str || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -315,8 +328,8 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
   const filtered = profiles
     .filter(p => p.id !== currentUserId)
     .filter(p => {
-      const name = (p.display_name || p.email || '').toLowerCase();
-      return name.includes(query.toLowerCase());
+      const name = profileFullName(p).toLowerCase();
+      return name.includes(query.toLowerCase()) || (p.email || '').toLowerCase().includes(query.toLowerCase());
     });
 
   return (
@@ -338,11 +351,11 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
             {filtered.map(p => (
               <button key={p.id} className={styles.dmUserItem} onClick={() => onSelect(p)}>
                 <div className={styles.dmUserAvatar}>
-                  {(p.display_name || p.email || '?').slice(0, 2).toUpperCase()}
+                  {profileInitials(p)}
                 </div>
                 <div className={styles.dmUserInfo}>
-                  <span className={styles.dmUserName}>{p.display_name || p.email}</span>
-                  <span className={styles.dmUserRole}>{p.role}</span>
+                  <span className={styles.dmUserName}>{profileFullName(p)}</span>
+                  <span className={styles.dmUserRole}>{p.position || p.role}</span>
                 </div>
               </button>
             ))}
@@ -389,10 +402,14 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
       </div>
       {dmConversations.map(dm => (
         <button key={dm.channelId}
-          className={`${styles.channelItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
-          onClick={() => onSelect(dm.channelId)}>
-          <span className={styles.dmDot}>●</span>
-          {dm.name}
+          className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
+          onClick={() => onSelect(dm.channelId)}
+          title={dm.name}>
+          <span className={styles.dmAvatar}>{dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()}</span>
+          <span className={styles.dmItemInfo}>
+            <span className={styles.dmItemName}>{dm.name}</span>
+            {dm.subtitle && <span className={styles.dmItemSub}>{dm.subtitle}</span>}
+          </span>
         </button>
       ))}
       {dmConversations.length === 0 && (
@@ -449,7 +466,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
 
   // Load profiles for @-mentions and DM picker
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, email, role').order('display_name')
+    supabase.from('profiles').select('id, display_name, first_name, last_name, email, role, position').order('display_name')
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
 
@@ -500,7 +517,10 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   // Resolve DM conversation names from profiles
   const dmConversationsWithNames = dmConversations.map(dm => {
     const other = profiles.find(p => p.id === dm.otherId);
-    return { ...dm, name: other?.display_name || other?.email || dm.otherId.slice(0, 8) };
+    const name = other ? profileFullName(other) : dm.otherId.slice(0, 8);
+    const subtitle = other ? (other.position || other.role || '') : '';
+    const initials = other ? profileInitials(other) : '?';
+    return { ...dm, name, subtitle, initials };
   });
 
   // Scroll to bottom when messages change
