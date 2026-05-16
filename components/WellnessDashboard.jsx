@@ -438,20 +438,20 @@ export default function WellnessDashboard({ lang, profile }) {
                 </button>
               ))}
             </div>
-            <div className={styles.viewToggle}>
-              <button
-                className={`${styles.dayRangeBtn} ${viewMode === 'heatmap' ? styles.dayRangeBtnActive : ''}`}
-                onClick={() => setViewMode('heatmap')}
-                title={lang === 'ja' ? 'ヒートマップ表示' : 'Heatmap view'}>
-                🗓
-              </button>
-              <button
-                className={`${styles.dayRangeBtn} ${viewMode === 'values' ? styles.dayRangeBtnActive : ''}`}
-                onClick={() => setViewMode('values')}
-                title={lang === 'ja' ? '数値表示' : 'Values view'}>
-                📊
-              </button>
-            </div>
+          </div>
+
+          {/* View mode toggle — shown as prominent sub-tabs */}
+          <div className={styles.viewToggleTabs}>
+            <button
+              className={`${styles.viewToggleTab} ${viewMode === 'heatmap' ? styles.viewToggleTabActive : ''}`}
+              onClick={() => setViewMode('heatmap')}>
+              🗓 {lang === 'ja' ? 'ヒートマップ' : 'Heatmap'}
+            </button>
+            <button
+              className={`${styles.viewToggleTab} ${viewMode === 'values' ? styles.viewToggleTabActive : ''}`}
+              onClick={() => setViewMode('values')}>
+              📋 {lang === 'ja' ? '詳細数値' : 'Detailed Values'}
+            </button>
           </div>
 
           {alarmedWeek.length > 0 && (
@@ -561,8 +561,8 @@ export default function WellnessDashboard({ lang, profile }) {
                   </div>
                   )}
 
-                  {/* Body pain frequency */}
-                  {weekPain.length > 0 && (() => {
+                  {/* Body pain + nutrition — values mode only */}
+                  {viewMode === 'values' && weekPain.length > 0 && (() => {
                     const freq = weekPain.reduce((acc, r) => {
                       acc[r.body_part] = (acc[r.body_part] ?? 0) + 1;
                       return acc;
@@ -591,55 +591,54 @@ export default function WellnessDashboard({ lang, profile }) {
                     );
                   })()}
 
+                  {viewMode === 'values' && nutriRows.length > 0 && (() => {
+                    const byPlayer = {};
+                    for (const r of nutriRows) {
+                      if (!byPlayer[r.user_name]) byPlayer[r.user_name] = { total: 0, green: 0, yellow: 0, red: 0, none: 0 };
+                      byPlayer[r.user_name].total++;
+                      if (r.player_rating === 'green')  byPlayer[r.user_name].green++;
+                      else if (r.player_rating === 'yellow') byPlayer[r.user_name].yellow++;
+                      else if (r.player_rating === 'red')    byPlayer[r.user_name].red++;
+                      else byPlayer[r.user_name].none++;
+                    }
+                    const players = Object.entries(byPlayer).sort((a, b) => b[1].total - a[1].total);
+                    return (
+                      <div className={styles.nutriSection}>
+                        <div className={styles.nutriTitle}>
+                          🍽️ {lang === 'ja' ? '栄養記録' : 'Nutrition Submissions'}
+                          <span className={styles.nutriPeriod}>({weekDays}{lang === 'ja' ? '日間' : 'd'})</span>
+                        </div>
+                        <table className={styles.nutriTable}>
+                          <thead>
+                            <tr>
+                              <th className={styles.nutriThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                              <th className={styles.nutriTh}>{lang === 'ja' ? '件数' : 'Meals'}</th>
+                              <th className={styles.nutriTh}>🟢</th>
+                              <th className={styles.nutriTh}>🟡</th>
+                              <th className={styles.nutriTh}>🔴</th>
+                              <th className={styles.nutriTh}>{lang === 'ja' ? '未評価' : '—'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {players.map(([name, s]) => (
+                              <tr key={name} className={styles.nutriTr}>
+                                <td className={styles.nutriTdName}>{name}</td>
+                                <td className={styles.nutriTd}><strong>{s.total}</strong></td>
+                                <td className={styles.nutriTd} style={{ color: s.green  ? '#15803d' : '#d1d5db' }}>{s.green  || '—'}</td>
+                                <td className={styles.nutriTd} style={{ color: s.yellow ? '#b45309' : '#d1d5db' }}>{s.yellow || '—'}</td>
+                                <td className={styles.nutriTd} style={{ color: s.red    ? '#b91c1c' : '#d1d5db' }}>{s.red    || '—'}</td>
+                                <td className={styles.nutriTd} style={{ color: '#9ca3af' }}>{s.none || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+
                 </div>
               )
           }
-
-          {/* ── Nutrition submissions overview ── */}
-          {nutriRows.length > 0 && (() => {
-            const byPlayer = {};
-            for (const r of nutriRows) {
-              if (!byPlayer[r.user_name]) byPlayer[r.user_name] = { total: 0, green: 0, yellow: 0, red: 0, none: 0 };
-              byPlayer[r.user_name].total++;
-              if (r.player_rating === 'green')  byPlayer[r.user_name].green++;
-              else if (r.player_rating === 'yellow') byPlayer[r.user_name].yellow++;
-              else if (r.player_rating === 'red')    byPlayer[r.user_name].red++;
-              else byPlayer[r.user_name].none++;
-            }
-            const players = Object.entries(byPlayer).sort((a, b) => b[1].total - a[1].total);
-            return (
-              <div className={styles.nutriSection}>
-                <div className={styles.nutriTitle}>
-                  🍽️ {lang === 'ja' ? '栄養記録' : 'Nutrition Submissions'}
-                  <span className={styles.nutriPeriod}>({weekDays}{lang === 'ja' ? '日間' : 'd'})</span>
-                </div>
-                <table className={styles.nutriTable}>
-                  <thead>
-                    <tr>
-                      <th className={styles.nutriThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                      <th className={styles.nutriTh}>{lang === 'ja' ? '件数' : 'Meals'}</th>
-                      <th className={styles.nutriTh}>🟢</th>
-                      <th className={styles.nutriTh}>🟡</th>
-                      <th className={styles.nutriTh}>🔴</th>
-                      <th className={styles.nutriTh}>{lang === 'ja' ? '未評価' : '—'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {players.map(([name, s]) => (
-                      <tr key={name} className={styles.nutriTr}>
-                        <td className={styles.nutriTdName}>{name}</td>
-                        <td className={styles.nutriTd}><strong>{s.total}</strong></td>
-                        <td className={styles.nutriTd} style={{ color: s.green  ? '#15803d' : '#d1d5db' }}>{s.green  || '—'}</td>
-                        <td className={styles.nutriTd} style={{ color: s.yellow ? '#b45309' : '#d1d5db' }}>{s.yellow || '—'}</td>
-                        <td className={styles.nutriTd} style={{ color: s.red    ? '#b91c1c' : '#d1d5db' }}>{s.red    || '—'}</td>
-                        <td className={styles.nutriTd} style={{ color: '#9ca3af' }}>{s.none || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
         </div>
       )}
 

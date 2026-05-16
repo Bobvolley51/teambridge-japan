@@ -50,7 +50,23 @@
 .currentWeekBtn:hover { background: #fdf2f4; }
 
 .dayRangeBtns { display: flex; gap: 3px; margin-left: 4px; }
-.viewToggle { display: flex; gap: 3px; margin-left: 12px; border-left: 1px solid #e5e7eb; padding-left: 12px; }
+
+.viewToggleTabs {
+  display: flex;
+  gap: 0;
+  margin: 10px 0 4px;
+  border-bottom: 2px solid #e5e7eb;
+}
+.viewToggleTab {
+  padding: 7px 18px;
+  font-size: 13px; font-weight: 600;
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; color: #6b7280;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.viewToggleTab:hover { color: #111827; }
+.viewToggleTabActive { color: #7e0027; border-bottom-color: #7e0027; }
 .dayRangeBtn {
   padding: 3px 9px; font-size: 11px; font-weight: 600;
   background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
