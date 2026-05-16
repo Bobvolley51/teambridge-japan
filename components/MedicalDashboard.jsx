@@ -71,9 +71,23 @@ function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
     setSaving(false);
   };
 
+  const initials = (player.player_name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
   return (
     <div className={styles.avCard} style={{ borderColor: cfg.border, background: cfg.bg }}>
-      <div className={styles.avName}>{player.player_name}</div>
+      <div className={styles.avPhotoRow}>
+        {player.avatar_url
+          ? <img src={player.avatar_url} alt={player.player_name} className={styles.avPhoto} />
+          : <div className={styles.avPhotoPlaceholder} style={{ background: cfg.color }}>{initials}</div>
+        }
+        <div className={styles.avHeaderInfo}>
+          <div className={styles.avName}>{player.player_name}</div>
+          <div className={styles.avMeta2}>
+            {player.jersey_number != null && <span className={styles.avJersey}>#{player.jersey_number}</span>}
+            {player.position && <span className={styles.avPos}>{player.position}</span>}
+          </div>
+        </div>
+      </div>
       {canEdit ? (
         <div className={styles.avStatusRow}>
           {Object.entries(STATUS_CFG).map(([key, c]) => (
@@ -530,7 +544,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     const thirtyAgoStr = `${d30.getFullYear()}-${pad(d30.getMonth()+1)}-${pad(d30.getDate())}`;
 
     const [{ data: profData }, { data: avData }, { data: commData }, { data: painRows }] = await Promise.all([
-      supabase.from('profiles').select('id, display_name, role').eq('role', 'Player').order('display_name'),
+      supabase.from('profiles').select('id, display_name, role, avatar_url, jersey_number, position').eq('role', 'Player').order('display_name'),
       supabase.from('player_availability').select('*').order('player_name'),
       supabase.from('medical_comms').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('wellness_body_pain').select('user_name, body_part, response_date').gte('response_date', thirtyAgoStr),
@@ -540,9 +554,14 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
 
     // Merge players with availability — show every player even if no row yet
     const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
-    const merged = (profData ?? []).map(p => avMap[p.id] ?? {
-      player_id: p.id, player_name: p.display_name, status: 'full', reason: null, updated_at: null,
-    });
+    const merged = (profData ?? []).map(p => ({
+      ...(avMap[p.id] ?? { status: 'full', reason: null, updated_at: null }),
+      player_id:     p.id,
+      player_name:   p.display_name,
+      avatar_url:    p.avatar_url ?? null,
+      jersey_number: p.jersey_number ?? null,
+      position:      p.position ?? null,
+    }));
     setAvailability(merged);
     setComms(commData ?? []);
 
@@ -669,12 +688,35 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                 })}
               </div>
 
-              <div className={styles.avGrid}>
-                {availability.map(p => (
-                  <AvailabilityCard key={p.player_id} player={p} lang={lang}
-                    canEdit={isTherapist} onEdit={setAvModal} onQuickStatus={quickSetStatus} />
-                ))}
-              </div>
+              {(() => {
+                // Group by position, sort by jersey number within group
+                const POSITION_ORDER = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+                const groups = {};
+                for (const p of availability) {
+                  const key = p.position || (lang === 'ja' ? 'その他' : 'Other');
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(p);
+                }
+                for (const key of Object.keys(groups)) {
+                  groups[key].sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
+                }
+                const orderedGroups = [
+                  ...POSITION_ORDER.filter(pos => groups[pos]),
+                  ...Object.keys(groups).filter(k => !POSITION_ORDER.includes(k) && k !== (lang === 'ja' ? 'その他' : 'Other')),
+                  ...(groups[lang === 'ja' ? 'その他' : 'Other'] ? [lang === 'ja' ? 'その他' : 'Other'] : []),
+                ];
+                return orderedGroups.map(posLabel => (
+                  <div key={posLabel} className={styles.posGroup}>
+                    <div className={styles.posGroupLabel}>{posLabel}</div>
+                    <div className={styles.avGrid}>
+                      {groups[posLabel].map(p => (
+                        <AvailabilityCard key={p.player_id} player={p} lang={lang}
+                          canEdit={isTherapist} onEdit={setAvModal} onQuickStatus={quickSetStatus} />
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
 
               {avModal && (
                 <AvailabilityModal player={avModal} lang={lang} currentUserName={currentUserName}
