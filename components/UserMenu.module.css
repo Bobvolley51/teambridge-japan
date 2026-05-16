@@ -36,17 +36,17 @@
 
 /* Dropdown */
 .dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
+  top: 52px;
+  right: 8px;
   width: 300px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
-  z-index: 100;
-  overflow: hidden;
-  max-height: 90vh;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 1000;
+  overflow-y: auto;
+  max-height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
 }
