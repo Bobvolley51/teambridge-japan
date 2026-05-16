@@ -15,12 +15,12 @@ const TYPE_ICONS = {
 
 function typeIcon(type) { return TYPE_ICONS[type] ?? '🔔'; }
 
-export default function NotificationBell({ userId, lang, onNavigate }) {
+export default function NotificationBell({ userId, lang, onNavigate, chatUnread = 0 }) {
   const [items,  setItems]  = useState([]);
   const [open,   setOpen]   = useState(false);
   const wrapRef = useRef(null);
 
-  const unread = items.filter(n => !n.is_read).length;
+  const unread = items.filter(n => !n.is_read).length + chatUnread;
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -146,10 +146,17 @@ export default function NotificationBell({ userId, lang, onNavigate }) {
           </div>
 
           <div className={styles.list}>
-            {items.length === 0 && (
-              <div className={styles.empty}>
-                {lang === 'ja' ? '通知はありません' : 'No notifications yet'}
-              </div>
+            {chatUnread > 0 && (
+              <button className={`${styles.item} ${styles.itemUnread}`} onClick={() => { if (onNavigate) onNavigate('chat'); setOpen(false); }}>
+                <span className={styles.icon}>💬</span>
+                <div className={styles.itemBody}>
+                  <div className={styles.itemTitle}>{lang === 'ja' ? `チャット ${chatUnread}件の未読メッセージ` : `${chatUnread} unread chat message${chatUnread > 1 ? 's' : ''}`}</div>
+                </div>
+                <span className={styles.dot} />
+              </button>
+            )}
+            {items.length === 0 && chatUnread === 0 && (
+              <div className={styles.empty}>{lang === 'ja' ? '通知はありません' : 'No notifications yet'}</div>
             )}
             {items.map(n => (
               <button

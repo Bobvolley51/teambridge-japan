@@ -84,6 +84,7 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
   const taskDesc  = useTranslated(task.description, lang);
 
   const colIdx = COLUMNS.findIndex(c => c.id === task.status);
+  const prevCol = COLUMNS[colIdx - 1] ?? null;
   const nextCol = COLUMNS[colIdx + 1] ?? null;
 
   const touchX   = useRef(null);
@@ -153,12 +154,22 @@ function TaskCard({ task, lang, profiles, onEdit, onDelete, onMove }) {
             ? <span className={styles.assignee}>{assigneeName}</span>
             : <span />}
           <div className={styles.cardRight}>
+            {prevCol && (
+              <button
+                className={styles.moveBtnBack}
+                onClick={(e) => { e.stopPropagation(); onMove(task.id, prevCol.id); }}
+                title={prevCol.label[lang]}
+              >
+                ←
+              </button>
+            )}
             {nextCol && (
               <button
                 className={styles.moveBtn}
                 onClick={(e) => { e.stopPropagation(); onMove(task.id, nextCol.id); }}
+                title={nextCol.label[lang]}
               >
-                {nextCol.label[lang]} →
+                → {nextCol.label[lang]}
               </button>
             )}
             <PriorityDot priority={task.priority} />
@@ -439,12 +450,13 @@ export default function Tasks({ lang = 'en', profile }) {
     else if (type === 'sort') setSortBy(value);
   }, []);
 
-  const isCoach = profile?.role === 'coach';
+  const STAFF_ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
+  const isStaff = STAFF_ROLES.includes(profile?.role);
 
   const visibleTasks = tasks
-    .filter(t => isCoach || t.assigned_to === profile?.id)
+    .filter(t => isStaff || t.assigned_to === profile?.id)
     .filter(t => filterPriority === 'all' || t.priority === filterPriority)
-    .filter(t => !isCoach || filterAssignee === 'all' || t.assigned_to === filterAssignee)
+    .filter(t => !isStaff || filterAssignee === 'all' || t.assigned_to === filterAssignee)
     .sort((a, b) => {
       if (sortBy !== 'due') return new Date(a.created_at) - new Date(b.created_at);
       if (!a.due_date && !b.due_date) return 0;

@@ -360,7 +360,7 @@ export default function Home() {
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
-          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} />
+          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} chatUnread={unreadChat} />
           <UserMenu user={user} profile={profile} lang={lang} onProfileUpdate={() => loadProfile(user.id, false)} />
         </div>
       </header>

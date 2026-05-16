@@ -912,7 +912,10 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
       .select('*, event_participants(profile_id, status, profiles(display_name, email))')
       .lte('start_time', to.toISOString())
       .order('start_time', { ascending: true });
-    setEvents(expandRecurring(data ?? [], from.toISOString(), to.toISOString()));
+    const filtered = role === 'Player' && currentUserId
+      ? (data ?? []).filter(ev => ev.event_participants?.some(ep => ep.profile_id === currentUserId))
+      : (data ?? []);
+    setEvents(expandRecurring(filtered, from.toISOString(), to.toISOString()));
     setLoading(false);
   }, [current]);
 

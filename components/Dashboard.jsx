@@ -194,18 +194,21 @@ function EmptyState({ children }) {
   return <div className={styles.empty}>{children}</div>;
 }
 
-function TaskItem({ task, lang, priColor, onNavigate }) {
+function TaskItem({ task, lang, priColor, onNavigate, onDismiss }) {
   const title = useTranslated(task.title, lang);
   return (
-    <div className={styles.alertItem} onClick={() => onNavigate('tasks')} style={{ cursor: 'pointer' }}>
+    <div className={styles.alertItem}>
       <span className={styles.alertDot} style={{ background: priColor }} />
-      <div>
+      <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => onNavigate('tasks')}>
         <div className={styles.alertText}>{title}</div>
         <div className={styles.alertSub}>
           {task.status === 'todo' ? (lang === 'ja' ? '未着手' : 'To do') : (lang === 'ja' ? '進行中' : 'In progress')}
           {task.priority === 'medium' ? ` · ${lang === 'ja' ? '中' : 'Medium'}` : ''}
         </div>
       </div>
+      <button className={styles.noticedBtn} onClick={() => onDismiss(task.id)}>
+        ✓ {lang === 'ja' ? '確認' : 'Noticed'}
+      </button>
     </div>
   );
 }
@@ -257,6 +260,7 @@ export default function Dashboard({
   const [availability,      setAvailability]      = useState([]);
   const [playerRpe,         setPlayerRpe]         = useState(null);
   const [playerWellnessAvg, setPlayerWellnessAvg] = useState(null);
+  const [playerUploadCounts, setPlayerUploadCounts] = useState(null); // { wellness, rpe, nutrition }
   const [weekOpen,          setWeekOpen]          = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true
   );
@@ -301,6 +305,8 @@ export default function Dashboard({
       { data: playerProfiles },
       { data: myLastRpeData },
       { data: myWellnessData },
+      { data: myRpeCountData },
+      { data: myNutritionCountData },
     ] = await Promise.all([
       // My participation events — no date filter so recurring base events are included
       currentUserId
@@ -398,6 +404,14 @@ export default function Dashboard({
             .eq('user_id', currentUserId)
             .gte('response_date', week7AgoStr)
             .in('question_key', ['fatigue', 'sleep', 'appetite'])
+        : Promise.resolve({ data: [] }),
+      // Player RPE sessions last 7 days
+      isPlayer && currentUserId
+        ? supabase.from('session_rpe').select('event_date').eq('user_id', currentUserId).gte('event_date', week7AgoStr)
+        : Promise.resolve({ data: [] }),
+      // Player nutrition entries last 7 days
+      isPlayer && currentUserId
+        ? supabase.from('nutrition_entries').select('meal_date').eq('user_id', currentUserId).gte('meal_date', week7AgoStr)
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -503,6 +517,11 @@ export default function Dashboard({
       setPlayerRpe((myLastRpeData ?? [])[0] ?? null);
       const wScores = (myWellnessData ?? []).map(r => r.score);
       setPlayerWellnessAvg(wScores.length > 0 ? wScores.reduce((a, b) => a + b, 0) / wScores.length : null);
+      setPlayerUploadCounts({
+        wellness:   new Set((myWellnessData ?? []).map(r => r.response_date)).size,
+        rpe:        (myRpeCountData ?? []).length,
+        nutrition:  (myNutritionCountData ?? []).length,
+      });
     }
 
     setLoading(false);
@@ -515,6 +534,13 @@ export default function Dashboard({
       await supabase.from('announcement_reads')
         .upsert({ user_id: currentUserId, announcement_id: id }, { onConflict: 'user_id,announcement_id' });
     }
+  };
+
+  const dismissTask = (id) => {
+    const key = `task_dismissed_${currentUserId}`;
+    const prev = JSON.parse(localStorage.getItem(key) || '[]');
+    localStorage.setItem(key, JSON.stringify([...prev, id]));
+    setTasks(prev => prev.filter(t => t.id !== id));
   };
 
   // ── #5: Inline RSVP ──────────────────────────────────────────────────────────
@@ -551,8 +577,13 @@ export default function Dashboard({
     out:   { en: 'Out',   ja: '欠席',  cls: 'rsvpOut' },
   };
 
-  const urgentTasks        = tasks.filter(t => t.priority === 'high');
-  const weekTasks          = tasks.filter(t => t.priority !== 'high');
+  const dismissedTaskIds = typeof window !== 'undefined'
+    ? new Set(JSON.parse(localStorage.getItem(`task_dismissed_${currentUserId}`) || '[]'))
+    : new Set();
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const visibleDashTasks   = tasks.filter(t => !dismissedTaskIds.has(t.id) && t.created_at >= threeDaysAgo);
+  const urgentTasks        = visibleDashTasks.filter(t => t.priority === 'high');
+  const weekTasks          = visibleDashTasks.filter(t => t.priority !== 'high');
   const canSeeWellness     = WELLNESS_ALERT_ROLES.includes(profile?.role);
   const canSeeAvailability = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
   const avIssues           = availability.filter(p => p.status !== 'full');
@@ -939,11 +970,24 @@ export default function Dashboard({
               <div className={styles.cardHead}>
                 <span className={styles.cardTitle}>
                   ✅ {lang === 'ja' ? 'マイタスク' : 'My Tasks'}
-                  {tasks.length > 0 && <span className={styles.countBadge}>{tasks.length}</span>}
+                  {visibleDashTasks.length > 0 && <span className={styles.countBadge}>{visibleDashTasks.length}</span>}
                 </span>
               </div>
               <div className={styles.cardBody}>
-                {tasks.length === 0 ? (
+                {isPlayer && playerUploadCounts && (
+                  <div className={styles.uploadCounts}>
+                    <span className={styles.uploadChip} title={lang === 'ja' ? '直近7日間の提出' : 'Submissions last 7 days'}>
+                      🩺 {playerUploadCounts.wellness}/7
+                    </span>
+                    <span className={styles.uploadChip}>
+                      🏋️ {playerUploadCounts.rpe} RPE
+                    </span>
+                    <span className={styles.uploadChip}>
+                      🥗 {playerUploadCounts.nutrition} {lang === 'ja' ? '栄養' : 'Nutrition'}
+                    </span>
+                  </div>
+                )}
+                {visibleDashTasks.length === 0 ? (
                   <EmptyState>{lang === 'ja' ? '✓ 未完了のタスクはありません。' : '✓ No open tasks.'}</EmptyState>
                 ) : (
                   <>
@@ -951,7 +995,7 @@ export default function Dashboard({
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '🔴 緊急' : '🔴 Urgent'}</SectionLabel>
                         {urgentTasks.map(t => (
-                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} />
+                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} onDismiss={dismissTask} />
                         ))}
                       </div>
                     )}
@@ -959,7 +1003,7 @@ export default function Dashboard({
                       <div className={styles.alertSection}>
                         <SectionLabel>{lang === 'ja' ? '📋 タスク' : '📋 Tasks'}</SectionLabel>
                         {weekTasks.map(t => (
-                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} />
+                          <TaskItem key={t.id} task={t} lang={lang} priColor={TASK_PRI_COLOR[t.priority] ?? '#6b7280'} onNavigate={onNavigate} onDismiss={dismissTask} />
                         ))}
                       </div>
                     )}
