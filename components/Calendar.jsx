@@ -220,9 +220,12 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   const [recurrence,     setRecurrence]     = useState(initRecType);
   const [recurrenceDays, setRecurrenceDays] = useState(initRecDays);
   const [recurrenceEnd,  setRecurrenceEnd]  = useState(event?.recurrence_end ?? '');
-  const [participantIds, setParticipantIds] = useState(
-    event?.event_participants?.map(ep => ep.profile_id) ?? []
-  );
+  const AUTO_INVITE_CATS = ['Ball-Practice', 'Weightlifting'];
+  const [participantIds, setParticipantIds] = useState(() => {
+    if (event) return event?.event_participants?.map(ep => ep.profile_id) ?? [];
+    if (AUTO_INVITE_CATS.includes(event?.category ?? 'Ball-Practice')) return profiles.map(p => p.id);
+    return [];
+  });
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState(null);
 
@@ -432,6 +435,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
               if (!isEditing) {
                 const startDate = new Date(start);
                 setEnd(toLocalDT(new Date(startDate.getTime() + (DEFAULT_DURATION[val] ?? 60) * 60000)));
+                if (AUTO_INVITE_CATS.includes(val)) setParticipantIds(profiles.map(p => p.id));
               }
             }}
             style={{ borderLeft: `4px solid ${catColor(category).solid}` }}>
