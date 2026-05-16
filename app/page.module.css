@@ -238,10 +238,10 @@
 }
 
 .sidebarBrandMark {
-  width: 28px;
+  width: 36px;
   height: auto;
   object-fit: contain;
-  opacity: 0.18;
+  opacity: 0.45;
   filter: brightness(0) invert(1);
 }
 
