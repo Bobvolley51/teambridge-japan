@@ -1,71 +1,124 @@
-/* components/Tactics.module.css — Tridents Red pass */
+/* components/Tactics.module.css */
 
-.wrapper { display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.loading { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9ca3af; }
-.error { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #fef2f2; border-bottom: 1px solid #fecaca; font-size: 13px; color: #7e0027; flex-shrink: 0; }
+.wrapper { display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+.loading  { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9ca3af; }
+.error    { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #fef2f2; border-bottom: 1px solid #fecaca; font-size: 13px; color: #7e0027; flex-shrink: 0; }
 .error button { background: none; border: none; cursor: pointer; color: #7e0027; font-size: 14px; }
+.emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #9ca3af; font-size: 14px; }
 
-.layout { display: flex; flex: 1; overflow: hidden; }
+/* ── Team grid (home screen) ─────────────────────────────────────── */
 
-.sidebar {
-  width: 220px; flex-shrink: 0;
-  display: flex; flex-direction: column;
-  border-right: 2px solid #7e0027;
-  background: #fdf2f4; overflow: hidden;
+.teamsHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 2px solid #7e0027;
+  flex-shrink: 0;
+  background: #fdf2f4;
 }
-.sidebarHeader { padding: 12px 14px 8px; border-bottom: 2px solid #7e0027; flex-shrink: 0; background: #fff5f7; }
-.sidebarTitle  { font-size: 13px; font-weight: 800; color: #5c001a; text-transform: uppercase; letter-spacing: 0.06em; }
-
-.teamList { flex: 1; overflow-y: auto; padding: 6px 0; }
-.teamRow {
-  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
-  cursor: pointer; border-radius: 0; transition: background 0.1s; position: relative;
+.teamsTitle { font-size: 17px; font-weight: 800; color: #5c001a; margin: 0; }
+.addTeamBtn {
+  padding: 7px 14px; font-size: 12px; font-weight: 700;
+  color: #7e0027; background: #fff; border: 1.5px solid #7e0027;
+  border-radius: 7px; cursor: pointer; font-family: inherit;
+  transition: background 0.1s;
 }
-.teamRow:hover { background: #fce8ed; }
-.teamRow:hover .teamRowActions { opacity: 1; }
-.teamRowActive { background: #fff; box-shadow: inset 3px 0 0 #7e0027; }
-.teamRowActive .teamRowName { color: #5c001a; font-weight: 700; }
-.teamRowName { flex: 1; font-size: 12px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.teamRowActions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.1s; }
-.teamActionBtn { background: none; border: none; cursor: pointer; font-size: 12px; color: #9ca3af; padding: 2px 4px; border-radius: 4px; transition: color 0.1s, background 0.1s; }
-.teamActionBtn:hover { color: #7e0027; background: #fff; }
+.addTeamBtn:hover { background: #fdf2f4; }
+
+.teamGrid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  align-content: start;
+}
+
+.teamCard {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 20px 16px 14px;
+  background: #fff; border: 1.5px solid #f5c2ce;
+  border-radius: 14px; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  position: relative;
+}
+.teamCard:hover {
+  border-color: #7e0027;
+  box-shadow: 0 4px 16px rgba(126,0,39,0.14);
+  transform: translateY(-2px);
+}
+
+.teamCardLogo { display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; }
+.teamCardLogoImg { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; }
+.teamCardAbbr {
+  width: 80px; height: 80px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 22px; font-weight: 900; letter-spacing: 0.02em;
+}
+.teamCardName { font-size: 13px; font-weight: 700; color: #111827; text-align: center; margin: 0; line-height: 1.3; }
+.teamCardActions {
+  display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s;
+  position: absolute; top: 8px; right: 8px;
+}
+.teamCard:hover .teamCardActions { opacity: 1; }
+
+/* ── Team badge (inline) ─────────────────────────────────────────── */
 
 .teamBadge { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: #fff; font-weight: 800; flex-shrink: 0; letter-spacing: 0.02em; }
-.teamLogo  { border-radius: 4px; object-fit: contain; flex-shrink: 0; }
-.teamDivider { height: 1px; background: #f5c2ce; margin: 6px 10px; }
+.teamLogo  { border-radius: 6px; object-fit: contain; flex-shrink: 0; }
 
-.addTeamBtn {
-  margin: 8px 10px 10px; padding: 7px 10px; font-size: 12px;
-  color: #7e0027; background: #fff; border: 1px dashed #7e0027;
-  border-radius: 7px; cursor: pointer; font-family: inherit;
-  text-align: left; transition: color 0.1s, border-color 0.1s, background 0.1s;
-  flex-shrink: 0; font-weight: 600;
-}
-.addTeamBtn:hover { background: #fdf2f4; border-style: solid; }
-
-.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.emptyState { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9ca3af; }
+/* ── Team detail header ──────────────────────────────────────────── */
 
 .contentHeader {
   display: flex; align-items: center; gap: 12px;
-  padding: 14px 18px 12px;
+  padding: 12px 18px;
   border-bottom: 2px solid #7e0027;
   background: #fdf2f4;
   flex-shrink: 0;
 }
 .contentTeamName { font-size: 17px; font-weight: 800; color: #5c001a; margin: 0; }
+.headerActions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-.categoryTabs { display: flex; gap: 2px; padding: 10px 14px 0; border-bottom: 1px solid #f5c2ce; flex-shrink: 0; overflow-x: auto; background: #fff; }
+.backBtn {
+  font-size: 12px; padding: 5px 10px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 6px;
+  color: #6b7280; cursor: pointer; font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+.backBtn:hover { background: #f9fafb; border-color: #9ca3af; color: #374151; }
+
+.printBtn {
+  font-size: 12px; padding: 5px 12px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 6px;
+  color: #374151; cursor: pointer; font-family: inherit; font-weight: 600;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.printBtn:hover { background: #f9fafb; }
+
+.teamActionBtn { background: none; border: none; cursor: pointer; font-size: 14px; color: #9ca3af; padding: 4px 6px; border-radius: 5px; transition: color 0.1s, background 0.1s; }
+.teamActionBtn:hover { color: #7e0027; background: #fdf2f4; }
+
+/* ── Category tabs ───────────────────────────────────────────────── */
+
+.categoryTabs {
+  display: flex; gap: 2px; padding: 10px 14px 0;
+  border-bottom: 1px solid #f5c2ce; flex-shrink: 0;
+  overflow-x: auto; background: #fff;
+}
 .catTab {
-  display: flex; align-items: center; gap: 5px; padding: 7px 14px;
-  font-size: 13px; font-weight: 600; color: #6b7280;
+  display: flex; align-items: center; gap: 5px; padding: 7px 12px;
+  font-size: 12px; font-weight: 600; color: #6b7280;
   background: none; border: none; border-bottom: 2px solid transparent;
   cursor: pointer; font-family: inherit; white-space: nowrap; margin-bottom: -1px;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .catTab:hover { color: #7e0027; background: #fdf2f4; }
 .catTabActive { color: #fff; background: #7e0027; border-bottom-color: #7e0027; font-weight: 700; border-radius: 6px 6px 0 0; }
-.catIcon { font-size: 14px; }
+.catIcon { font-size: 13px; }
+
+/* ── Note area ───────────────────────────────────────────────────── */
 
 .noteArea { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .emptyNotes { font-size: 13px; color: #9ca3af; margin: 0; }
@@ -74,16 +127,17 @@
 
 .noteCard {
   background: #fff; border: 1px solid #e5e7eb; border-left: 3px solid #7e0027;
-  border-radius: 9px; padding: 12px 13px 8px; transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: 9px; padding: 12px 13px 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .noteCard:hover { border-left-color: #5c001a; box-shadow: 0 2px 6px rgba(126,0,39,0.1); }
-
 .noteCardVideo { padding: 0; overflow: hidden; }
 .noteCardHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 
 .jerseyBadge { font-size: 11px; font-weight: 800; background: #7e0027; color: #fff; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
 .noteTitle   { font-size: 13px; font-weight: 700; color: #111827; margin: 0; }
 .noteBody    { font-size: 13px; color: #374151; margin: 0 0 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.notePhoto   { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 
 .videoLayout { display: flex; gap: 0; }
 .videoThumbWrap { flex-shrink: 0; width: 120px; }
@@ -96,10 +150,24 @@
 .noteMeta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px solid #f3f4f6; }
 .noteAuthor { font-size: 11px; color: #9ca3af; }
 .noteMetaActions { display: flex; gap: 4px; }
-.noteEditBtn, .noteDeleteBtn, .noteDupBtn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: #d1d5db; transition: color 0.1s, background 0.1s; }
+.noteEditBtn, .noteDeleteBtn, .noteDupBtn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; padding: 2px 5px; border-radius: 4px;
+  color: #d1d5db; transition: color 0.1s, background 0.1s;
+}
 .noteEditBtn:hover   { color: #7e0027; background: #fdf2f4; }
 .noteDeleteBtn:hover { color: #ef4444; background: #fef2f2; }
 .noteDupBtn:hover    { color: #7e0027; background: #fdf2f4; }
+
+.addNoteBtn {
+  align-self: flex-start; padding: 7px 16px; font-size: 12px; font-weight: 700;
+  color: #fff; background: #7e0027; border: none;
+  border-radius: 7px; cursor: pointer; font-family: inherit;
+  transition: background 0.1s; margin-top: 4px;
+}
+.addNoteBtn:hover { background: #6b001f; }
+
+/* ── Roster / server tables ──────────────────────────────────────── */
 
 .tacChip { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; white-space: nowrap; line-height: 1.4; }
 
@@ -112,14 +180,17 @@
 .serverTd { padding: 8px 10px; color: #374151; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 .serverTdWrap { white-space: normal; max-width: 200px; }
 
-.autoCreateHint { font-size: 11px; color: #6b7280; margin-right: auto; }
-.addNoteBtn {
-  align-self: flex-start; padding: 7px 16px; font-size: 12px; font-weight: 700;
-  color: #fff; background: #7e0027; border: 1px solid #7e0027;
-  border-radius: 7px; cursor: pointer; font-family: inherit;
-  transition: background 0.1s; margin-top: 4px;
+.playerThumb { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: block; }
+.playerThumbPlaceholder {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fdf2f4; color: #7e0027;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
 }
-.addNoteBtn:hover { background: #6b001f; }
+
+.autoCreateHint { font-size: 11px; color: #6b7280; margin-right: auto; }
+
+/* ── Modals ──────────────────────────────────────────────────────── */
 
 .overlay { position: fixed; inset: 0; background: rgba(92,0,26,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
 .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px rgba(126,0,39,0.25); display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; border-top: 4px solid #7e0027; }
@@ -127,7 +198,6 @@
 .modalTitle  { font-size: 15px; font-weight: 700; color: #5c001a; }
 .closeBtn    { background: none; border: none; cursor: pointer; font-size: 20px; color: #e09aaa; line-height: 1; padding: 0; transition: color 0.1s; }
 .closeBtn:hover { color: #7e0027; }
-
 .modalErr { margin: 8px 20px 0; font-size: 12px; color: #7e0027; }
 .modalBody { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .label { display: block; font-size: 11px; font-weight: 700; color: #7e0027; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 10px; margin-bottom: 4px; }
@@ -140,12 +210,10 @@
 }
 .modalTextarea { resize: vertical; }
 .modalInput:focus, .modalTextarea:focus { border-color: #7e0027; box-shadow: 0 0 0 3px rgba(126,0,39,0.12); }
-
 .modalRow { display: flex; gap: 10px; }
 .modalField { flex: 1; display: flex; flex-direction: column; }
 .colorRow { display: flex; align-items: center; gap: 10px; }
 .colorPicker { width: 40px; height: 34px; border: 1px solid #e5e7eb; border-radius: 7px; padding: 2px; cursor: pointer; }
-
 .modalFooter { display: flex; align-items: center; justify-content: flex-end; padding: 14px 20px 16px; border-top: 1px solid #f5c2ce; flex-shrink: 0; }
 .modalActions { display: flex; gap: 8px; }
 .cancelBtn { font-size: 13px; padding: 7px 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; color: #374151; cursor: pointer; font-family: inherit; transition: background 0.1s; }
@@ -153,3 +221,151 @@
 .saveBtn { font-size: 13px; padding: 7px 16px; background: #7e0027; border: none; border-radius: 7px; color: #fff; cursor: pointer; font-family: inherit; font-weight: 700; transition: background 0.15s; }
 .saveBtn:hover    { background: #6b001f; }
 .saveBtn:disabled { background: #e09aaa; cursor: not-allowed; }
+
+/* ── Court diagram ───────────────────────────────────────────────── */
+
+.courtDiagram {
+  display: flex; flex-direction: column; gap: 4px;
+  width: fit-content; max-width: 100%;
+}
+.courtCompact { transform: scale(0.85); transform-origin: left top; }
+.courtNetLabel {
+  font-size: 10px; font-weight: 700; color: #9ca3af;
+  text-align: center; letter-spacing: 0.06em; text-transform: uppercase;
+  padding-bottom: 2px; border-bottom: 2px solid #9ca3af;
+  width: 100%;
+}
+.courtRow { display: flex; gap: 4px; }
+.courtZone {
+  width: 68px; height: 56px;
+  border: 1.5px solid #e5e7eb; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.12s;
+  gap: 2px;
+}
+.courtZone:hover:not(:disabled) { border-color: #7e0027; box-shadow: 0 0 0 2px rgba(126,0,39,0.15); }
+.courtZone:disabled { cursor: default; }
+.czNum   { font-size: 15px; font-weight: 800; }
+.czCount { font-size: 10px; font-weight: 700; opacity: 0.85; }
+
+/* ── Serve heatmap ───────────────────────────────────────────────── */
+
+.heatmapBlock {
+  background: #fff; border: 1px solid #f5c2ce; border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+  align-self: flex-start;
+}
+.heatmapTitle { font-size: 11px; font-weight: 800; color: #7e0027; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+
+/* ── Rotation viewer ─────────────────────────────────────────────── */
+
+.rotWrapper { display: flex; flex-direction: column; gap: 14px; }
+.rotTabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.rotTab {
+  padding: 6px 14px; font-size: 12px; font-weight: 600;
+  background: #fff; border: 1.5px solid #e5e7eb;
+  border-radius: 20px; cursor: pointer; font-family: inherit;
+  color: #6b7280; transition: all 0.12s;
+}
+.rotTab:hover { border-color: #7e0027; color: #7e0027; }
+.rotTabActive { background: #7e0027; border-color: #7e0027; color: #fff; }
+
+.rotHint { font-size: 12px; color: #9ca3af; margin: 0; }
+
+.rotCourt {
+  display: flex; flex-direction: column; gap: 3px;
+  width: fit-content;
+}
+.rotNet {
+  text-align: center; font-size: 11px; font-weight: 700;
+  color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 0; border-bottom: 3px solid #374151;
+  margin-bottom: 4px;
+}
+.rotRow { display: flex; gap: 4px; }
+.rotCell {
+  width: 130px; height: 80px;
+  border: 2px dashed #e5e7eb; border-radius: 10px;
+  background: #f9fafb; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; font-family: inherit;
+}
+.rotCell:hover:not(:disabled) { border-color: #7e0027; background: #fdf2f4; }
+.rotCellFilled { background: #fff; border-style: solid; border-color: #7e0027; }
+.rotCellFilled:hover { background: #fdf2f4; }
+
+.rotPlayerInfo { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rotPhoto { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.rotJersey { font-size: 10px; font-weight: 800; color: #7e0027; }
+.rotName   { font-size: 12px; font-weight: 700; color: #111827; text-align: center; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rotZoneNum { font-size: 22px; font-weight: 900; color: #d1d5db; }
+
+.rotClearBtn {
+  width: 100%; padding: 8px 12px; font-size: 13px;
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+  color: #6b7280; cursor: pointer; font-family: inherit; text-align: left;
+  transition: background 0.1s;
+  margin-bottom: 4px;
+}
+.rotClearBtn:hover { background: #f3f4f6; }
+
+.rotPickBtn {
+  width: 100%; padding: 8px 12px; font-size: 13px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  color: #111827; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 8px;
+  transition: background 0.1s, border-color 0.1s;
+}
+.rotPickBtn:hover { background: #fdf2f4; border-color: #f5c2ce; }
+.rotPickBtnActive { background: #fdf2f4; border-color: #7e0027; color: #5c001a; font-weight: 700; }
+.rotPickPhoto { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.rotPickPos { font-size: 11px; color: #9ca3af; margin-left: auto; flex-shrink: 0; }
+
+/* ── Match list ──────────────────────────────────────────────────── */
+
+.matchList { display: flex; flex-direction: column; gap: 6px; }
+.matchRow {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid #e5e7eb; border-left: 3px solid #7e0027;
+  border-radius: 9px; padding: 10px 14px; cursor: pointer;
+  transition: box-shadow 0.1s;
+  font-size: 13px;
+}
+.matchRow:hover { box-shadow: 0 2px 8px rgba(126,0,39,0.1); border-left-color: #5c001a; }
+.matchDate { color: #6b7280; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+.matchVs { flex: 1; font-weight: 600; color: #111827; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchResult {
+  font-size: 12px; font-weight: 800; padding: 2px 8px;
+  border-radius: 10px; flex-shrink: 0;
+}
+.matchWin  { background: #dcfce7; color: #15803d; }
+.matchLoss { background: #fef2f2; color: #dc2626; }
+.matchScore { font-size: 14px; font-weight: 800; color: #111827; flex-shrink: 0; }
+.matchNoteText { font-size: 12px; color: #9ca3af; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Print styles ────────────────────────────────────────────────── */
+
+@media print {
+  .backBtn, .printBtn, .addNoteBtn, .noteEditBtn, .noteDeleteBtn, .noteDupBtn,
+  .teamActionBtn, .categoryTabs, .rotTabs { display: none !important; }
+  .wrapper { height: auto; overflow: visible; }
+  .noteArea { overflow: visible; }
+  .contentHeader { border-bottom: 2px solid #000; background: #fff; }
+  .contentTeamName { color: #000; }
+  .noteCard { break-inside: avoid; border-left-color: #000; }
+  .serverTableWrap { overflow: visible; }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .teamGrid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; padding: 14px; }
+  .teamCard { padding: 16px 12px 10px; }
+  .teamCardLogoImg, .teamCardAbbr { width: 60px; height: 60px; }
+  .teamCardAbbr { font-size: 17px; }
+  .rotCell { width: 100px; height: 70px; }
+  .rotName { max-width: 80px; }
+  .courtZone { width: 54px; height: 46px; }
+  .czNum { font-size: 13px; }
+}
