@@ -664,7 +664,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       sendPush([recipientId], {
         title:   currentUser.name,
         body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
-        url:     '/chat',
+        url:     '/?nav=chat',
         tag:     `dm-${activeChannel}`,
         prefKey: 'chat_dm',
       });

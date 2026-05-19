@@ -416,7 +416,7 @@ export default function Tasks({ lang = 'en', profile }) {
         sendPush([payload.assigned_to], {
           title:   lang === 'ja' ? '新しいタスクが割り当てられました' : 'New task assigned',
           body:    payload.title,
-          url:     '/tasks',
+          url:     '/?nav=tasks',
           tag:     'task-assigned',
           prefKey: 'tasks',
         });

@@ -245,7 +245,7 @@ export default function Announcements({ lang = 'en', currentUserName = 'Team Mem
         sendPush(recipientIds, {
           title:   `📢 ${title}`,
           body:    content?.slice(0, 80) || '',
-          url:     '/feed',
+          url:     '/?nav=feed',
           tag:     `ann-${ann?.id}`,
           prefKey: 'announcements',
         });

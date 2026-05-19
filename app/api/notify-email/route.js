@@ -97,7 +97,7 @@ export async function POST(req) {
     fetch(`${appUrl}/api/push`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userIds: participantIds, title: pushTitle, body: pushBody, url: '/calendar', tag: 'calendar-notif', prefKey: 'calendar' }),
+      body:    JSON.stringify({ userIds: participantIds, title: pushTitle, body: pushBody, url: '/?nav=calendar', tag: 'calendar-notif', prefKey: 'calendar' }),
     }).catch(() => {});
   }
 

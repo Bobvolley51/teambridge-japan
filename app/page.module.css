@@ -280,6 +280,36 @@
   flex-direction: column;
   background: var(--tb-surface);
   min-width: 0;
+  overscroll-behavior-y: contain;
+  position: relative;
+}
+
+/* Pull-to-refresh indicator */
+.pullIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+  transition: transform 0.15s ease-out;
+}
+
+.pullSpinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(255,255,255,0.2);
+  border-top-color: var(--tb-accent);
+  border-radius: 50%;
+  animation: pullSpin 0.75s linear infinite;
+}
+
+@keyframes pullSpin {
+  to { transform: rotate(360deg); }
 }
 
 .logoText { }

@@ -64,7 +64,11 @@ const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff', 'Player'];
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
   const [profile,       setProfile]       = useState(null);
-  const [nav,           setNav]           = useState('dashboard');
+  const [nav,           setNav]           = useState(() => {
+    if (typeof window === 'undefined') return 'dashboard';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('nav') || localStorage.getItem('tb_nav') || 'dashboard';
+  });
   const [lang,          setLang]          = useState(() =>
     (typeof window !== 'undefined' && localStorage.getItem('tb_lang')) || 'en'
   );
@@ -92,8 +96,15 @@ export default function Home() {
   const [showSearch,       setShowSearch]       = useState(false);
   const [showIdleWarning,  setShowIdleWarning]  = useState(false);
   const [idleCountdown,    setIdleCountdown]    = useState(120);
-  const idleTimer   = useRef(null);
-  const warnTimer   = useRef(null);
+  const idleTimer       = useRef(null);
+  const warnTimer       = useRef(null);
+  const mainRef         = useRef(null);
+  const touchStartYRef  = useRef(0);
+  const isPullingRef    = useRef(false);
+  const pullDeltaRef    = useRef(0);
+  const [pullDelta,   setPullDelta]   = useState(0);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const PULL_THRESHOLD = 72;
 
   const IDLE_MS      = 60 * 60 * 1000; // 1 hour
   const WARN_BEFORE  = 2  * 60 * 1000; // warn 2 min before
@@ -159,6 +170,71 @@ export default function Home() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+  }, []);
+
+  // Clean ?nav= query param from URL after reading it on first load
+  useEffect(() => {
+    if (window.location.search.includes('nav=')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Handle NAVIGATE messages from the service worker (notification click when app is open)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (e) => {
+      if (e.data?.type !== 'NAVIGATE') return;
+      try {
+        const url = new URL(e.data.url, window.location.origin);
+        const navParam = url.searchParams.get('nav');
+        if (navParam) { setNav(navParam); localStorage.setItem('tb_nav', navParam); }
+      } catch {}
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
+  // Pull-to-refresh gesture on the main content area
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onTouchStart = (e) => {
+      if (el.scrollTop > 0) { isPullingRef.current = false; return; }
+      touchStartYRef.current = e.touches[0].clientY;
+      isPullingRef.current = true;
+    };
+    const onTouchMove = (e) => {
+      if (!isPullingRef.current) return;
+      const delta = e.touches[0].clientY - touchStartYRef.current;
+      if (delta > 0) {
+        const clamped = Math.min(delta * 0.55, PULL_THRESHOLD);
+        pullDeltaRef.current = clamped;
+        setPullDelta(clamped);
+      } else {
+        isPullingRef.current = false;
+        pullDeltaRef.current = 0;
+        setPullDelta(0);
+      }
+    };
+    const onTouchEnd = () => {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+      if (pullDeltaRef.current >= PULL_THRESHOLD) {
+        setRefreshing(true);
+        setTimeout(() => window.location.reload(), 250);
+      } else {
+        pullDeltaRef.current = 0;
+        setPullDelta(0);
+      }
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+      el.removeEventListener('touchend',   onTouchEnd);
+    };
   }, []);
 
   // Global search keyboard shortcut
@@ -492,7 +568,13 @@ export default function Home() {
             <img src="/logo-white.png" alt="" className={styles.sidebarBrandMark} />
           </div>
         </aside>
-        <main className={styles.main}>
+        <main className={styles.main} ref={mainRef}>
+          {/* Pull-to-refresh indicator */}
+          {(pullDelta > 0 || refreshing) && (
+            <div className={styles.pullIndicator} style={{ transform: `translateY(${refreshing ? 0 : pullDelta - 48}px)` }}>
+              <div className={styles.pullSpinner} style={{ opacity: refreshing ? 1 : pullDelta / PULL_THRESHOLD }} />
+            </div>
+          )}
           {/* Mobile calendar sub-nav strip */}
           {['calendar','tasks','feed','travel'].includes(nav) && (
             <nav className={styles.calSubNav}>
