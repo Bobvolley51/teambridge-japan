@@ -145,6 +145,7 @@ function expandRecurring(rawEvents, fromISO, toISO) {
               _key:            `${ev.id}_${occStart.toISOString()}`,
               _baseStartTime:  ev.start_time,
               _baseEndTime:    ev.end_time,
+              _occDate:        occStart.toISOString().slice(0, 10),
             });
           }
         }
@@ -167,6 +168,7 @@ function expandRecurring(rawEvents, fromISO, toISO) {
           _key:           `${ev.id}_${curr.toISOString()}`,
           _baseStartTime: ev.start_time,
           _baseEndTime:   ev.end_time,
+          _occDate:       curr.toISOString().slice(0, 10),
         });
       }
       const next = new Date(curr);
@@ -544,6 +546,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
 function EventDetail({ event, lang, canEdit, currentUserId, onEdit, onDelete, onClose }) {
   const [deleting,     setDeleting]     = useState(false);
   const [participants, setParticipants] = useState(event.event_participants ?? []);
+  const [myOccStatus,  setMyOccStatus]  = useState(event._myOccStatus ?? null);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -552,13 +555,22 @@ function EventDetail({ event, lang, canEdit, currentUserId, onEdit, onDelete, on
   };
 
   const setMyStatus = async (newStatus) => {
-    const { error } = await supabase
-      .from('event_participants')
-      .update({ status: newStatus })
-      .eq('event_id', event.id)
-      .eq('profile_id', currentUserId);
-    if (!error) {
-      setParticipants(prev => prev.map(p =>
+    if (event._occDate) {
+      // Recurring occurrence: upsert a per-occurrence override row
+      const { error } = await supabase.from('event_participants')
+        .upsert(
+          { event_id: event.id, profile_id: currentUserId, status: newStatus, occurrence_date: event._occDate },
+          { onConflict: 'event_id,profile_id,occurrence_date' }
+        );
+      if (!error) setMyOccStatus(newStatus);
+    } else {
+      // Non-recurring: update the base row
+      const { error } = await supabase.from('event_participants')
+        .update({ status: newStatus })
+        .eq('event_id', event.id)
+        .eq('profile_id', currentUserId)
+        .eq('occurrence_date', '1900-01-01');
+      if (!error) setParticipants(prev => prev.map(p =>
         p.profile_id === currentUserId ? { ...p, status: newStatus } : p
       ));
     }
@@ -616,7 +628,10 @@ function EventDetail({ event, lang, canEdit, currentUserId, onEdit, onDelete, on
                 {participants.map(ep => {
                   const name   = ep.profiles?.display_name || ep.profiles?.email || ep.profile_id;
                   const isMe   = ep.profile_id === currentUserId;
-                  const status = ep.status ?? 'in';
+                  // For recurring occurrences, prefer the per-occurrence status for the current user
+                  const status = isMe && event._occDate
+                    ? (myOccStatus ?? ep.status ?? 'in')
+                    : (ep.status ?? 'in');
                   return (
                     <div key={ep.profile_id} className={styles.attendeeRow}>
                       <span className={status === 'in' ? styles.statusIn : status === 'maybe' ? styles.statusMaybe : styles.statusOut}>
@@ -912,19 +927,46 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
     setLoading(true);
     const from = new Date(current.getFullYear(), current.getMonth() - 1, 1);
     const to   = new Date(current.getFullYear(), current.getMonth() + 2, 0, 23, 59);
-    // Fetch events starting at or before `to` — recurring events that started earlier
-    // will be expanded client-side; non-recurring ones outside [from, to] are dropped.
     const { data } = await supabase
       .from('events')
-      .select('*, event_participants(profile_id, status, profiles(display_name, email))')
+      .select('*, event_participants(profile_id, status, occurrence_date, profiles(display_name, email))')
       .lte('start_time', to.toISOString())
       .order('start_time', { ascending: true });
+
+    // For players: only show events they're invited to (base rows only)
     const filtered = role === 'Player' && currentUserId
-      ? (data ?? []).filter(ev => ev.event_participants?.some(ep => ep.profile_id === currentUserId))
+      ? (data ?? []).filter(ev => ev.event_participants?.some(
+          ep => ep.profile_id === currentUserId && ep.occurrence_date === '1900-01-01'
+        ))
       : (data ?? []);
-    setEvents(expandRecurring(filtered, from.toISOString(), to.toISOString()));
+
+    // Strip occurrence-specific rows from participant lists — only show base invitations
+    const withBaseParticipants = filtered.map(ev => ({
+      ...ev,
+      event_participants: (ev.event_participants ?? []).filter(ep => ep.occurrence_date === '1900-01-01'),
+    }));
+
+    const expanded = expandRecurring(withBaseParticipants, from.toISOString(), to.toISOString());
+
+    // Load per-occurrence RSVP overrides for the current user and merge into expanded events
+    if (currentUserId) {
+      const { data: occRows } = await supabase
+        .from('event_participants')
+        .select('event_id, occurrence_date, status')
+        .eq('profile_id', currentUserId)
+        .neq('occurrence_date', '1900-01-01');
+      const occMap = {};
+      for (const r of (occRows ?? [])) occMap[`${r.event_id}_${r.occurrence_date}`] = r.status;
+      setEvents(expanded.map(ev => {
+        if (!ev._occDate) return ev;
+        const s = occMap[`${ev.id}_${ev._occDate}`];
+        return s !== undefined ? { ...ev, _myOccStatus: s } : ev;
+      }));
+    } else {
+      setEvents(expanded);
+    }
     setLoading(false);
-  }, [current]);
+  }, [current, currentUserId]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 

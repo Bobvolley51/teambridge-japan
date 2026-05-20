@@ -61,7 +61,8 @@ function expandRecurring(rawEvents, fromISO, toISO) {
         if (selectedDays.includes(dow)) {
           const occStart = new Date(d); occStart.setHours(h, m, 0, 0);
           if (occStart >= fromDate) {
-            result.push({ ...ev, start_time: occStart.toISOString(), end_time: new Date(occStart.getTime() + duration).toISOString(), _key: `${ev.id}_${occStart.toISOString()}` });
+            const _occDate = occStart.toISOString().slice(0, 10);
+            result.push({ ...ev, start_time: occStart.toISOString(), end_time: new Date(occStart.getTime() + duration).toISOString(), _key: `${ev.id}_${occStart.toISOString()}`, _occDate });
           }
         }
         d = new Date(d); d.setDate(d.getDate() + 1);
@@ -71,8 +72,10 @@ function expandRecurring(rawEvents, fromISO, toISO) {
     let curr = new Date(baseStart), safety = 0;
     while (curr <= effectiveEnd && safety < 500) {
       safety++;
-      if (curr >= fromDate)
-        result.push({ ...ev, start_time: curr.toISOString(), end_time: new Date(curr.getTime() + duration).toISOString(), _key: `${ev.id}_${curr.toISOString()}` });
+      if (curr >= fromDate) {
+        const _occDate = curr.toISOString().slice(0, 10);
+        result.push({ ...ev, start_time: curr.toISOString(), end_time: new Date(curr.getTime() + duration).toISOString(), _key: `${ev.id}_${curr.toISOString()}`, _occDate });
+      }
       const next = new Date(curr);
       if      (ev.recurrence === 'daily')   next.setDate(next.getDate() + 1);
       else if (ev.recurrence === 'weekly')  next.setDate(next.getDate() + 7);
@@ -311,11 +314,12 @@ export default function Dashboard({
       { data: myNutritionCountData },
       { data: nutriSubmittedData },
     ] = await Promise.all([
-      // My participation events — no date filter so recurring base events are included
+      // My participation events — base rows only (occurrence_date = sentinel) so recurring series are included once
       currentUserId
         ? supabase.from('event_participants')
             .select('status, events(id, title, start_time, end_time, all_day, category, location, recurrence, recurrence_end)')
             .eq('profile_id', currentUserId)
+            .eq('occurrence_date', '1900-01-01')
         : Promise.resolve({ data: [] }),
       // All team events (admin roles) — only upper bound so old recurring events are included
       isAdminSchedule
@@ -423,10 +427,23 @@ export default function Dashboard({
     const rangeFrom = todayStart.toISOString();
     const rangeTo   = weekEnd.toISOString();
 
-    // Build status map by base event id (participation is per event, not per occurrence)
+    // Build base status map by event id
     const statusByEventId = {};
     for (const p of (myPartsData ?? [])) {
       if (p.events?.id) statusByEventId[p.events.id] = p.status ?? 'in';
+    }
+
+    // Load occurrence-specific RSVP overrides for the current user
+    const occRsvpMap = {};
+    if (currentUserId) {
+      const { data: occRows } = await supabase
+        .from('event_participants')
+        .select('event_id, occurrence_date, status')
+        .eq('profile_id', currentUserId)
+        .neq('occurrence_date', '1900-01-01');
+      for (const r of (occRows ?? [])) {
+        occRsvpMap[`${r.event_id}_${r.occurrence_date}`] = r.status;
+      }
     }
 
     // Expand my participated events into occurrences within the window
@@ -434,7 +451,11 @@ export default function Dashboard({
       .filter(p => p.events?.id)
       .map(p => p.events);
     const myExpanded = expandRecurring(myBaseEvents, rangeFrom, rangeTo)
-      .map(ev => ({ ...ev, _myStatus: statusByEventId[ev.id] ?? 'in' }));
+      .map(ev => {
+        const base = statusByEventId[ev.id] ?? 'in';
+        const occ  = ev._occDate ? occRsvpMap[`${ev.id}_${ev._occDate}`] : undefined;
+        return { ...ev, _myStatus: occ ?? base };
+      });
 
     // Expand all team events (admin) — then merge, preferring participation entries
     const adminExpanded = isAdminSchedule
@@ -550,14 +571,24 @@ export default function Dashboard({
   };
 
   // ── #5: Inline RSVP ──────────────────────────────────────────────────────────
-  const handleRsvp = async (eventId, newStatus) => {
+  const handleRsvp = async (eventId, occDate, newStatus) => {
     setEvents(prev => prev.map(ev =>
-      ev.id === eventId ? { ...ev, _myStatus: newStatus } : ev
+      ev.id === eventId && (ev._occDate ?? null) === (occDate ?? null)
+        ? { ...ev, _myStatus: newStatus } : ev
     ));
-    await supabase.from('event_participants')
-      .update({ status: newStatus })
-      .eq('event_id', eventId)
-      .eq('profile_id', currentUserId);
+    if (occDate) {
+      await supabase.from('event_participants')
+        .upsert(
+          { event_id: eventId, profile_id: currentUserId, status: newStatus, occurrence_date: occDate },
+          { onConflict: 'event_id,profile_id,occurrence_date' }
+        );
+    } else {
+      await supabase.from('event_participants')
+        .update({ status: newStatus })
+        .eq('event_id', eventId)
+        .eq('profile_id', currentUserId)
+        .eq('occurrence_date', '1900-01-01');
+    }
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -808,7 +839,7 @@ export default function Dashboard({
                               {['in', 'maybe', 'out'].map(s => (
                                 <button key={s}
                                   className={`${styles.rsvpBtnInline} ${status === s ? styles[`rsvpBtnActive_${s}`] : ''}`}
-                                  onClick={() => handleRsvp(ev.id, s)}>
+                                  onClick={() => handleRsvp(ev.id, ev._occDate ?? null, s)}>
                                   {RSVP_LABEL[s]?.[lang] ?? s}
                                 </button>
                               ))}
