@@ -7,25 +7,27 @@ import styles from './WellnessDashboard.module.css';
 // ── Constants ─────────────────────────────────────────────────
 
 const QUESTIONS = [
-  { key: 'fatigue',  en: 'Fatigue',  ja: '疲労' },
-  { key: 'sleep',    en: 'Sleep',    ja: '睡眠' },
-  { key: 'appetite', en: 'Appetite', ja: '食欲' },
+  { key: 'physical_readiness', en: 'Physical',  ja: '身体' },
+  { key: 'mental_readiness',   en: 'Mental',    ja: 'メンタル' },
+  { key: 'sleep_quality',      en: 'Sleep Q.',  ja: '睡眠質' },
 ];
 
-const FEVER_THRESHOLD = 37.0; // above this = show; ≥38.0 = red
+const MAIN_KEYS = new Set(QUESTIONS.map(q => q.key));
+
+const FEVER_THRESHOLD = 37.0;
 
 const BODY_PARTS = [
   { key: 'shoulder_l',  en: 'Left Shoulder',   ja: '左肩' },
   { key: 'shoulder_r',  en: 'Right Shoulder',  ja: '右肩' },
-  { key: 'lower_back',  en: 'Lower Back',       ja: '腰' },
-  { key: 'knee_l',      en: 'Left Knee',        ja: '左膝' },
-  { key: 'knee_r',      en: 'Right Knee',       ja: '右膝' },
-  { key: 'ankle_l',     en: 'Left Ankle',       ja: '左足首' },
-  { key: 'ankle_r',     en: 'Right Ankle',      ja: '右足首' },
-  { key: 'quad_l',      en: 'Left Quad',        ja: '左大腿四頭筋' },
-  { key: 'quad_r',      en: 'Right Quad',       ja: '右大腿四頭筋' },
-  { key: 'hamstring_l', en: 'Left Hamstring',   ja: '左ハムストリングス' },
-  { key: 'hamstring_r', en: 'Right Hamstring',  ja: '右ハムストリングス' },
+  { key: 'lower_back',  en: 'Lower Back',      ja: '腰' },
+  { key: 'knee_l',      en: 'Left Knee',       ja: '左膝' },
+  { key: 'knee_r',      en: 'Right Knee',      ja: '右膝' },
+  { key: 'ankle_l',     en: 'Left Ankle',      ja: '左足首' },
+  { key: 'ankle_r',     en: 'Right Ankle',     ja: '右足首' },
+  { key: 'quad_l',      en: 'Left Quad',       ja: '左大腿四頭筋' },
+  { key: 'quad_r',      en: 'Right Quad',      ja: '右大腿四頭筋' },
+  { key: 'hamstring_l', en: 'Left Hamstring',  ja: '左ハムストリングス' },
+  { key: 'hamstring_r', en: 'Right Hamstring', ja: '右ハムストリングス' },
 ];
 
 const DAY_LABELS = {
@@ -50,8 +52,8 @@ function getPeriodStart(days, offset = 0) {
 
 function colorOf(score) {
   if (score == null) return '#d1d5db';
-  if (score < 5)     return '#ef4444';
-  if (score < 7)     return '#f59e0b';
+  if (score < 40)    return '#ef4444';
+  if (score < 60)    return '#f59e0b';
   return '#10b981';
 }
 
@@ -76,6 +78,27 @@ function prevWeekStartOf(dateStr) {
   const d = new Date(dateStr);
   d.setDate(d.getDate() - 7);
   return getWeekStart(toDateStr(d));
+}
+
+function sleepHourColor(h) {
+  if (h == null) return '#d1d5db';
+  if (h >= 7)    return '#10b981';
+  if (h === 6)   return '#f59e0b';
+  return '#ef4444';
+}
+
+function availColor(v) {
+  if (v == null) return '#d1d5db';
+  if (v >= 100)  return '#10b981';
+  if (v >= 50)   return '#f59e0b';
+  return '#ef4444';
+}
+
+function availLabel(v, lang) {
+  if (v == null) return '—';
+  if (v >= 100)  return lang === 'ja' ? '全力' : 'Full';
+  if (v >= 50)   return lang === 'ja' ? '制限' : 'Ltd';
+  return lang === 'ja' ? '不可' : 'Out';
 }
 
 // ── Player Heatmap ────────────────────────────────────────────
@@ -122,11 +145,10 @@ function PlayerHeatmap({ players, dates, playerDayMap, weekRows, lang }) {
               </tr>
             );
           })}
-          {/* Team row */}
           <tr className={styles.hmTeamRow}>
             <td className={styles.hmNameCell}><em>{lang === 'ja' ? 'チーム' : 'Team'}</em></td>
             {dates.map(ds => {
-              const dayRows = weekRows.filter(r => r.response_date === ds);
+              const dayRows = weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.response_date === ds);
               const score   = dayRows.length ? avg(dayRows.map(r => r.score)) : null;
               return (
                 <td key={ds} className={styles.hmCell}
@@ -165,6 +187,26 @@ function TempBadge({ val }) {
   );
 }
 
+function SleepBadge({ hours }) {
+  if (hours == null) return <span className={styles.noData}>—</span>;
+  const c = sleepHourColor(hours);
+  return (
+    <span className={styles.badge} style={{ background: c }}>
+      {hours}h
+    </span>
+  );
+}
+
+function AvailBadge({ value, lang }) {
+  if (value == null) return <span className={styles.noData}>—</span>;
+  const c = availColor(value);
+  return (
+    <span className={styles.badge} style={{ background: c, fontSize: '11px' }}>
+      {availLabel(value, lang)}
+    </span>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────
 
 export default function WellnessDashboard({ lang, profile }) {
@@ -174,7 +216,7 @@ export default function WellnessDashboard({ lang, profile }) {
   const [date,       setDate]       = useState(todayStr);
   const [weekOffset, setWeekOffset] = useState(0);
   const [weekDays,   setWeekDays]   = useState(7);
-  const [viewMode,   setViewMode]   = useState('heatmap'); // 'heatmap' | 'values'
+  const [viewMode,   setViewMode]   = useState('heatmap');
   const [rows,       setRows]       = useState([]);
   const [weekRows,   setWeekRows]   = useState([]);
   const [todayPain,  setTodayPain]  = useState([]);
@@ -182,7 +224,6 @@ export default function WellnessDashboard({ lang, profile }) {
   const [bwRows,     setBwRows]     = useState([]);
   const [loading,    setLoading]    = useState(true);
 
-  // ── Load today ──────────────────────────────────────────────
   const loadToday = useCallback(async () => {
     setLoading(true);
     const curWeek  = getWeekStart(date);
@@ -198,7 +239,6 @@ export default function WellnessDashboard({ lang, profile }) {
     setLoading(false);
   }, [date]);
 
-  // ── Load week ───────────────────────────────────────────────
   const loadWeek = useCallback(async () => {
     setLoading(true);
     const ws = getPeriodStart(weekDays, weekOffset);
@@ -222,7 +262,6 @@ export default function WellnessDashboard({ lang, profile }) {
     if (tab === 'today') loadToday(); else loadWeek();
   }, [tab, loadToday, loadWeek]);
 
-  // ── Body weight map: { userName: { weekStart: weight_kg } } ─
   const bwMap = {};
   for (const r of bwRows) {
     if (!bwMap[r.user_name]) bwMap[r.user_name] = {};
@@ -231,34 +270,25 @@ export default function WellnessDashboard({ lang, profile }) {
   const todayCurWeek  = getWeekStart(date);
   const todayPrevWeek = prevWeekStartOf(date);
 
-  const ws         = getPeriodStart(weekDays, weekOffset);
-  const weekDates0 = toDateStr(ws);
+  const ws          = getPeriodStart(weekDays, weekOffset);
+  const weekDates0  = toDateStr(ws);
   const weekCurWeek  = getWeekStart(weekDates0);
   const weekPrevWeek = prevWeekStartOf(weekDates0);
 
-  const MAIN_KEYS = new Set(QUESTIONS.map(q => q.key));
-
-  // ── Today: derived data ─────────────────────────────────────
+  // ── Today ──────────────────────────────────────────────────
   const todayPlayers = {};
   for (const r of rows) {
     if (!todayPlayers[r.user_name]) todayPlayers[r.user_name] = {};
     todayPlayers[r.user_name][r.question_key] = r.score;
   }
   const todayList    = Object.entries(todayPlayers);
-  const alarmedToday = [...new Set(rows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 5).map(r => r.user_name))];
+  const alarmedToday = [...new Set(rows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
 
-  // ── Week: derived data ──────────────────────────────────────
+  // ── Week ───────────────────────────────────────────────────
   const weekDates = Array.from({ length: weekDays }, (_, i) => {
     const d = new Date(ws); d.setDate(d.getDate() + i); return toDateStr(d);
   });
 
-  const dayLabel = (ds) => {
-    const d = new Date(ds);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  };
-
-  // Build player-day map for heatmap: { playerName: { dateStr: [scores] } }
-  // Only include the 3 main wellness scores (not temperature which is in °C)
   const playerDayMap = {};
   for (const r of weekRows) {
     if (!MAIN_KEYS.has(r.question_key)) continue;
@@ -266,10 +296,9 @@ export default function WellnessDashboard({ lang, profile }) {
     if (!playerDayMap[r.user_name][r.response_date]) playerDayMap[r.user_name][r.response_date] = [];
     playerDayMap[r.user_name][r.response_date].push(r.score);
   }
-  // Sort players: worst overall average first (most concerning at top)
   const heatmapPlayers = Object.keys(playerDayMap).sort((a, b) => {
-    const aAvg = avg(Object.values(playerDayMap[a]).flat()) ?? 10;
-    const bAvg = avg(Object.values(playerDayMap[b]).flat()) ?? 10;
+    const aAvg = avg(Object.values(playerDayMap[a]).flat()) ?? 100;
+    const bAvg = avg(Object.values(playerDayMap[b]).flat()) ?? 100;
     return aAvg - bAvg;
   });
 
@@ -281,28 +310,27 @@ export default function WellnessDashboard({ lang, profile }) {
   }
   const weekPlayerList = Object.entries(weekPlayers).map(([name, qs]) => ({
     name,
-    avgs: Object.fromEntries(QUESTIONS.map(q => [q.key, avg(qs[q.key] ?? [])])),
+    avgs:       Object.fromEntries(QUESTIONS.map(q => [q.key, avg(qs[q.key] ?? [])])),
+    sleepHours: avg(qs['sleep_hours'] ?? []),
+    avail:      avg(qs['availability'] ?? []),
   }));
 
-  const alarmedWeek  = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 5).map(r => r.user_name))];
-  const weekLabel    = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
+  const alarmedWeek = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
+  const weekLabel   = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
 
-  // ── Render ──────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────
   return (
     <div className={styles.wrapper}>
 
-      {/* Header */}
       <div className={styles.topBar}>
         <div className={styles.heading}>
           💪 {lang === 'ja' ? 'ウェルネス チェックイン' : 'Wellness Check-in'}
         </div>
         <div className={styles.tabs}>
-          <button className={`${styles.tab} ${tab === 'today' ? styles.tabActive : ''}`}
-            onClick={() => setTab('today')}>
+          <button className={`${styles.tab} ${tab === 'today' ? styles.tabActive : ''}`} onClick={() => setTab('today')}>
             {lang === 'ja' ? '今日' : 'Today'}
           </button>
-          <button className={`${styles.tab} ${tab === 'week' ? styles.tabActive : ''}`}
-            onClick={() => setTab('week')}>
+          <button className={`${styles.tab} ${tab === 'week' ? styles.tabActive : ''}`} onClick={() => setTab('week')}>
             {lang === 'ja' ? '直近7日' : 'Last 7 Days'}
           </button>
         </div>
@@ -312,16 +340,12 @@ export default function WellnessDashboard({ lang, profile }) {
       {tab === 'today' && (
         <div className={styles.content}>
           <div className={styles.controls}>
-            <input type="date" className={styles.datePicker} value={date}
-              onChange={e => setDate(e.target.value)} />
+            <input type="date" className={styles.datePicker} value={date} onChange={e => setDate(e.target.value)} />
           </div>
 
           {alarmedToday.length > 0 && (
             <div className={styles.alarm}>
-              ⚠️&nbsp;
-              {lang === 'ja'
-                ? `低スコア検出 — ${alarmedToday.join('、')}`
-                : `Low score alert — ${alarmedToday.join(', ')}`}
+              ⚠️&nbsp;{lang === 'ja' ? `低スコア検出 — ${alarmedToday.join('、')}` : `Low score alert — ${alarmedToday.join(', ')}`}
             </div>
           )}
 
@@ -332,90 +356,98 @@ export default function WellnessDashboard({ lang, profile }) {
               : (() => {
                   const hasAnyFever = todayList.some(([, qs]) => tempColor(qs['temperature']) != null);
                   return (
-                  <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                        {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
-                        {hasAnyFever && <th className={styles.th}>🌡 {lang === 'ja' ? '体温' : 'Temp'}</th>}
-                        <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
-                        <th className={styles.th}>{lang === 'ja' ? '平均' : 'Avg'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {todayList.map(([name, qs]) => {
-                        const mainScores = QUESTIONS.map(q => qs[q.key]);
-                        const a = avg(mainScores);
-                        const curBw  = bwMap[name]?.[todayCurWeek];
-                        const prevBw = bwMap[name]?.[todayPrevWeek];
-                        const pct    = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
-                        return (
-                          <tr key={name} className={styles.tr}>
-                            <td className={styles.tdName}>{name}</td>
-                            {QUESTIONS.map(q => (
-                              <td key={q.key} className={`${styles.td} ${qs[q.key] != null && qs[q.key] < 5 ? styles.lowCell : ''}`}>
-                                <ScoreBadge score={qs[q.key]} alarm={qs[q.key] != null && qs[q.key] < 5} />
-                              </td>
-                            ))}
-                            {hasAnyFever && (
-                              <td className={`${styles.td} ${tempColor(qs['temperature']) === '#ef4444' ? styles.lowCell : ''}`}>
-                                <TempBadge val={qs['temperature']} />
-                              </td>
-                            )}
-                            <td className={styles.td}>
-                              {curBw != null
-                                ? <div className={styles.bwCell}>
-                                    <span className={styles.bwValue}>{curBw} kg</span>
-                                    {pct !== null && (
-                                      <span className={styles.bwChange}>
-                                        {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
-                                      </span>
-                                    )}
-                                  </div>
-                                : <span className={styles.noData}>—</span>
-                              }
-                            </td>
-                            <td className={styles.td}>
-                              <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className={styles.footRow}>
-                        <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
-                        {QUESTIONS.map(q => {
-                          const a = avg(rows.filter(r => r.question_key === q.key).map(r => r.score));
+                    <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                          {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
+                          <th className={styles.th}>{lang === 'ja' ? '睡眠時間' : 'Sleep'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '参加' : 'Avail'}</th>
+                          {hasAnyFever && <th className={styles.th}>🌡</th>}
+                          <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
+                          <th className={styles.th}>{lang === 'ja' ? '平均' : 'Avg'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayList.map(([name, qs]) => {
+                          const mainScores = QUESTIONS.map(q => qs[q.key]);
+                          const a          = avg(mainScores);
+                          const curBw      = bwMap[name]?.[todayCurWeek];
+                          const prevBw     = bwMap[name]?.[todayPrevWeek];
+                          const pct        = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                           return (
-                            <td key={q.key} className={styles.td}>
-                              <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
-                            </td>
+                            <tr key={name} className={styles.tr}>
+                              <td className={styles.tdName}>{name}</td>
+                              {QUESTIONS.map(q => (
+                                <td key={q.key} className={`${styles.td} ${qs[q.key] != null && qs[q.key] < 40 ? styles.lowCell : ''}`}>
+                                  <ScoreBadge score={qs[q.key]} alarm={qs[q.key] != null && qs[q.key] < 40} />
+                                </td>
+                              ))}
+                              <td className={styles.td}>
+                                <SleepBadge hours={qs['sleep_hours']} />
+                              </td>
+                              <td className={styles.td}>
+                                <AvailBadge value={qs['availability']} lang={lang} />
+                              </td>
+                              {hasAnyFever && (
+                                <td className={`${styles.td} ${tempColor(qs['temperature']) === '#ef4444' ? styles.lowCell : ''}`}>
+                                  <TempBadge val={qs['temperature']} />
+                                </td>
+                              )}
+                              <td className={styles.td}>
+                                {curBw != null
+                                  ? <div className={styles.bwCell}>
+                                      <span className={styles.bwValue}>{curBw} kg</span>
+                                      {pct !== null && (
+                                        <span className={styles.bwChange}>
+                                          {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  : <span className={styles.noData}>—</span>
+                                }
+                              </td>
+                              <td className={styles.td}>
+                                <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
+                              </td>
+                            </tr>
                           );
                         })}
-                        {hasAnyFever && <td className={styles.td} />}
-                        <td className={styles.td} />
-                        <td className={styles.td} />
-                      </tr>
-                    </tfoot>
-                  </table>
-                  </div>
+                      </tbody>
+                      <tfoot>
+                        <tr className={styles.footRow}>
+                          <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
+                          {QUESTIONS.map(q => {
+                            const a = avg(rows.filter(r => r.question_key === q.key).map(r => r.score));
+                            return (
+                              <td key={q.key} className={styles.td}>
+                                <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
+                              </td>
+                            );
+                          })}
+                          <td className={styles.td} />
+                          <td className={styles.td} />
+                          {hasAnyFever && <td className={styles.td} />}
+                          <td className={styles.td} />
+                          <td className={styles.td} />
+                        </tr>
+                      </tfoot>
+                    </table>
+                    </div>
                   );
                 })()
           }
 
-          {/* Score legend */}
           {todayList.length > 0 && (
             <div className={styles.chartLegend} style={{ marginTop: 8 }}>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 7–10' : 'Good 7–10'}</span>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 5–6' : 'Moderate 5–6'}</span>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <5 ⚠️' : 'Alert <5 ⚠️'}</span>
-              <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：1（低）→ 10（高）' : 'Scale: 1 (low) → 10 (high)'}</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 60–100' : 'Good 60–100'}</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 40–59' : 'Moderate 40–59'}</span>
+              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <40 ⚠️' : 'Alert <40 ⚠️'}</span>
+              <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：0（低）→ 100（高）' : 'Scale: 0 (low) → 100 (high)'}</span>
             </div>
           )}
 
-          {/* Body pain today */}
           {todayPain.length > 0 && (
             <div className={styles.painSection}>
               <div className={styles.painTitle}>
@@ -432,15 +464,17 @@ export default function WellnessDashboard({ lang, profile }) {
                   <span className={styles.painName}>{name}</span>
                   <div className={styles.painParts}>
                     {entries.map(r => {
-                      const label = BODY_PARTS.find(b => b.key === r.body_part);
+                      const label     = BODY_PARTS.find(b => b.key === r.body_part);
                       const chipLabel = label ? (lang === 'ja' ? label.ja : label.en) : r.body_part;
-                      const level = r.pain_level;
+                      const level     = r.pain_level;
                       const chipColor = level == null ? undefined
-                        : level >= 7 ? '#ef4444' : level >= 4 ? '#f59e0b' : '#10b981';
+                        : level >= 70 ? '#ef4444'
+                        : level >= 40 ? '#f59e0b'
+                        : '#10b981';
                       return (
                         <span key={r.body_part} className={styles.painChip}
                           style={chipColor ? { background: chipColor, color: '#fff', borderColor: chipColor } : undefined}>
-                          {chipLabel}{level != null ? ` ${level}/10` : ''}
+                          {chipLabel}{level != null ? ` ${level}/100` : ''}
                         </span>
                       );
                     })}
@@ -475,15 +509,12 @@ export default function WellnessDashboard({ lang, profile }) {
             </div>
           </div>
 
-          {/* View mode toggle — shown as prominent sub-tabs */}
           <div className={styles.viewToggleTabs}>
-            <button
-              className={`${styles.viewToggleTab} ${viewMode === 'heatmap' ? styles.viewToggleTabActive : ''}`}
+            <button className={`${styles.viewToggleTab} ${viewMode === 'heatmap' ? styles.viewToggleTabActive : ''}`}
               onClick={() => setViewMode('heatmap')}>
               🗓 {lang === 'ja' ? 'ヒートマップ' : 'Heatmap'}
             </button>
-            <button
-              className={`${styles.viewToggleTab} ${viewMode === 'values' ? styles.viewToggleTabActive : ''}`}
+            <button className={`${styles.viewToggleTab} ${viewMode === 'values' ? styles.viewToggleTabActive : ''}`}
               onClick={() => setViewMode('values')}>
               📋 {lang === 'ja' ? '詳細数値' : 'Detailed Values'}
             </button>
@@ -491,10 +522,7 @@ export default function WellnessDashboard({ lang, profile }) {
 
           {alarmedWeek.length > 0 && (
             <div className={styles.alarm}>
-              ⚠️&nbsp;
-              {lang === 'ja'
-                ? `今週の低スコア — ${alarmedWeek.join('、')}`
-                : `Low scores (last 7 days) — ${alarmedWeek.join(', ')}`}
+              ⚠️&nbsp;{lang === 'ja' ? `今週の低スコア — ${alarmedWeek.join('、')}` : `Low scores (last 7 days) — ${alarmedWeek.join(', ')}`}
             </div>
           )}
 
@@ -505,98 +533,105 @@ export default function WellnessDashboard({ lang, profile }) {
               : (
                 <div className={styles.weekContent}>
 
-                  {/* Player heatmap */}
                   {viewMode === 'heatmap' && (
-                  <div className={styles.chartCard}>
-                    <div className={styles.chartTitle}>
-                      {lang === 'ja' ? '選手別 ウェルネス ヒートマップ' : 'Player Wellness Heatmap'}
-                      <span className={styles.hmSubtitle}>
-                        {lang === 'ja' ? '（1日の全質問の平均スコア）' : '(daily avg across all questions)'}
-                      </span>
+                    <div className={styles.chartCard}>
+                      <div className={styles.chartTitle}>
+                        {lang === 'ja' ? '選手別 ウェルネス ヒートマップ' : 'Player Wellness Heatmap'}
+                        <span className={styles.hmSubtitle}>
+                          {lang === 'ja' ? '（身体・メンタル・睡眠質の平均）' : '(avg of physical, mental & sleep quality)'}
+                        </span>
+                      </div>
+                      <PlayerHeatmap
+                        players={heatmapPlayers}
+                        dates={weekDates}
+                        playerDayMap={playerDayMap}
+                        weekRows={weekRows}
+                        lang={lang}
+                      />
+                      <div className={styles.chartLegend}>
+                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 60–100' : 'Good 60–100'}</span>
+                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 40–59' : 'Moderate 40–59'}</span>
+                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <40 ⚠️' : 'Alert <40 ⚠️'}</span>
+                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#d1d5db' }} />{lang === 'ja' ? '未回答' : 'No data'}</span>
+                        <span className={styles.legendScale}>{lang === 'ja' ? '最悪スコアの選手が上位' : 'Lowest avg shown first'}</span>
+                      </div>
                     </div>
-                    <PlayerHeatmap
-                      players={heatmapPlayers}
-                      dates={weekDates}
-                      playerDayMap={playerDayMap}
-                      weekRows={weekRows}
-                      lang={lang}
-                    />
-                    <div className={styles.chartLegend}>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 7–10' : 'Good 7–10'}</span>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 5–6' : 'Moderate 5–6'}</span>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <5 ⚠️' : 'Alert <5 ⚠️'}</span>
-                      <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#d1d5db' }} />{lang === 'ja' ? '未回答' : 'No data'}</span>
-                      <span className={styles.legendScale}>{lang === 'ja' ? '最悪スコアの選手が上位' : 'Lowest avg shown first'}</span>
-                    </div>
-                  </div>
                   )}
 
-                  {/* Weekly player summary table */}
                   {viewMode === 'values' && (
-                  <div className={styles.tableWrap}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                          {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
-                          <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
-                          <th className={styles.th}>{lang === 'ja' ? '週平均' : 'Wk avg'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {weekPlayerList.map(({ name, avgs }) => {
-                          const overall = avg(QUESTIONS.map(q => avgs[q.key]));
-                          const curBw   = bwMap[name]?.[weekCurWeek];
-                          const prevBw  = bwMap[name]?.[weekPrevWeek];
-                          const pct     = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
-                          return (
-                            <tr key={name} className={styles.tr}>
-                              <td className={styles.tdName}>{name}</td>
-                              {QUESTIONS.map(q => (
-                                <td key={q.key} className={`${styles.td} ${avgs[q.key] != null && avgs[q.key] < 5 ? styles.lowCell : ''}`}>
-                                  <ScoreBadge score={avgs[q.key]} alarm={avgs[q.key] != null && avgs[q.key] < 5} />
-                                </td>
-                              ))}
-                              <td className={styles.td}>
-                                {curBw != null
-                                  ? <div className={styles.bwCell}>
-                                      <span className={styles.bwValue}>{curBw} kg</span>
-                                      {pct !== null && (
-                                        <span className={styles.bwChange}>
-                                          {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
-                                        </span>
-                                      )}
-                                    </div>
-                                  : <span className={styles.noData}>—</span>
-                                }
-                              </td>
-                              <td className={styles.td}>
-                                <span className={styles.avgText} style={{ color: colorOf(overall) }}>{overall ?? '—'}</span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className={styles.footRow}>
-                          <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
-                          {QUESTIONS.map(q => {
-                            const a = avg(weekRows.filter(r => r.question_key === q.key).map(r => r.score));
+                    <div className={styles.tableWrap}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
+                            {QUESTIONS.map(q => <th key={q.key} className={styles.th}>{lang === 'ja' ? q.ja : q.en}</th>)}
+                            <th className={styles.th}>{lang === 'ja' ? '睡眠' : 'Sleep'}</th>
+                            <th className={styles.th}>{lang === 'ja' ? '参加' : 'Avail'}</th>
+                            <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
+                            <th className={styles.th}>{lang === 'ja' ? '週平均' : 'Wk avg'}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {weekPlayerList.map(({ name, avgs, sleepHours, avail }) => {
+                            const overall = avg(QUESTIONS.map(q => avgs[q.key]));
+                            const curBw   = bwMap[name]?.[weekCurWeek];
+                            const prevBw  = bwMap[name]?.[weekPrevWeek];
+                            const pct     = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                             return (
-                              <td key={q.key} className={styles.td}>
-                                <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
-                              </td>
+                              <tr key={name} className={styles.tr}>
+                                <td className={styles.tdName}>{name}</td>
+                                {QUESTIONS.map(q => (
+                                  <td key={q.key} className={`${styles.td} ${avgs[q.key] != null && avgs[q.key] < 40 ? styles.lowCell : ''}`}>
+                                    <ScoreBadge score={avgs[q.key]} alarm={avgs[q.key] != null && avgs[q.key] < 40} />
+                                  </td>
+                                ))}
+                                <td className={styles.td}>
+                                  <SleepBadge hours={sleepHours != null ? Math.round(sleepHours) : null} />
+                                </td>
+                                <td className={styles.td}>
+                                  <AvailBadge value={avail} lang={lang} />
+                                </td>
+                                <td className={styles.td}>
+                                  {curBw != null
+                                    ? <div className={styles.bwCell}>
+                                        <span className={styles.bwValue}>{curBw} kg</span>
+                                        {pct !== null && (
+                                          <span className={styles.bwChange}>
+                                            {parseFloat(pct) > 0 ? '↑' : parseFloat(pct) < 0 ? '↓' : '→'} {Math.abs(pct)}%
+                                          </span>
+                                        )}
+                                      </div>
+                                    : <span className={styles.noData}>—</span>
+                                  }
+                                </td>
+                                <td className={styles.td}>
+                                  <span className={styles.avgText} style={{ color: colorOf(overall) }}>{overall ?? '—'}</span>
+                                </td>
+                              </tr>
                             );
                           })}
-                          <td className={styles.td} />
-                          <td className={styles.td} />
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                        </tbody>
+                        <tfoot>
+                          <tr className={styles.footRow}>
+                            <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
+                            {QUESTIONS.map(q => {
+                              const a = avg(weekRows.filter(r => r.question_key === q.key).map(r => r.score));
+                              return (
+                                <td key={q.key} className={styles.td}>
+                                  <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
+                                </td>
+                              );
+                            })}
+                            <td className={styles.td} />
+                            <td className={styles.td} />
+                            <td className={styles.td} />
+                            <td className={styles.td} />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   )}
 
-                  {/* Body pain + nutrition — values mode only */}
                   {viewMode === 'values' && weekPain.length > 0 && (() => {
                     const freq = weekPain.reduce((acc, r) => {
                       acc[r.body_part] = (acc[r.body_part] ?? 0) + 1;
@@ -610,10 +645,8 @@ export default function WellnessDashboard({ lang, profile }) {
                         </div>
                         <div className={styles.freqChips}>
                           {sorted.map(([key, count]) => {
-                            const label = BODY_PARTS.find(b => b.key === key);
-                            const chipCls = count >= 3 ? styles.freqChipRed
-                              : count === 2 ? styles.freqChipOrange
-                              : styles.freqChipYellow;
+                            const label   = BODY_PARTS.find(b => b.key === key);
+                            const chipCls = count >= 3 ? styles.freqChipRed : count === 2 ? styles.freqChipOrange : styles.freqChipYellow;
                             return (
                               <span key={key} className={`${styles.freqChip} ${chipCls}`}>
                                 {label ? (lang === 'ja' ? label.ja : label.en) : key}
@@ -625,7 +658,6 @@ export default function WellnessDashboard({ lang, profile }) {
                       </div>
                     );
                   })()}
-
 
                 </div>
               )

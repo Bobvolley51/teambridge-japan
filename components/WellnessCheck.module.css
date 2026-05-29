@@ -395,3 +395,106 @@
   color: #9ca3af;
   margin: 0;
 }
+
+/* 0-100 slider */
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sliderWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.slider {
+  flex: 1;
+  height: 6px;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.sliderVal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 3px 6px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+/* Sleep hours */
+.sleepHourBtns {
+  display: flex;
+  gap: 5px;
+}
+
+.sleepHourBtn {
+  flex: 1;
+  padding: 9px 2px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  text-align: center;
+}
+.sleepHourBtn:hover { border-color: #9ca3af; background: #f3f4f6; }
+
+.sleepHint {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Availability */
+.availBtns {
+  display: flex;
+  gap: 10px;
+}
+
+.availBtn {
+  flex: 1;
+  padding: 10px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+  text-align: center;
+}
+.availBtn:hover { border-color: #9ca3af; }
+
+.availFull {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #15803d;
+}
+
+.availLtd {
+  background: #fef9c3;
+  border-color: #ca8a04;
+  color: #a16207;
+}
+
+.availNo {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
