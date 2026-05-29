@@ -888,4 +888,48 @@
   .statsTile:nth-child(odd):last-child  { grid-column: span 2; border-right: none; }
   .statsTile:nth-child(even)            { border-right: none; }
   .statsTile:not(:nth-last-child(-n+2)) { border-bottom: 1px solid #f3f4f6; }
+
+  /* ── User list: switch from 3-col grid to stacked card layout ── */
+  .tableHead { display: none; }
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .userCell { width: 100%; }
+
+  .roleCell {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .roleSelect {
+    flex: 1;
+    min-width: 120px;
+    font-size: 14px;
+    padding: 7px 8px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .editBtn, .delBtn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .adminToggleBtn {
+    height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+    opacity: 0.6;
+  }
 }
