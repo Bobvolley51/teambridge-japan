@@ -336,6 +336,7 @@
 .mobileNavItem {
   flex: 1;
   min-width: 52px;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
