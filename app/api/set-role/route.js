@@ -15,23 +15,26 @@ export async function POST(req) {
     return Response.json({ error: 'Missing required fields.' }, { status: 400 });
   }
 
+  // Use anon-key client for JWT verification (service-role client overrides auth headers)
+  const authClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+  const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
+  if (authErr || !user) return Response.json({ error: 'Unauthorized.' }, { status: 401 });
+
+  // Use service-role client for privileged DB operations
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // Verify the caller is authenticated
-  const { data: { user }, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !user) return Response.json({ error: 'Unauthorized.' }, { status: 401 });
-
-  // Verify they are a super-admin or admin
   const { data: caller } = await admin.from('profiles').select('is_super_admin, is_admin').eq('id', user.id).single();
   if (!caller?.is_super_admin && !caller?.is_admin) {
     return Response.json({ error: 'Only admins can change roles.' }, { status: 403 });
   }
 
-  // Apply the role change
   const { error } = await admin.from('profiles').update({ role: newRole }).eq('id', targetUserId);
   if (error) return Response.json({ error: error.message }, { status: 400 });
 
