@@ -193,7 +193,7 @@
 /* ── Modals ──────────────────────────────────────────────────────── */
 
 .overlay { position: fixed; inset: 0; background: rgba(92,0,26,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-.modal { background: #fff; border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px rgba(126,0,39,0.25); display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; border-top: 4px solid #7e0027; }
+.modal { background: #fff; border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 20px 40px rgba(126,0,39,0.25); display: flex; flex-direction: column; max-height: 90dvh; overflow: hidden; border-top: 4px solid #7e0027; }
 .modalHeader { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; border-bottom: 1px solid #f5c2ce; flex-shrink: 0; }
 .modalTitle  { font-size: 15px; font-weight: 700; color: #5c001a; }
 .closeBtn    { background: none; border: none; cursor: pointer; font-size: 20px; color: #e09aaa; line-height: 1; padding: 0; transition: color 0.1s; }

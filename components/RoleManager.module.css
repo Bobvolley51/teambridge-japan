@@ -211,6 +211,9 @@
   justify-content: center;
   transition: background 0.1s, border-color 0.1s;
 }
+@media (max-width: 768px) {
+  .editBtn, .delBtn { width: 44px; height: 44px; font-size: 16px; }
+}
 
 .editBtn:hover { background: #fdf2f4; border-color: #f5c2ce; }
 
@@ -427,8 +430,9 @@
   border-radius: 14px;
   width: 100%;
   max-width: 400px;
+  max-height: 90dvh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-  overflow: hidden;
 }
 
 .modalHead {

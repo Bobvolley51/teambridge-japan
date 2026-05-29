@@ -23,7 +23,8 @@
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   width: 100%;
   max-width: 560px;
-  overflow: hidden;
+  max-height: calc(90dvh - 80px);
+  overflow-y: auto;
   animation: slideDown 0.15s ease;
 }
 

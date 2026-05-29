@@ -10,7 +10,18 @@
       "Bash(node --input-type=module -e \"import { extractText } from 'unpdf'; console.log\\('ok', typeof extractText\\)\")",
       "Bash(grep -A15 \"async function extractText\\\\$1\")",
       "mcp__claude_ai_Google_Drive__read_file_content",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(cp \"webfetch-1778479410386-vhrz0g.bin\" design.html.gz)",
+      "Bash(gzip -d design.html.gz)",
+      "Bash(mkdir -p design_extracted)",
+      "Bash(tar -xf design.html -C design_extracted)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(xargs grep -l \"demo\\\\|fake\\\\|seed\\\\|mock\\\\|test.*data\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\" -Recurse -Filter \"*.sql\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(xargs grep -l \"role\\\\|super\")"
     ]
   }
 }

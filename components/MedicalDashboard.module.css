@@ -217,7 +217,7 @@
   border-radius: 16px 16px 0 0;
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
 }
 @media (min-width: 600px) { .modal { border-radius: 16px; } }

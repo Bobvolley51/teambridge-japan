@@ -102,6 +102,8 @@ export default function Home() {
   const touchStartYRef  = useRef(0);
   const isPullingRef    = useRef(false);
   const pullDeltaRef    = useRef(0);
+  const swipeStartXRef  = useRef(0);
+  const swipeStartYRef  = useRef(0);
   const [pullDelta,   setPullDelta]   = useState(0);
   const [refreshing,  setRefreshing]  = useState(false);
   const PULL_THRESHOLD = 72;
@@ -569,7 +571,27 @@ export default function Home() {
             <img src="/logo-white.png" alt="" className={styles.sidebarBrandMark} />
           </div>
         </aside>
-        <main className={styles.main} ref={mainRef}>
+        <main className={styles.main} ref={mainRef}
+          onTouchStart={(e) => {
+            swipeStartXRef.current = e.touches[0].clientX;
+            swipeStartYRef.current = e.touches[0].clientY;
+          }}
+          onTouchEnd={(e) => {
+            const dx = e.changedTouches[0].clientX - swipeStartXRef.current;
+            const dy = e.changedTouches[0].clientY - swipeStartYRef.current;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+              const ids = nav_items.map(i => i.id);
+              const cur = ids.findIndex(id =>
+                id === nav ||
+                (id === 'players'  && PLAYERS_IDS.has(nav)) ||
+                (id === 'calendar' && ['tasks','feed','travel'].includes(nav))
+              );
+              if (cur === -1) return;
+              if (dx < 0 && cur < ids.length - 1) navigate(ids[cur + 1]);
+              if (dx > 0 && cur > 0) navigate(ids[cur - 1]);
+            }
+          }}
+        >
           {/* Pull-to-refresh indicator */}
           {(pullDelta > 0 || refreshing) && (
             <div className={styles.pullIndicator} style={{ transform: `translateY(${refreshing ? 0 : pullDelta - 48}px)` }}>

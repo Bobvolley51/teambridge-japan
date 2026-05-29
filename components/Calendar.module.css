@@ -44,6 +44,9 @@
   flex-shrink: 0;
 }
 .navBtn:hover { background: #f3f4f6; }
+@media (max-width: 768px) {
+  .navBtn { width: 44px; height: 44px; border-radius: 10px; }
+}
 
 .headerLabel {
   font-size: 15px;
@@ -1038,6 +1041,6 @@
 /* ── Modal scrollable ───────────────────────────────────────── */
 
 .modal {
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
 }
