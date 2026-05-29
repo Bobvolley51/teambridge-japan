@@ -59,7 +59,7 @@ const PLAYERS_IDS     = new Set(['wellness', 'nutrition', 'performance', 'medica
 const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
 const PERFORMANCE_VIEWERS = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
 const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
-const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff', 'Player'];
+const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff'];
 
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
