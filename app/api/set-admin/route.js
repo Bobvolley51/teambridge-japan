@@ -1,17 +1,16 @@
-// app/api/set-role/route.js
-// Only super-admins can change a user's role.
-// Caller must pass their Supabase access token so we can verify their privilege.
+// app/api/set-admin/route.js
+// Only super-admins can grant or revoke the admin flag on a profile.
 
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req) {
-  const { targetUserId, newRole, token } = await req.json();
+  const { targetUserId, isAdmin, token } = await req.json();
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return Response.json({ error: 'Server not configured.' }, { status: 500 });
   }
 
-  if (!targetUserId || !newRole || !token) {
+  if (!targetUserId || typeof isAdmin !== 'boolean' || !token) {
     return Response.json({ error: 'Missing required fields.' }, { status: 400 });
   }
 
@@ -21,18 +20,15 @@ export async function POST(req) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // Verify the caller is authenticated
   const { data: { user }, error: authErr } = await admin.auth.getUser(token);
   if (authErr || !user) return Response.json({ error: 'Unauthorized.' }, { status: 401 });
 
-  // Verify they are a super-admin or admin
-  const { data: caller } = await admin.from('profiles').select('is_super_admin, is_admin').eq('id', user.id).single();
-  if (!caller?.is_super_admin && !caller?.is_admin) {
-    return Response.json({ error: 'Only admins can change roles.' }, { status: 403 });
+  const { data: caller } = await admin.from('profiles').select('is_super_admin').eq('id', user.id).single();
+  if (!caller?.is_super_admin) {
+    return Response.json({ error: 'Only super-admins can grant or revoke admin status.' }, { status: 403 });
   }
 
-  // Apply the role change
-  const { error } = await admin.from('profiles').update({ role: newRole }).eq('id', targetUserId);
+  const { error } = await admin.from('profiles').update({ is_admin: isAdmin }).eq('id', targetUserId);
   if (error) return Response.json({ error: error.message }, { status: 400 });
 
   return Response.json({ ok: true });

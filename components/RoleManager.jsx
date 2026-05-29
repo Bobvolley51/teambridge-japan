@@ -420,18 +420,19 @@ function DeleteModal({ profile, lang, currentUserId, onDelete, onClose }) {
 
 // ── Main Component ───────────────────────────────────────────
 
-export default function RoleManager({ lang = 'en', currentUserId, currentUserRole, isSuperAdmin = false }) {
+export default function RoleManager({ lang = 'en', currentUserId, currentUserRole, isSuperAdmin = false, isAdminUser = false }) {
   const [profiles,    setProfiles]    = useState([]);
   const [requests,    setRequests]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(null);
   const [actioning,   setActioning]   = useState(null);
+  const [adminToggling, setAdminToggling] = useState(null);
   const [error,       setError]       = useState(null);
   const [success,     setSuccess]     = useState(null);
   const [editProfile, setEditProfile] = useState(null);
   const [delProfile,  setDelProfile]  = useState(null);
   const [activeTab,   setActiveTab]   = useState('users');
-  const isHeadcoach = ['Headcoach', 'GM'].includes(currentUserRole);
+  const canEditRoles = isSuperAdmin || isAdminUser;
   const [birthdayInit, setBirthdayInit] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
 
   const handleBirthdayInit = async () => {
@@ -464,9 +465,25 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
     else { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); }
   };
 
-  // Inline role change — only super-admins may call this
-  const updateRole = async (profileId, newRole) => {
+  const updateAdminStatus = async (profileId, newIsAdmin) => {
     if (!isSuperAdmin) return;
+    setAdminToggling(profileId);
+    setError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/set-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId: profileId, isAdmin: newIsAdmin, token: session?.access_token }),
+    });
+    const json = await res.json();
+    if (!res.ok) { setError(json.error ?? 'Update failed.'); }
+    else { setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, is_admin: newIsAdmin } : p)); }
+    setAdminToggling(null);
+  };
+
+  // Inline role change — super-admins and admins may call this
+  const updateRole = async (profileId, newRole) => {
+    if (!canEditRoles) return;
     setSaving(profileId);
     setError(null); setSuccess(null);
     const { data: { session } } = await supabase.auth.getSession();
@@ -514,7 +531,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
       <div className={styles.header}>
         <span className={styles.headerTitle}>{lang === 'ja' ? 'ユーザー管理' : 'User Management'}</span>
         <div className={styles.headerRight}>
-          {isHeadcoach && (
+          {isSuperAdmin && (
             <div className={styles.tabGroup}>
               <button
                 className={`${styles.tabBtn} ${activeTab === 'users' ? styles.tabBtnActive : ''}`}
@@ -528,7 +545,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
               </button>
             </div>
           )}
-          {isHeadcoach && (
+          {isSuperAdmin && (
             <button
               className={styles.birthdayInitBtn}
               onClick={handleBirthdayInit}
@@ -577,7 +594,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
       )}
 
       {/* ── Stats tab ── */}
-      {!loading && isHeadcoach && activeTab === 'stats' && (
+      {!loading && isSuperAdmin && activeTab === 'stats' && (
         <AppStats profiles={profiles} lang={lang} />
       )}
 
@@ -638,7 +655,10 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                   {profile.is_super_admin && (
                     <span className={styles.superAdminBadge} title="Super Admin">★</span>
                   )}
-                  {isSuperAdmin && (
+                  {!profile.is_super_admin && profile.is_admin && (
+                    <span className={styles.adminBadge} title="Admin">🛡️</span>
+                  )}
+                  {canEditRoles && (
                     <>
                       <select className={styles.roleSelect} value={profile.role}
                         disabled={saving === profile.id}
@@ -647,6 +667,16 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                       </select>
                       {saving === profile.id && <span className={styles.spinner}>…</span>}
                     </>
+                  )}
+                  {isSuperAdmin && !profile.is_super_admin && (
+                    <button
+                      className={`${styles.adminToggleBtn} ${profile.is_admin ? styles.adminToggleActive : ''}`}
+                      disabled={adminToggling === profile.id}
+                      onClick={() => updateAdminStatus(profile.id, !profile.is_admin)}
+                      title={profile.is_admin ? (lang === 'ja' ? '管理者権限を削除' : 'Remove admin') : (lang === 'ja' ? '管理者に設定' : 'Make admin')}
+                    >
+                      {adminToggling === profile.id ? '…' : '🛡️'}
+                    </button>
                   )}
                 </div>
 
@@ -677,7 +707,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
         <EditModal
           profile={editProfile}
           lang={lang}
-          canEditRole={isSuperAdmin}
+          canEditRole={canEditRoles}
           onSave={updated => setProfiles(prev => prev.map(p => p.id === updated.id ? updated : p))}
           onClose={() => setEditProfile(null)}
         />

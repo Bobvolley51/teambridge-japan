@@ -460,7 +460,8 @@ export default function Home() {
     || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : null)
     || user.email;
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
-  const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role);
+  const isAdminUser    = profile?.is_admin === true;
+  const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role) || isAdminUser;
   const isPlayer       = profile?.role === 'Player';
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
   const canNutrition   = isPlayer || canWellness;
@@ -619,7 +620,7 @@ export default function Home() {
           {nav==='nutrition'    && canNutrition   && <NutritionDashboard   lang={lang} profile={profile} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} profile={profile} />}
           {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} />}
-          {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} />}
+          {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} isAdminUser={isAdminUser} />}
         </main>
       </div>
 
