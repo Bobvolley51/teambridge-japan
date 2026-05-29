@@ -95,12 +95,13 @@ a, button, [role="button"], input, label, select, textarea {
 
 input, textarea, select, button { font-family: inherit; }
 
-/* Prevent iOS Safari from auto-zooming on input focus (triggers when font-size < 16px) */
-@media (max-width: 768px) {
+/* Prevent iOS Safari from auto-zooming on input focus (triggers when font-size < 16px).
+   !important needed to override CSS Module rules which load after globals. */
+@supports (-webkit-touch-callout: none) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
-    font-size: max(16px, 1em);
+    font-size: 16px !important;
   }
 }
 
