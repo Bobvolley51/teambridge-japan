@@ -64,5 +64,27 @@ export async function POST(req) {
     user_id:      data.user.id,
   }, { onConflict: 'email' });
 
+  // Notify admins and super-admins about the new request
+  const { data: adminProfiles } = await admin
+    .from('profiles')
+    .select('id')
+    .or('is_super_admin.eq.true,is_admin.eq.true');
+
+  const adminIds = (adminProfiles ?? []).map(p => p.id);
+  if (adminIds.length) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${process.env.VERCEL_URL}`;
+    fetch(`${appUrl}/api/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userIds: adminIds,
+        title: '📋 New Access Request',
+        body: `${displayName.trim()} is requesting access to TeamBridge.`,
+        url: '/?nav=admin',
+        tag: 'account-request',
+      }),
+    }).catch(() => {});
+  }
+
   return Response.json({ ok: true });
 }

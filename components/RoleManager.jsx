@@ -668,6 +668,10 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                       {saving === profile.id && <span className={styles.spinner}>…</span>}
                     </>
                   )}
+                </div>
+
+                {/* Actions */}
+                <div className={styles.actions}>
                   {isSuperAdmin && !profile.is_super_admin && (
                     <button
                       className={`${styles.adminToggleBtn} ${profile.is_admin ? styles.adminToggleActive : ''}`}
@@ -678,10 +682,6 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                       {adminToggling === profile.id ? '…' : '🛡️'}
                     </button>
                   )}
-                </div>
-
-                {/* Actions */}
-                <div className={styles.actions}>
                   <button className={styles.editBtn} onClick={() => setEditProfile(profile)}
                     title={lang === 'ja' ? '編集' : 'Edit'}>
                     ✏️
