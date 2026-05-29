@@ -6,6 +6,7 @@ import { timeAgo } from '@/lib/date';
 import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
+import SetupPrompt from './SetupPrompt';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -728,6 +729,15 @@ export default function Dashboard({
           </div>
         )}
       </div>
+
+      {/* Onboarding / setup guide — shown once until dismissed */}
+      <SetupPrompt
+        userId={currentUserId}
+        lang={lang}
+        role={profile?.role}
+        onNavigate={onNavigate}
+        onOpenWellness={onOpenWellness}
+      />
 
       {/* Schedule change banners */}
       {visibleCalChanges.map(n => (
