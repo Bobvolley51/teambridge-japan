@@ -167,17 +167,6 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Reset iOS Safari zoom level after login (input-focus zoom persists across navigation)
-  useEffect(() => {
-    if (!session) return;
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) return;
-    const original = meta.getAttribute('content');
-    meta.setAttribute('content', original + ',maximum-scale=1');
-    const t = requestAnimationFrame(() => meta.setAttribute('content', original));
-    return () => cancelAnimationFrame(t);
-  }, [session]);
-
   // Register Service Worker
   useEffect(() => {
     if ('serviceWorker' in navigator) {

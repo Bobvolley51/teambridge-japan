@@ -95,14 +95,11 @@ a, button, [role="button"], input, label, select, textarea {
 
 input, textarea, select, button { font-family: inherit; }
 
-/* Prevent iOS Safari from auto-zooming on input focus (triggers when font-size < 16px).
-   !important needed to override CSS Module rules which load after globals. */
-@supports (-webkit-touch-callout: none) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
+/* Prevent iOS Safari from auto-zooming on input focus.
+   iOS zooms in when focused input font-size < 16px and holds that zoom after navigation.
+   Using plain @media so Tailwind's CSS bundling order can't override it. */
+@media screen and (max-width: 768px) {
+  input, textarea, select { font-size: 16px !important; }
 }
 
 input:focus-visible, textarea:focus-visible, select:focus-visible {
