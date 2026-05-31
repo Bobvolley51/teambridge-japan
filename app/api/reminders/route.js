@@ -140,8 +140,8 @@ export async function GET(request) {
 
   const results = {};
 
-  // Wellness reminder at 07:00 JST
-  if (jstHour === 7) {
+  // Wellness reminder at 09:00 JST
+  if (jstHour === 9) {
     results.wellness = await wellnessReminder(db, todayJST);
   }
 
