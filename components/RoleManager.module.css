@@ -78,7 +78,7 @@
 
 .tableHead {
   display: grid;
-  grid-template-columns: 1fr 220px 110px;
+  grid-template-columns: 1fr 200px 110px;
   padding: 0 12px 6px;
   font-size: 11px;
   font-weight: 600;
@@ -90,13 +90,14 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 220px 110px;
+  grid-template-columns: 1fr 200px 110px;
   align-items: center;
   padding: 10px 12px;
   border: 1px solid #f3f4f6;
   border-radius: 8px;
   background: #ffffff;
   transition: border-color 0.15s;
+  overflow: hidden;
 }
 
 .row:hover {
@@ -902,47 +903,66 @@
   .birthdayInitBtn { font-size: 11px; padding: 4px 8px; }
   .tabBtn { font-size: 11px; padding: 4px 8px; }
 
-  /* ── User list: switch from 3-col grid to stacked card layout ── */
+  /* ── User list: 2-row CSS grid per card ── */
   .tableHead { display: none; }
 
   .row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    row-gap: 8px;
     padding: 12px;
+    align-items: center;
   }
 
-  .userCell { width: 100%; }
-
-  .roleCell {
+  /* Row 1: user info spans full width */
+  .userCell {
+    grid-column: 1 / -1;
     width: 100%;
-    flex-wrap: wrap;
-    gap: 6px;
   }
+
+  /* Row 2 left: role select */
+  .roleCell {
+    grid-column: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Hide static role badge on mobile — the select shows the same info */
+  .roleBadge { display: none; }
+  /* Keep admin/superadmin badges visible */
+  .adminBadge, .superAdminBadge { display: inline; }
 
   .roleSelect {
     flex: 1;
-    min-width: 120px;
-    font-size: 14px;
-    padding: 7px 8px;
+    width: 100%;
+    max-width: none;
+    font-size: 15px;
+    padding: 8px 10px;
   }
 
+  /* Row 2 right: action buttons */
   .actions {
-    width: 100%;
+    grid-column: 2;
+    width: auto;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .editBtn, .delBtn {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
   }
 
   .adminToggleBtn {
-    height: 44px;
-    padding: 0 12px;
-    font-size: 16px;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 15px;
     opacity: 0.6;
   }
 }
