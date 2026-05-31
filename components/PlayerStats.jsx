@@ -6,11 +6,11 @@ import styles from './PlayerStats.module.css';
 import VertDashboard from './VertDashboard';
 
 const QUESTIONS = [
-  { key: 'fatigue',     en: 'Fatigue',  ja: '疲労' },
-  { key: 'sleep',       en: 'Sleep',    ja: '睡眠' },
-  { key: 'appetite',    en: 'Appetite', ja: '食欲' },
-  { key: 'temperature', en: 'Temp',     ja: '体温' },
-  { key: 'pain',        en: 'Pain',     ja: '痛み' },
+  { key: 'physical_readiness', en: 'Physical', ja: '身体' },
+  { key: 'mental_readiness',   en: 'Mental',   ja: 'メンタル' },
+  { key: 'sleep_quality',      en: 'Sleep Q.', ja: '睡眠質' },
+  { key: 'sleep_hours',        en: 'Sleep h',  ja: '睡眠時間' },
+  { key: 'availability',       en: 'Avail.',   ja: '出場可否' },
 ];
 
 const BODY_PARTS = [
@@ -29,8 +29,8 @@ const BODY_PARTS = [
 
 function scoreColor(s) {
   if (s == null) return '#e5e7eb';
-  if (s <= 3) return '#ef4444';
-  if (s <= 6) return '#f59e0b';
+  if (s < 40)  return '#ef4444';
+  if (s < 60)  return '#f59e0b';
   return '#10b981';
 }
 

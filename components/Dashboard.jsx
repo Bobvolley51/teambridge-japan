@@ -103,11 +103,12 @@ const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athleti
 const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
 const QUESTION_LABELS = {
-  fatigue:     { en: 'Fatigue',     ja: '疲労' },
-  sleep:       { en: 'Sleep',       ja: '睡眠' },
-  appetite:    { en: 'Appetite',    ja: '食欲' },
-  temperature: { en: 'Temperature', ja: '体温' },
-  pain:        { en: 'Body Pain',   ja: '痛み' },
+  physical_readiness: { en: 'Physical',   ja: '身体' },
+  mental_readiness:   { en: 'Mental',     ja: 'メンタル' },
+  sleep_quality:      { en: 'Sleep Q.',   ja: '睡眠質' },
+  sleep_hours:        { en: 'Sleep h',    ja: '睡眠時間' },
+  availability:       { en: 'Avail.',     ja: '出場可否' },
+  temperature:        { en: 'Temp.',      ja: '体温' },
 };
 
 const CAT_COLOR = {
