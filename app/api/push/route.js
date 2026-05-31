@@ -5,8 +5,13 @@
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
+// VAPID subject must be a mailto: URI or https URL
+const vapidSubject = (() => {
+  const e = process.env.VAPID_EMAIL ?? '';
+  return e.startsWith('mailto:') || e.startsWith('https:') ? e : `mailto:${e}`;
+})();
 webpush.setVapidDetails(
-  process.env.VAPID_EMAIL,
+  vapidSubject,
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );

@@ -93,6 +93,7 @@ export default function Home() {
   const [bwWeekStart,      setBwWeekStart]      = useState('');
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
   const [unreadChat,       setUnreadChat]       = useState(0);
+  const [totalUnread,      setTotalUnread]      = useState(0);
   const [showSearch,       setShowSearch]       = useState(false);
   const [showIdleWarning,  setShowIdleWarning]  = useState(false);
   const [idleCountdown,    setIdleCountdown]    = useState(120);
@@ -166,6 +167,15 @@ export default function Home() {
     );
     return () => subscription.unsubscribe();
   }, []);
+
+  // Update browser tab title and home-screen app badge when unread count changes
+  useEffect(() => {
+    const base = 'TeamBridge';
+    document.title = totalUnread > 0 ? `(${totalUnread}) ${base}` : base;
+    if ('setAppBadge' in navigator) {
+      totalUnread > 0 ? navigator.setAppBadge(totalUnread) : navigator.clearAppBadge();
+    }
+  }, [totalUnread]);
 
   // Register Service Worker
   useEffect(() => {
@@ -503,7 +513,7 @@ export default function Home() {
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
-          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} chatUnread={unreadChat} />
+          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} chatUnread={unreadChat} onUnreadChange={setTotalUnread} />
           <UserMenu user={user} profile={profile} lang={lang} onProfileUpdate={() => loadProfile(user.id, false)} />
         </div>
       </header>

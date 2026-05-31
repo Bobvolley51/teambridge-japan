@@ -16,12 +16,15 @@ const TYPE_ICONS = {
 
 function typeIcon(type) { return TYPE_ICONS[type] ?? '🔔'; }
 
-export default function NotificationBell({ userId, lang, onNavigate, chatUnread = 0 }) {
+export default function NotificationBell({ userId, lang, onNavigate, chatUnread = 0, onUnreadChange }) {
   const [items,  setItems]  = useState([]);
   const [open,   setOpen]   = useState(false);
   const wrapRef = useRef(null);
 
   const unread = items.filter(n => !n.is_read).length + chatUnread;
+
+  // Notify parent of unread count changes (for tab title + app badge)
+  useEffect(() => { onUnreadChange?.(unread); }, [unread, onUnreadChange]);
 
   const load = useCallback(async () => {
     const { data } = await supabase
