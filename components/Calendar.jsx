@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
+import { translate } from '@/lib/translate';
 import { SkeletonLine } from './Skeleton';
 import Select from './Select';
 import styles from './Calendar.module.css';
@@ -721,10 +722,10 @@ function MonthView({ year, month, events, lang, today, onDayClick, onEventClick 
                     <div key={ev._key ?? ev.id} className={styles.pill}
                       style={{ background: cc.bg, color: cc.text }}
                       onClick={e => { e.stopPropagation(); onEventClick(ev); }}
-                      title={ev.title}>
+                      title={tTitle(ev.title)}>
                       {ev.recurrence && <span className={styles.recurIcon}>↻</span>}
                       {!ev.all_day && <span className={styles.pillTime}>{pad(new Date(ev.start_time).getHours())}:{pad(new Date(ev.start_time).getMinutes())}</span>}
-                      {ev.title}
+                      {tTitle(ev.title)}
                     </div>
                   );
                 })}
@@ -786,7 +787,7 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
                 <div key={ev._key ?? ev.id} className={styles.allDayPill}
                   style={{ background: cc.bg, color: cc.text }}
                   onClick={() => onEventClick(ev)}>
-                  {ev.recurrence && '↻ '}{ev.title}
+                  {ev.recurrence && '↻ '}{tTitle(ev.title)}
                 </div>
               );
             })}
@@ -811,7 +812,7 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
                 <div key={ev._key ?? ev.id} className={styles.tEvent}
                   style={{ ...eventStyle(ev), background: catColor(ev.category).solid }}
                   onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
-                  <span className={styles.tEventTitle}>{ev.recurrence && '↻ '}{ev.title}</span>
+                  <span className={styles.tEventTitle}>{ev.recurrence && '↻ '}{tTitle(ev.title)}</span>
                   <span className={styles.tEventTime}>{pad(new Date(ev.start_time).getHours())}:{pad(new Date(ev.start_time).getMinutes())}</span>
                 </div>
               ))}
@@ -863,7 +864,7 @@ function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
                 <div key={ev._key ?? ev.id} className={styles.allDayPill}
                   style={{ background: cc.bg, color: cc.text }}
                   onClick={() => onEventClick(ev)}>
-                  {ev.recurrence && '↻ '}{ev.title}
+                  {ev.recurrence && '↻ '}{tTitle(ev.title)}
                 </div>
               );
             })}
@@ -885,7 +886,7 @@ function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
               <div key={ev._key ?? ev.id} className={styles.tEvent}
                 style={{ ...eventStyle(ev), background: catColor(ev.category).solid }}
                 onClick={e => { e.stopPropagation(); onEventClick(ev); }}>
-                <span className={styles.tEventTitle}>{ev.recurrence && '↻ '}{ev.title}</span>
+                <span className={styles.tEventTitle}>{ev.recurrence && '↻ '}{tTitle(ev.title)}</span>
                 <span className={styles.tEventTime}>
                   {pad(new Date(ev.start_time).getHours())}:{pad(new Date(ev.start_time).getMinutes())} – {pad(new Date(ev.end_time).getHours())}:{pad(new Date(ev.end_time).getMinutes())}
                 </span>
@@ -908,6 +909,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   );
   const [current,   setCurrent]   = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
   const [events,    setEvents]    = useState([]);
+  const [titleMap,  setTitleMap]  = useState(new Map());
   const [profiles,  setProfiles]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,    setShowForm]    = useState(false);
@@ -969,6 +971,22 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   }, [current, currentUserId]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
+
+  // Build a title translation map whenever events or language changes
+  useEffect(() => {
+    if (lang !== 'ja') { setTitleMap(new Map()); return; }
+    let cancelled = false;
+    const unique = [...new Set(events.map(ev => ev.title).filter(Boolean))];
+    if (!unique.length) return;
+    Promise.all(unique.map(async t => [t, await translate(t, 'ja')]))
+      .then(pairs => { if (!cancelled) setTitleMap(new Map(pairs)); });
+    return () => { cancelled = true; };
+  }, [events, lang]);
+
+  const tTitle = useCallback(
+    (title) => (lang === 'ja' && titleMap.size ? titleMap.get(title) ?? title : title),
+    [titleMap, lang]
+  );
 
   useEffect(() => {
     const ch = supabase.channel('events-rt')
@@ -1062,7 +1080,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
                 return (
                   <div key={ev._key ?? ev.id} className={styles.mobileUpItem} onClick={() => setDetailEv(ev)}>
                     <span className={styles.mobileUpDot} style={{ background: c.solid }} />
-                    <span className={styles.mobileUpTitle}>{ev.title}</span>
+                    <span className={styles.mobileUpTitle}>{tTitle(ev.title)}</span>
                     <span className={styles.mobileUpDate}>
                       {pad(d.getDate())}/{pad(d.getMonth() + 1)}
                       {!ev.all_day && ` ${pad(d.getHours())}:${pad(d.getMinutes())}`}
@@ -1108,7 +1126,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
                     <span className={styles.upMonth}>{MONTHS[lang][d.getMonth()].slice(0,3)}</span>
                   </div>
                   <div className={styles.upInfo}>
-                    <span className={styles.upTitle}>{ev.recurrence && '↻ '}{ev.title}</span>
+                    <span className={styles.upTitle}>{ev.recurrence && '↻ '}{tTitle(ev.title)}</span>
                     {ev.location && <span className={styles.upLoc}>📍 {ev.location}</span>}
                     {!ev.all_day && <span className={styles.upTime}>{pad(d.getHours())}:{pad(d.getMinutes())}</span>}
                   </div>
@@ -1132,7 +1150,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
           onClose={() => setEditingEvent(null)} />
       )}
       {detailEv && (
-        <EventDetail event={detailEv} lang={lang} canEdit={canEdit} currentUserId={currentUserId}
+        <EventDetail event={{ ...detailEv, title: tTitle(detailEv.title) }} lang={lang} canEdit={canEdit} currentUserId={currentUserId}
           onEdit={ev => { setDetailEv(null); setEditingEvent(ev); }}
           onDelete={() => { loadEvents(); toast(lang === 'ja' ? '予定を削除しました' : 'Event deleted', 'info'); }}
           onClose={() => setDetailEv(null)} />
