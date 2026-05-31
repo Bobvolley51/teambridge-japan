@@ -691,16 +691,22 @@ function EventDetail({ event, lang, canEdit, currentUserId, onEdit, onDelete, on
 
 // ── Month View ────────────────────────────────────────────────────────────────
 
-function MonthView({ year, month, events, lang, today, onDayClick, onEventClick }) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month + 1, 0);
-  const startDow = (firstDay.getDay() + 6) % 7;
-  const cells    = [];
-  for (let i = 0; i < startDow; i++) cells.push(null);
-  for (let d = 1; d <= lastDay.getDate(); d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
+// Always shows 5 rows with the week containing referenceDate in row 2.
+function MonthView({ referenceDate, events, lang, today, onDayClick, onEventClick, tTitle }) {
+  const focalMonth = referenceDate.getMonth();
+  const focalYear  = referenceDate.getFullYear();
 
-  const dayEvents = (day) => events.filter(ev => sameDay(new Date(ev.start_time), new Date(year, month, day)));
+  // Row 2 = week of referenceDate → display starts 1 week earlier
+  const displayStart = new Date(getWeekStart(referenceDate));
+  displayStart.setDate(displayStart.getDate() - 7);
+
+  const cells = Array.from({ length: 35 }, (_, i) => {
+    const d = new Date(displayStart);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  const dayEvents = (date) => events.filter(ev => sameDay(new Date(ev.start_time), date));
 
   return (
     <div className={styles.monthView}>
@@ -708,19 +714,21 @@ function MonthView({ year, month, events, lang, today, onDayClick, onEventClick 
         {WEEKDAYS[lang].map(d => <div key={d} className={styles.wd}>{d}</div>)}
       </div>
       <div className={styles.grid}>
-        {cells.map((day, i) => {
-          const evs       = day ? dayEvents(day) : [];
-          const todayCell = day && sameDay(new Date(year, month, day), today);
+        {cells.map((date, i) => {
+          const evs        = dayEvents(date);
+          const todayCell  = sameDay(date, today);
+          const otherMonth = date.getMonth() !== focalMonth || date.getFullYear() !== focalYear;
           return (
-            <div key={i} className={`${styles.cell} ${!day ? styles.cellEmpty : ''} ${todayCell ? styles.cellToday : ''}`}
-              onClick={() => day && onDayClick(new Date(year, month, day))}>
-              {day && <span className={styles.dayNum}>{day}</span>}
+            <div key={i}
+              className={`${styles.cell} ${todayCell ? styles.cellToday : ''} ${otherMonth ? styles.cellOtherMonth : ''}`}
+              onClick={() => onDayClick(date)}>
+              <span className={styles.dayNum}>{date.getDate()}</span>
               <div className={styles.pills}>
                 {evs.slice(0, 3).map(ev => {
                   const cc = catColor(ev.category);
                   return (
                     <div key={ev._key ?? ev.id} className={styles.pill}
-                      style={{ background: cc.bg, color: cc.text }}
+                      style={{ background: otherMonth ? '#f0f0f0' : cc.bg, color: otherMonth ? '#aaa' : cc.text }}
                       onClick={e => { e.stopPropagation(); onEventClick(ev); }}
                       title={tTitle(ev.title)}>
                       {ev.recurrence && <span className={styles.recurIcon}>↻</span>}
@@ -1000,7 +1008,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   const navigate = (dir) => {
     setCurrent(prev => {
       const d = new Date(prev);
-      if (view === 'month') d.setMonth(d.getMonth() + dir);
+      if (view === 'month') d.setDate(d.getDate() + dir * 7);
       if (view === 'week')  d.setDate(d.getDate() + dir * 7);
       if (view === 'day')   d.setDate(d.getDate() + dir);
       return d;
@@ -1058,8 +1066,8 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
         </div>
 
         {view === 'month' && (
-          <MonthView year={current.getFullYear()} month={current.getMonth()}
-            events={events} lang={lang} today={today}
+          <MonthView referenceDate={current}
+            events={events} lang={lang} today={today} tTitle={tTitle}
             onDayClick={handleDayClick} onEventClick={setDetailEv} />
         )}
         {view === 'week' && (

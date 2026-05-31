@@ -164,6 +164,10 @@
 .cellEmpty { background: #f9fafb; cursor: default; border-color: transparent; }
 .cellEmpty:hover { background: #f9fafb; border-color: transparent; }
 
+.cellOtherMonth { background: #f7f7f7; border-color: #f0f0f0; }
+.cellOtherMonth:hover { background: #f0f0f0; border-color: #e5e7eb; }
+.cellOtherMonth .dayNum { color: #b0b0b0; }
+
 .cellToday .dayNum {
   background: #7e0027;
   color: #fff;
