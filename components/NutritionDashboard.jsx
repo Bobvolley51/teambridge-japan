@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useTranslated } from '@/lib/translate';
 import styles from './NutritionDashboard.module.css';
 
 const MEALS = [
@@ -57,6 +58,7 @@ function emptyEntry() {
 // ── MealCard defined before NutritionDashboard to avoid TDZ ──────────────
 function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChange, onAskCoach, onPlayerRating, onPhotoUpload, onPhotoDelete, onSaveComment, onPhotoClick }) {
   const [notes,   setNotes]   = useState(entry.notes);
+  const translatedNotes = useTranslated(entry.notes, lang);
   const [comment, setComment] = useState(entry.comment);
   const [rating,  setRating]  = useState(entry.rating);
   const fileRef = useRef();
@@ -127,7 +129,7 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChang
         />
       ) : (
         entry.notes
-          ? <div className={styles.notesRead}>{entry.notes}</div>
+          ? <div className={styles.notesRead}>{translatedNotes}</div>
           : !isTrainer ? <div className={styles.notesEmpty}>{lang === 'ja' ? 'メモなし' : 'No notes'}</div> : null
       )}
 

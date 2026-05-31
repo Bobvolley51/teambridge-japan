@@ -976,7 +976,9 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   useEffect(() => {
     if (lang !== 'ja') { setTitleMap(new Map()); return; }
     let cancelled = false;
-    const unique = [...new Set(events.map(ev => ev.title).filter(Boolean))];
+    const unique = [...new Set(
+      events.flatMap(ev => [ev.title, ev.location, ev.description]).filter(Boolean)
+    )];
     if (!unique.length) return;
     Promise.all(unique.map(async t => [t, await translate(t, 'ja')]))
       .then(pairs => { if (!cancelled) setTitleMap(new Map(pairs)); });
@@ -1150,7 +1152,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
           onClose={() => setEditingEvent(null)} />
       )}
       {detailEv && (
-        <EventDetail event={{ ...detailEv, title: tTitle(detailEv.title) }} lang={lang} canEdit={canEdit} currentUserId={currentUserId}
+        <EventDetail event={{ ...detailEv, title: tTitle(detailEv.title), location: tTitle(detailEv.location), description: tTitle(detailEv.description) }} lang={lang} canEdit={canEdit} currentUserId={currentUserId}
           onEdit={ev => { setDetailEv(null); setEditingEvent(ev); }}
           onDelete={() => { loadEvents(); toast(lang === 'ja' ? '予定を削除しました' : 'Event deleted', 'info'); }}
           onClose={() => setDetailEv(null)} />

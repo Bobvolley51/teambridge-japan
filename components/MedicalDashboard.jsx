@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
+import { useTranslated } from '@/lib/translate';
 import styles from './MedicalDashboard.module.css';
 
 const STATUS_CFG = {
@@ -62,6 +63,7 @@ function today() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getM
 
 function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
   const cfg = STATUS_CFG[player.status] ?? STATUS_CFG.full;
+  const translatedReason = useTranslated(player.reason, lang);
   const [saving,        setSaving]        = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [pendingReason, setPendingReason] = useState('');
@@ -138,7 +140,7 @@ function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
           {lang === 'ja' ? cfg.ja : cfg.en}
         </span>
       )}
-      {player.reason && <div className={styles.avReason}>{player.reason}</div>}
+      {player.reason && <div className={styles.avReason}>{translatedReason}</div>}
       {player.updated_at && (
         <div className={styles.avMeta}>
           {lang === 'ja' ? '更新：' : 'Updated: '}

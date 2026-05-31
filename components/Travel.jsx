@@ -416,7 +416,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                 <span className={styles.logIcon}>✈️</span>
                 <div>
                   <div className={styles.logLabel}>{lang === 'ja' ? 'フライト' : 'Flight'}</div>
-                  <div className={styles.logValue}>{trip.flight_number}</div>
+                  <div className={styles.logValue}><TText text={trip.flight_number} lang={lang} /></div>
                 </div>
               </div>
             )}
@@ -425,8 +425,8 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
                 <span className={styles.logIcon}>🏨</span>
                 <div>
                   <div className={styles.logLabel}>{lang === 'ja' ? 'ホテル' : 'Hotel'}</div>
-                  <div className={styles.logValue}>{trip.hotel_name}</div>
-                  {trip.hotel_address && <div className={styles.logSub}>{trip.hotel_address}</div>}
+                  <div className={styles.logValue}><TText text={trip.hotel_name} lang={lang} /></div>
+                  {trip.hotel_address && <div className={styles.logSub}><TText text={trip.hotel_address} lang={lang} /></div>}
                 </div>
               </div>
             )}
@@ -544,7 +544,7 @@ export default function Travel({ lang = 'en', profile, currentUserName = '' }) {
             <div className={styles.cardTitle}><TText text={trip.title} lang={lang} /></div>
             <div className={styles.cardMeta}>
               <span>📅 {fmtShort(trip.start_date, lang)}{trip.end_date && trip.end_date !== trip.start_date ? ` – ${fmtShort(trip.end_date, lang)}` : ''}</span>
-              {trip.location && <span>📍 {trip.location}</span>}
+              {trip.location && <span>📍 <TText text={trip.location} lang={lang} /></span>}
               {partCount > 0 && <span>👥 {partCount}</span>}
             </div>
           </div>
