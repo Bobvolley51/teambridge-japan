@@ -353,12 +353,13 @@ export default function Dashboard({
             .neq('status', 'done')
             .limit(50)
         : Promise.resolve({ data: [] }),
-      // Wellness low-score alerts
+      // Wellness low-score alerts (score < 40 on 0-100 scale = red zone)
       canSeeWellness
         ? supabase.from('wellness_responses')
             .select('user_name, question_key, score, response_date')
             .gte('response_date', yesterdayDateStr)
-            .lt('score', 5)
+            .in('question_key', ['physical_readiness', 'mental_readiness', 'sleep_quality'])
+            .lt('score', 40)
             .order('response_date', { ascending: false })
             .order('user_name')
         : Promise.resolve({ data: [] }),
@@ -405,10 +406,10 @@ export default function Dashboard({
       // #3: Player's wellness last 7 days
       isPlayer && currentUserId
         ? supabase.from('wellness_responses')
-            .select('score, question_key')
+            .select('score, question_key, response_date')
             .eq('user_id', currentUserId)
             .gte('response_date', week7AgoStr)
-            .in('question_key', ['fatigue', 'sleep', 'appetite'])
+            .in('question_key', ['physical_readiness', 'mental_readiness', 'sleep_quality'])
         : Promise.resolve({ data: [] }),
       // Player RPE sessions last 7 days
       isPlayer && currentUserId
