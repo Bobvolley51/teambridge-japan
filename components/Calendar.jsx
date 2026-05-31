@@ -780,7 +780,7 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
         <div className={styles.gutterLabel} />
         {days.map((day, i) => (
           <div key={i} className={styles.weekDayCol}>
-            <span className={styles.wdName}>{WEEKDAYS[lang][i]}</span>
+            <span className={styles.wdName}>{WEEKDAYS[lang][(day.getDay() + 6) % 7]}</span>
             <span className={`${styles.wdNum} ${isToday(day) ? styles.wdToday : ''}`}>{day.getDate()}</span>
           </div>
         ))}
@@ -1018,7 +1018,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   const headerLabel = () => {
     if (view === 'month') return `${MONTHS[lang][current.getMonth()]} ${current.getFullYear()}`;
     if (view === 'week') {
-      const ws = getWeekStart(current);
+      const ws = weekViewStart;
       const we = new Date(ws); we.setDate(we.getDate() + 6);
       return `${pad(ws.getDate())} – ${pad(we.getDate())} ${MONTHS[lang][we.getMonth()].slice(0,3)} ${we.getFullYear()}`;
     }
@@ -1037,6 +1037,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   const copyUrl = () => { navigator.clipboard.writeText(icsUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const weekStart     = getWeekStart(current);
+  const weekViewStart = (() => { const d = new Date(current); d.setDate(d.getDate() - 2); d.setHours(0,0,0,0); return d; })();
   const upcomingEvents = [...events].filter(ev => new Date(ev.start_time) >= today).slice(0, 5);
 
   return (
@@ -1071,7 +1072,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
             onDayClick={handleDayClick} onEventClick={setDetailEv} />
         )}
         {view === 'week' && (
-          <WeekView weekStart={weekStart} events={events} lang={lang} today={today}
+          <WeekView weekStart={weekViewStart} events={events} lang={lang} today={today}
             onSlotClick={handleSlotClick} onEventClick={setDetailEv} />
         )}
         {view === 'day' && (
