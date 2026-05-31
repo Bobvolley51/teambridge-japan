@@ -89,6 +89,12 @@
   box-shadow: 0 0 0 2px rgba(126,0,39,0.12);
 }
 
+.fieldHint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
 .error {
   font-size: 13px;
   color: #dc2626;

@@ -393,7 +393,7 @@ export default function Home() {
       return;
     }
 
-    if (!prof?.first_name || !prof?.last_name || !prof?.date_of_birth) {
+    if (!prof?.first_name || !prof?.last_name || !prof?.date_of_birth || !prof?.display_name) {
       setShowProfileSetup(true);
       return;
     }

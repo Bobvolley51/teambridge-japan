@@ -12,13 +12,20 @@ export default function ProfileSetup({ userId, currentRole, lang, onComplete }) 
 
   const [firstName,  setFirstName]  = useState('');
   const [lastName,   setLastName]   = useState('');
+  const [nickname,   setNickname]   = useState('');
   const [dob,        setDob]        = useState('');
   const [position,   setPosition]   = useState('');
   const [jersey,     setJersey]     = useState('');
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState('');
 
-  const canSubmit = firstName.trim() && lastName.trim() && dob;
+  const handleFirstNameChange = (val) => {
+    setFirstName(val);
+    // Auto-fill nickname from first name if user hasn't touched it yet
+    if (!nickname || nickname === firstName) setNickname(val);
+  };
+
+  const canSubmit = firstName.trim() && lastName.trim() && dob && nickname.trim();
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -27,9 +34,9 @@ export default function ProfileSetup({ userId, currentRole, lang, onComplete }) 
     setError('');
 
     const updates = {
-      first_name:   firstName.trim(),
-      last_name:    lastName.trim(),
-      display_name: `${firstName.trim()} ${lastName.trim()}`,
+      first_name:    firstName.trim(),
+      last_name:     lastName.trim(),
+      display_name:  nickname.trim() || firstName.trim(),
       date_of_birth: dob,
       ...(isPlayer && position  ? { position }                                 : {}),
       ...(isPlayer && jersey !== '' ? { jersey_number: Number(jersey) || null } : {}),
@@ -70,7 +77,7 @@ export default function ProfileSetup({ userId, currentRole, lang, onComplete }) 
               <input
                 className={styles.input}
                 value={firstName}
-                onChange={e => setFirstName(e.target.value)}
+                onChange={e => handleFirstNameChange(e.target.value)}
                 placeholder={isJa ? '例：太郎' : 'e.g. Thomas'}
                 autoFocus
               />
@@ -86,6 +93,22 @@ export default function ProfileSetup({ userId, currentRole, lang, onComplete }) 
                 placeholder={isJa ? '例：山田' : 'e.g. Ranner'}
               />
             </div>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>
+              {isJa ? 'ニックネーム（チームメイトに表示される名前）' : 'Nickname — how teammates see you'} *
+            </label>
+            <input
+              className={styles.input}
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              placeholder={isJa ? '例：タロウ、Bob …' : 'e.g. Bob, Taro, Kento …'}
+              maxLength={30}
+            />
+            <span className={styles.fieldHint}>
+              {isJa ? 'チャット・カレンダー・ダッシュボードで表示されます' : 'Shown in chat, calendar and dashboard'}
+            </span>
           </div>
 
           <div className={styles.field}>
