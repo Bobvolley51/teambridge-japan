@@ -17,6 +17,7 @@ import ProfileSetup          from '@/components/ProfileSetup';
 import WellnessDashboard     from '@/components/WellnessDashboard';
 import SessionRPE            from '@/components/SessionRPE';
 import BodyWeightCheck       from '@/components/BodyWeightCheck';
+import { toJstDateStr }      from '@/lib/date';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
 import MedicalDashboard      from '@/components/MedicalDashboard';
 import NotificationBell      from '@/components/NotificationBell';
@@ -60,6 +61,8 @@ const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist',
 const PERFORMANCE_VIEWERS = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
 const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
 const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff'];
+
+function pad(n) { return String(n).padStart(2, '0'); }
 
 export default function Home() {
   const [session,       setSession]       = useState(undefined);
@@ -409,7 +412,7 @@ export default function Home() {
     }
 
     if (checkWellness && prof?.role === 'Player') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toJstDateStr(new Date());
       // localStorage prevents re-showing after skip or submit within the same day
       if (!localStorage.getItem(`wellness_done_${userId}_${today}`)) {
         const { data: existing } = await supabase
@@ -435,7 +438,7 @@ export default function Home() {
   };
 
   const handleWellnessDone = () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toJstDateStr(new Date());
     if (session?.user) {
       localStorage.setItem(`wellness_done_${session.user.id}_${today}`, '1');
     }

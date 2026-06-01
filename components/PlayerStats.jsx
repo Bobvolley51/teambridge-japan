@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDate, toJstDateStr, dateToYmd } from '@/lib/date';
 import styles from './PlayerStats.module.css';
 import VertDashboard from './VertDashboard';
 
@@ -52,14 +53,13 @@ function fmtDate(dateStr, lang) {
   );
 }
 
-function pad(n) { return String(n).padStart(2, '0'); }
-
 function getLast7Dates() {
   const dates = [];
+  const today = toJstDate(new Date());
   for (let i = 0; i < 7; i++) {
-    const d = new Date();
+    const d = new Date(today);
     d.setDate(d.getDate() - i);
-    dates.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    dates.push(dateToYmd(d));
   }
   return dates;
 }
@@ -83,9 +83,9 @@ export default function PlayerStats({ lang, profile, onEditWellness }) {
     if (!userId) return;
     setLoading(true);
     try {
-      const since = new Date();
+      const since = toJstDate(new Date());
       since.setDate(since.getDate() - 6);
-      const sinceStr = `${since.getFullYear()}-${pad(since.getMonth() + 1)}-${pad(since.getDate())}`;
+      const sinceStr = dateToYmd(since);
 
       const [wellRes, painRes, rpeRes] = await Promise.all([
         supabase.from('wellness_responses')
@@ -115,7 +115,7 @@ export default function PlayerStats({ lang, profile, onEditWellness }) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toJstDateStr(new Date());
   const dates = getLast7Dates();
 
   const wellGrid = {};

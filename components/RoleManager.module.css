@@ -76,9 +76,18 @@
   gap: 6px;
 }
 
+/* Limit table width so ROLE + ACTIONS columns stay visible on wide screens */
+.tableInner {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .tableHead {
   display: grid;
-  grid-template-columns: 1fr 200px 110px;
+  grid-template-columns: 1fr 190px 110px;
   padding: 0 12px 6px;
   font-size: 11px;
   font-weight: 600;
@@ -90,14 +99,13 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 200px 110px;
+  grid-template-columns: 1fr 190px 110px;
   align-items: center;
   padding: 10px 12px;
   border: 1px solid #f3f4f6;
   border-radius: 8px;
   background: #ffffff;
   transition: border-color 0.15s;
-  overflow: hidden;
 }
 
 .row:hover {
@@ -904,6 +912,7 @@
   .tabBtn { font-size: 11px; padding: 4px 8px; }
 
   /* ── User list: 2-row CSS grid per card ── */
+  .tableInner { max-width: none; }
   .tableHead { display: none; }
 
   .row {
@@ -931,8 +940,13 @@
     align-items: center;
   }
 
-  /* Hide static role badge on mobile — the select shows the same info */
-  .roleBadge { display: none; }
+  /* Show role badge on mobile (inline, no background box — just colored text) */
+  .roleBadge {
+    display: inline-flex;
+    background: none;
+    padding: 0;
+    font-size: 12px;
+  }
   /* Keep admin/superadmin badges visible */
   .adminBadge, .superAdminBadge { display: inline; }
 
