@@ -2,7 +2,31 @@
 
 // app/page.jsx — Full TeamBridge Japan App
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Component } from 'react';
+
+class AppErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'sans-serif', maxWidth: 480, margin: '0 auto' }}>
+          <h2 style={{ color: '#b91c1c' }}>Something went wrong</h2>
+          <pre style={{ background: '#fef2f2', padding: 12, borderRadius: 8, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#7f1d1d' }}>
+            {this.state.error?.message}
+            {'\n\n'}
+            {this.state.error?.stack}
+          </pre>
+          <button onClick={() => window.location.reload()}
+            style={{ marginTop: 16, padding: '10px 24px', background: '#7e0027', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, cursor: 'pointer' }}>
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { supabase }          from '@/lib/supabase';
 import Login                 from '@/components/Login';
 import Dashboard             from '@/components/Dashboard';
@@ -514,6 +538,7 @@ export default function Home() {
   ];
 
   return (
+    <AppErrorBoundary>
     <ToastProvider>
     <div className={styles.app}>
       <header className={styles.header}>
@@ -793,5 +818,6 @@ export default function Home() {
       )}
     </div>
     </ToastProvider>
+    </AppErrorBoundary>
   );
 }
