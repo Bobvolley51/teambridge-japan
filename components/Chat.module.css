@@ -708,6 +708,65 @@
   margin-bottom: 8px;
 }
 
+/* Sort buttons in channel list */
+.sortBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sortBtn {
+  width: 22px;
+  height: 18px;
+  font-size: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.1s;
+}
+.sortBtn:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+.sortBtn:disabled { opacity: 0.25; cursor: default; }
+
+/* Multi-select member add */
+.addMemberMulti {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.addMemberMultiList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 4px;
+  background: #f9fafb;
+}
+.memberCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.memberCheckRow:hover { background: #f0f0f0; }
+.memberCheckRow input[type="checkbox"] { flex-shrink: 0; accent-color: #7e0027; width: 15px; height: 15px; cursor: pointer; }
+.memberCheckName { flex: 1; font-size: 13px; color: #111827; font-weight: 500; }
+.memberCheckRole { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+.memberDivider { height: 1px; background: #e5e7eb; margin: 4px 0; }
+
 .modalInput {
   width: 100%;
   font-size: 13px;
