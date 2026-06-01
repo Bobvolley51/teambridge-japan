@@ -1,15 +1,38 @@
 // public/sw.js — TeamBridge Service Worker
 // Handles push notifications and basic offline caching
 
-const CACHE = 'tb-v1';
+const CACHE = 'tb-v2';
 
-// ── Install: cache shell assets ──────────────────────────────────────────
+// ── Install: cache the app shell so iOS PWA never shows "This page couldn't load" ──
 self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then(cache => cache.add('/')).catch(() => {})
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
+  // Remove old caches from previous versions
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ── Fetch: network-first for navigation, cache fallback so PWA always loads ──
+self.addEventListener('fetch', (e) => {
+  if (e.request.mode !== 'navigate') return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        // Cache fresh copy of the shell on every successful navigation
+        const copy = res.clone();
+        caches.open(CACHE).then(cache => cache.put('/', copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match('/'))
+  );
 });
 
 // ── Push: show notification ──────────────────────────────────────────────
