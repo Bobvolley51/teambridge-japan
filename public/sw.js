@@ -32,9 +32,21 @@ self.addEventListener('push', (e) => {
     }),
   ];
 
-  // Set the home-screen app icon badge (works even when app is closed)
-  if (badgeCount != null && 'setAppBadge' in self.navigator) {
-    tasks.push(self.navigator.setAppBadge(badgeCount));
+  // Set home-screen badge — try multiple API paths (Safari SW vs Chrome SW)
+  if (badgeCount != null) {
+    const setBadge = async () => {
+      try {
+        // Standard: navigator.setAppBadge (Chrome, Edge, Android)
+        if ('setAppBadge' in navigator) { await navigator.setAppBadge(badgeCount); return; }
+        // Safari service worker global scope
+        if ('setAppBadge' in self) { await self.setAppBadge(badgeCount); return; }
+        if (self.navigator && 'setAppBadge' in self.navigator) { await self.navigator.setAppBadge(badgeCount); return; }
+      } catch (_) {}
+      // Fallback: notify any open app windows to set the badge
+      const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const c of allClients) c.postMessage({ type: 'SET_BADGE', count: badgeCount });
+    };
+    tasks.push(setBadge());
   }
 
   e.waitUntil(Promise.all(tasks));
