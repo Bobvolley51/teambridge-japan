@@ -604,6 +604,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
         <div className={styles.loading}>{lang === 'ja' ? '読込中...' : 'Loading…'}</div>
       ) : (
         <div className={styles.table}>
+          <div className={styles.tableInner}>
           <div className={styles.tableHead}>
             <span>{lang === 'ja' ? 'ユーザー' : 'User'}</span>
             <span>{lang === 'ja' ? '役割' : 'Role'}</span>
@@ -700,6 +701,7 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
           {profiles.length === 0 && (
             <p className={styles.empty}>{lang === 'ja' ? 'ユーザーが見つかりません。' : 'No users found.'}</p>
           )}
+          </div>
         </div>
       ))}
 
