@@ -719,6 +719,7 @@
 }
 
 .statsBlock {
+  flex-shrink: 0;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
