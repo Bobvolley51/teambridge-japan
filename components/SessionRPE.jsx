@@ -138,17 +138,23 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         .eq('user_id', userId)
         .gte('event_date', since28);
 
-      if (rpeData?.length) {
-        const acute   = rpeData.filter(r => r.event_date >= since7).reduce((s, r) => s + r.load_au, 0);
-        const chronic = rpeData.reduce((s, r) => s + r.load_au, 0) / 4;
-        if (chronic > 0 && acute / chronic > 1.3) {
-          const ratio = (acute / chronic).toFixed(1);
-          sendAlertDM(userId, userName, [
-            `📊 High training load — ${userName}`,
-            `⚠️ ACWR: ${ratio} (above 1.3 threshold)`,
-            `   Acute load (7d): ${Math.round(acute)} AU`,
-            `   Chronic load (28d avg): ${Math.round(chronic)} AU`,
-          ]).catch(() => {});
+      // ACWR is only meaningful once data spans at least 2 separate weeks
+      // (otherwise the first session always produces ACWR = 4.0 by math)
+      if (rpeData?.length >= 2) {
+        const weeks = new Set(rpeData.map(r => r.event_date.slice(0, 7) + '-W' +
+          String(Math.ceil(new Date(r.event_date).getDate() / 7))));
+        if (weeks.size >= 2) {
+          const acute   = rpeData.filter(r => r.event_date >= since7).reduce((s, r) => s + r.load_au, 0);
+          const chronic = rpeData.reduce((s, r) => s + r.load_au, 0) / 4;
+          if (chronic > 0 && acute / chronic > 1.3) {
+            const ratio = (acute / chronic).toFixed(1);
+            sendAlertDM(userId, userName, [
+              `📊 High training load — ${userName}`,
+              `⚠️ ACWR: ${ratio} (above 1.3 threshold)`,
+              `   Acute load (7d): ${Math.round(acute)} AU`,
+              `   Chronic load (28d avg): ${Math.round(chronic)} AU`,
+            ]).catch(() => {});
+          }
         }
       }
     } catch (_) {}
