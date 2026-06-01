@@ -195,20 +195,33 @@ export default function Home() {
     }
   }, []);
 
-  // Handle NAVIGATE messages from the service worker (notification click when app is open)
+  // Handle messages from the service worker
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const handler = (e) => {
-      if (e.data?.type !== 'NAVIGATE') return;
-      try {
-        const url = new URL(e.data.url, window.location.origin);
-        const navParam = url.searchParams.get('nav');
-        if (navParam) { setNav(navParam); localStorage.setItem('tb_nav', navParam); }
-      } catch {}
+      // Navigation on notification click
+      if (e.data?.type === 'NAVIGATE') {
+        try {
+          const url = new URL(e.data.url, window.location.origin);
+          const navParam = url.searchParams.get('nav');
+          if (navParam) { setNav(navParam); localStorage.setItem('tb_nav', navParam); }
+        } catch {}
+      }
+      // iOS APNs token renewal — re-register the new subscription
+      if (e.data?.type === 'PUSH_RESUBSCRIBE' && e.data.subscription) {
+        const userId = session?.user?.id;
+        if (userId) {
+          fetch('/api/push-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, subscription: e.data.subscription }),
+          }).catch(() => {});
+        }
+      }
     };
     navigator.serviceWorker.addEventListener('message', handler);
     return () => navigator.serviceWorker.removeEventListener('message', handler);
-  }, []);
+  }, [session?.user?.id]);
 
   // Pull-to-refresh gesture on the main content area
   useEffect(() => {

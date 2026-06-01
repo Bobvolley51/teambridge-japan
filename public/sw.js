@@ -33,6 +33,22 @@ self.addEventListener('push', (e) => {
   );
 });
 
+// ── Push subscription renewal (iOS APNs tokens expire silently) ─────────
+self.addEventListener('pushsubscriptionchange', (e) => {
+  e.waitUntil(
+    self.registration.pushManager.subscribe(e.oldSubscription.options)
+      .then(async (newSub) => {
+        // Find the userId stored in IndexedDB or send via message to client
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        // Ask the active client to re-register the new subscription
+        for (const client of clients) {
+          client.postMessage({ type: 'PUSH_RESUBSCRIBE', subscription: newSub.toJSON() });
+        }
+      })
+      .catch(() => {})
+  );
+});
+
 // ── Notification click: focus or open app ───────────────────────────────
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
