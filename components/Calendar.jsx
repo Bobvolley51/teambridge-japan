@@ -755,7 +755,7 @@ function nowLineTop() {
   return Math.max(0, mins / 60 * SLOT_H);
 }
 
-function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick }) {
+function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick, tTitle }) {
   const gridRef = useRef(null);
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart); d.setDate(d.getDate() + i); return d;
@@ -834,7 +834,7 @@ function WeekView({ weekStart, events, lang, today, onSlotClick, onEventClick })
 
 // ── Day View ──────────────────────────────────────────────────────────────────
 
-function DayView({ date, events, lang, today, onSlotClick, onEventClick }) {
+function DayView({ date, events, lang, today, onSlotClick, onEventClick, tTitle }) {
   const gridRef = useRef(null);
   const [nowTop, setNowTop] = useState(nowLineTop);
   const isT = isToday(date);
@@ -1072,11 +1072,11 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
             onDayClick={handleDayClick} onEventClick={setDetailEv} />
         )}
         {view === 'week' && (
-          <WeekView weekStart={weekViewStart} events={events} lang={lang} today={today}
+          <WeekView weekStart={weekViewStart} events={events} lang={lang} today={today} tTitle={tTitle}
             onSlotClick={handleSlotClick} onEventClick={setDetailEv} />
         )}
         {view === 'day' && (
-          <DayView date={current} events={events} lang={lang} today={today}
+          <DayView date={current} events={events} lang={lang} today={today} tTitle={tTitle}
             onSlotClick={handleSlotClick} onEventClick={setDetailEv} />
         )}
 
