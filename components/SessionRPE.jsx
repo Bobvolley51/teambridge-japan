@@ -138,12 +138,12 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         .eq('user_id', userId)
         .gte('event_date', since28);
 
-      // ACWR is only meaningful once data spans at least 2 separate weeks
-      // (otherwise the first session always produces ACWR = 4.0 by math)
-      if (rpeData?.length >= 2) {
-        const weeks = new Set(rpeData.map(r => r.event_date.slice(0, 7) + '-W' +
-          String(Math.ceil(new Date(r.event_date).getDate() / 7))));
-        if (weeks.size >= 2) {
+      // ACWR requires ≥ 28 days of history to be mathematically valid.
+      // With less data the chronic baseline is too thin and ratios are misleading.
+      if (rpeData?.length) {
+        const oldest  = rpeData.reduce((min, r) => r.event_date < min ? r.event_date : min, rpeData[0].event_date);
+        const spanDays = Math.round((Date.now() - new Date(oldest)) / 86400000);
+        if (spanDays >= 28) {
           const acute   = rpeData.filter(r => r.event_date >= since7).reduce((s, r) => s + r.load_au, 0);
           const chronic = rpeData.reduce((s, r) => s + r.load_au, 0) / 4;
           if (chronic > 0 && acute / chronic > 1.3) {
