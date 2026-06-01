@@ -5,20 +5,25 @@
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
-// VAPID subject must be a mailto: URI or https URL
-const vapidSubject = (() => {
-  const e = process.env.VAPID_EMAIL ?? '';
-  return e.startsWith('mailto:') || e.startsWith('https:') ? e : `mailto:${e}`;
-})();
-webpush.setVapidDetails(
-  vapidSubject,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
-
 export async function POST(req) {
   const { userIds, title, body, url = '/', tag, prefKey } = await req.json();
   if (!userIds?.length || !title) return Response.json({ error: 'Missing fields' }, { status: 400 });
+
+  const vapidPublic  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  const vapidEmail   = process.env.VAPID_EMAIL ?? '';
+  if (!vapidPublic || !vapidPrivate) {
+    console.error('push/route: VAPID keys not configured');
+    return Response.json({ error: 'Push not configured' }, { status: 503 });
+  }
+  const vapidSubject = vapidEmail.startsWith('mailto:') || vapidEmail.startsWith('https:')
+    ? vapidEmail : `mailto:${vapidEmail}`;
+  try {
+    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
+  } catch (e) {
+    console.error('push/route: invalid VAPID config', e.message);
+    return Response.json({ error: 'Invalid VAPID config' }, { status: 503 });
+  }
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
