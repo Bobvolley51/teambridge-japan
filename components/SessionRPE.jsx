@@ -77,6 +77,29 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
     }
   }
 
+  // Save a "did not train" record so the popup won't reappear on next login
+  const handleSkip = async () => {
+    setSaving(true);
+    try {
+      await supabase.from('session_rpe').upsert(
+        {
+          user_id:      userId,
+          user_name:    userName,
+          event_id:     event.id,
+          event_title:  event.title,
+          event_date:   dateToYmd(toJstDate(event.start_time)),
+          rpe:          null,
+          duration_min: 0,
+          load_au:      0,
+          attended:     false,
+        },
+        { onConflict: 'user_id,event_id' }
+      );
+    } catch (_) {}
+    setSaving(false);
+    advanceEvent();
+  };
+
   const handleRpeNext = () => {
     if (isBallPractice) {
       setPage(2);
@@ -212,6 +235,9 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
             </div>
 
             <div className={styles.actions}>
+              <button className={styles.skipBtn} disabled={saving} onClick={handleSkip}>
+                {lang === 'ja' ? '不参加' : 'Did not train'}
+              </button>
               <button className={styles.submitBtn} disabled={!rpe || saving} onClick={handleRpeNext}>
                 {isBallPractice
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
