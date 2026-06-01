@@ -980,22 +980,23 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
-  // Build a title translation map whenever events or language changes
+  // Translate all event texts to the current UI language (en or ja).
+  // DeepL auto-detects source language and returns unchanged text when
+  // source == target, so English titles stay English in EN mode.
   useEffect(() => {
-    if (lang !== 'ja') { setTitleMap(new Map()); return; }
     let cancelled = false;
     const unique = [...new Set(
       events.flatMap(ev => [ev.title, ev.location, ev.description]).filter(Boolean)
     )];
-    if (!unique.length) return;
-    Promise.all(unique.map(async t => [t, await translate(t, 'ja')]))
+    if (!unique.length) { setTitleMap(new Map()); return; }
+    Promise.all(unique.map(async t => [t, await translate(t, lang)]))
       .then(pairs => { if (!cancelled) setTitleMap(new Map(pairs)); });
     return () => { cancelled = true; };
   }, [events, lang]);
 
   const tTitle = useCallback(
-    (title) => (lang === 'ja' && titleMap.size ? titleMap.get(title) ?? title : title),
-    [titleMap, lang]
+    (title) => (titleMap.size ? titleMap.get(title) ?? title : title),
+    [titleMap]
   );
 
   useEffect(() => {
