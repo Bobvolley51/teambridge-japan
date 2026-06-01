@@ -128,7 +128,7 @@ const TASK_PRI_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#6b7280' };
 
 // ── #3 Player Summary Card ────────────────────────────────────────────────────
 
-function PlayerSummaryCard({ lang, lastRpe, wellnessAvg, nextEvent, onNavigate }) {
+function PlayerSummaryCard({ lang, lastRpe, wellnessAvg, nextEvent, onNavigate, tEvent }) {
   return (
     <div className={styles.card} style={{ marginBottom: 0 }}>
       <div className={styles.cardHead}>
@@ -811,6 +811,7 @@ export default function Dashboard({
                 wellnessAvg={playerWellnessAvg}
                 nextEvent={todayEvents[0] ?? null}
                 onNavigate={onNavigate}
+                tEvent={tEvent}
               />
             </div>
           )}
