@@ -145,7 +145,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
   async function loadAll() {
     const [{ data: ch }, { data: pr }] = await Promise.all([
       supabase.from('channels').select('id, name, description, created_at, sort_order').order('sort_order'),
-      supabase.from('profiles').select('id, display_name, email, role').order('display_name'),
+      supabase.from('profiles').select('id, display_name, email, role, avatar_url').order('display_name'),
     ]);
     setChannels(ch ?? []);
     setProfiles(pr ?? []);
@@ -154,7 +154,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
   async function loadMembers(channelId) {
     const { data } = await supabase
       .from('channel_members')
-      .select('profile_id, profiles(id, display_name, email)')
+      .select('profile_id, profiles(id, display_name, email, avatar_url)')
       .eq('channel_id', channelId);
     setMembers(data ?? []);
   }
@@ -326,6 +326,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
                             <input type="checkbox"
                               checked={addProfileIds.has(p.id)}
                               onChange={() => toggleAddProfile(p.id)} />
+                            <AvatarPhoto url={p.avatar_url ?? null} initials={profileInitials(p)} name={p.display_name || p.email} size={24} />
                             <span className={styles.memberCheckName}>{p.display_name || p.email}</span>
                             <span className={styles.memberCheckRole}>{p.role}</span>
                           </label>
@@ -344,6 +345,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
                     const p = m.profiles;
                     return (
                       <div key={m.profile_id} className={styles.memberRow}>
+                        <AvatarPhoto url={p?.avatar_url ?? null} initials={p ? profileInitials(p) : '?'} name={p?.display_name || p?.email} size={28} />
                         <span className={styles.memberName}>{p?.display_name || p?.email}</span>
                         <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
                           onClick={() => handleRemoveMember(m.profile_id)}>
@@ -391,9 +393,7 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
           <div className={styles.dmUserList}>
             {filtered.map(p => (
               <button key={p.id} className={styles.dmUserItem} onClick={() => onSelect(p)}>
-                <div className={styles.dmUserAvatar}>
-                  {profileInitials(p)}
-                </div>
+                <AvatarPhoto url={p.avatar_url ?? null} initials={profileInitials(p)} name={profileFullName(p)} size={36} />
                 <div className={styles.dmUserInfo}>
                   <span className={styles.dmUserName}>{profileFullName(p)}</span>
                   <span className={styles.dmUserRole}>{p.position || p.role}</span>
@@ -448,7 +448,7 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
             className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
             onClick={() => onSelect(dm.channelId)}
             title={dm.name}>
-            <span className={styles.dmAvatar}>{dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()}</span>
+            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={28} />
             <span className={styles.dmItemInfo}>
               <span className={styles.dmItemName}>{dm.name}</span>
               {dm.subtitle && <span className={styles.dmItemSub}>{dm.subtitle}</span>}
@@ -658,11 +658,12 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
 
   // Resolve DM conversation names from profiles
   const dmConversationsWithNames = dmConversations.map(dm => {
-    const other = profiles.find(p => p.id === dm.otherId);
-    const name = other ? profileFullName(other) : dm.otherId.slice(0, 8);
+    const other    = profiles.find(p => p.id === dm.otherId);
+    const name     = other ? profileFullName(other) : dm.otherId.slice(0, 8);
     const subtitle = other ? (other.position || other.role || '') : '';
     const initials = other ? profileInitials(other) : '?';
-    return { ...dm, name, subtitle, initials };
+    const avatarUrl = other?.avatar_url ?? null;
+    return { ...dm, name, subtitle, initials, avatarUrl };
   });
 
   // Scroll to bottom when messages change
