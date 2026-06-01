@@ -97,6 +97,7 @@ export default function Home() {
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
   const [unreadChat,       setUnreadChat]       = useState(0);
   const [totalUnread,      setTotalUnread]      = useState(0);
+  const [sectionUnread,    setSectionUnread]    = useState({});
   const [showSearch,       setShowSearch]       = useState(false);
   const [showIdleWarning,  setShowIdleWarning]  = useState(false);
   const [idleCountdown,    setIdleCountdown]    = useState(120);
@@ -512,7 +513,7 @@ export default function Home() {
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
           <button className={`${styles.langBtn} ${lang==='ja'?styles.langActive:''}`} onClick={()=>{setLang('ja');localStorage.setItem('tb_lang','ja');}}>日本語</button>
-          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} chatUnread={unreadChat} onUnreadChange={setTotalUnread} />
+          <NotificationBell userId={user.id} lang={lang} onNavigate={navigate} chatUnread={unreadChat} onUnreadChange={setTotalUnread} onSectionUnread={setSectionUnread} />
           <UserMenu user={user} profile={profile} lang={lang} onProfileUpdate={() => loadProfile(user.id, false)} />
         </div>
       </header>
@@ -536,6 +537,7 @@ export default function Home() {
                     } else {
                       navigate(item.id);
                       if (item.id === 'chat') setUnreadChat(0);
+                      setSectionUnread(prev => ({ ...prev, [item.id]: 0 }));
                       if (isCalGroup) setCalGroupOpen(o => !o);
                     }
                   }}>
@@ -546,6 +548,9 @@ export default function Home() {
                   )}
                   {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
                     <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
+                  )}
+                  {item.id !== 'chat' && item.id !== 'performance' && (sectionUnread[item.id] ?? 0) > 0 && nav !== item.id && (
+                    <span className={styles.navBadge}>{sectionUnread[item.id] > 99 ? '99+' : sectionUnread[item.id]}</span>
                   )}
                 </button>
                 {isCalGroup && calGroupOpen && NAV_CAL_SUBS.map(sub => {
@@ -673,6 +678,7 @@ export default function Home() {
               } else {
                 navigate(item.id);
                 if (item.id === 'chat') setUnreadChat(0);
+                setSectionUnread(prev => ({ ...prev, [item.id]: 0 }));
               }
             }}>
             <span className={styles.mobileNavIconWrap}>
@@ -682,6 +688,9 @@ export default function Home() {
               )}
               {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
                 <span className={styles.mobileNavBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
+              )}
+              {item.id !== 'chat' && item.id !== 'performance' && (sectionUnread[item.id] ?? 0) > 0 && nav !== item.id && (
+                <span className={styles.mobileNavBadge}>{sectionUnread[item.id] > 99 ? '99+' : sectionUnread[item.id]}</span>
               )}
             </span>
             {item.label[lang]}

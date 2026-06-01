@@ -16,14 +16,37 @@ const TYPE_ICONS = {
 
 function typeIcon(type) { return TYPE_ICONS[type] ?? '🔔'; }
 
-export default function NotificationBell({ userId, lang, onNavigate, chatUnread = 0, onUnreadChange }) {
+// Map notification types → nav section IDs
+const SECTION_MAP = {
+  calendar_invite: 'calendar',
+  calendar_change: 'calendar',
+  announcement:    'feed',
+  task_deadline:   'tasks',
+  dm:              'chat',
+  wellness_other:  'wellness',
+  birthday:        'calendar',
+};
+
+export default function NotificationBell({ userId, lang, onNavigate, chatUnread = 0, onUnreadChange, onSectionUnread }) {
   const [items,  setItems]  = useState([]);
   const [open,   setOpen]   = useState(false);
   const wrapRef = useRef(null);
 
   const unread = items.filter(n => !n.is_read).length + chatUnread;
 
-  // Notify parent of unread count changes (for tab title + app badge)
+  // Per-section unread counts for nav badges
+  useEffect(() => {
+    const counts = {};
+    for (const n of items) {
+      if (n.is_read) continue;
+      const sec = SECTION_MAP[n.type];
+      if (sec) counts[sec] = (counts[sec] ?? 0) + 1;
+    }
+    counts.chat = (counts.chat ?? 0) + chatUnread;
+    onSectionUnread?.(counts);
+  }, [items, chatUnread, onSectionUnread]);
+
+  // Notify parent of total unread count (for tab title + app badge)
   useEffect(() => { onUnreadChange?.(unread); }, [unread, onUnreadChange]);
 
   const load = useCallback(async () => {
