@@ -405,7 +405,7 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen }) {
+function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen, unreadCounts }) {
   return (
     <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarMobileOpen : ''}`}>
       <div className={styles.sidebarHead}>
@@ -434,18 +434,24 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
           +
         </button>
       </div>
-      {dmConversations.map(dm => (
-        <button key={dm.channelId}
-          className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
-          onClick={() => onSelect(dm.channelId)}
-          title={dm.name}>
-          <span className={styles.dmAvatar}>{dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()}</span>
-          <span className={styles.dmItemInfo}>
-            <span className={styles.dmItemName}>{dm.name}</span>
-            {dm.subtitle && <span className={styles.dmItemSub}>{dm.subtitle}</span>}
-          </span>
-        </button>
-      ))}
+      {dmConversations.map(dm => {
+        const unread = unreadCounts?.[dm.channelId] ?? 0;
+        return (
+          <button key={dm.channelId}
+            className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
+            onClick={() => onSelect(dm.channelId)}
+            title={dm.name}>
+            <span className={styles.dmAvatar}>{dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()}</span>
+            <span className={styles.dmItemInfo}>
+              <span className={styles.dmItemName}>{dm.name}</span>
+              {dm.subtitle && <span className={styles.dmItemSub}>{dm.subtitle}</span>}
+            </span>
+            {unread > 0 && activeChannel !== dm.channelId && (
+              <span className={styles.dmUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
+            )}
+          </button>
+        );
+      })}
       {dmConversations.length === 0 && (
         <p className={styles.dmEmpty}>{uiLang === 'ja' ? 'まだDMなし' : 'No DMs yet'}</p>
       )}
@@ -468,13 +474,20 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [showNewDM,         setShowNewDM]         = useState(false);
   const [showChanList,      setShowChanList]      = useState(false);
 
-  const [profiles,     setProfiles]     = useState([]);
-  const [mentionQuery, setMentionQuery] = useState(null);
-  const [mentionIdx,   setMentionIdx]   = useState(0);
+  const [profiles,      setProfiles]      = useState([]);
+  const [mentionQuery,  setMentionQuery]  = useState(null);
+  const [mentionIdx,    setMentionIdx]    = useState(0);
+  // { channelId: last_read_at } for current user
+  const [myReadAt,      setMyReadAt]      = useState({});
+  // last_read_at of the DM partner in the active channel
+  const [partnerReadAt, setPartnerReadAt] = useState(null);
+  // { channelId: unreadCount }
+  const [unreadCounts,  setUnreadCounts]  = useState({});
 
-  const endRef          = useRef(null);
-  const subscriptionRef = useRef(null);
-  const inputRef        = useRef(null);
+  const endRef           = useRef(null);
+  const subscriptionRef  = useRef(null);
+  const readSubRef       = useRef(null);
+  const inputRef         = useRef(null);
 
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
@@ -548,6 +561,87 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     loadDMs();
   }, [currentUser?.id]);
 
+  // ── Read receipts ────────────────────────────────────────────
+
+  // Mark the active channel as read for the current user
+  const markAsRead = useCallback(async (channelId) => {
+    if (!currentUser?.id || !channelId) return;
+    const now = new Date().toISOString();
+    await supabase.from('channel_reads').upsert(
+      { user_id: currentUser.id, channel_id: channelId, last_read_at: now },
+      { onConflict: 'user_id,channel_id' }
+    );
+    setMyReadAt(prev => ({ ...prev, [channelId]: now }));
+    setUnreadCounts(prev => ({ ...prev, [channelId]: 0 }));
+  }, [currentUser?.id]);
+
+  // Load my read timestamps + unread counts for all known DM channels
+  useEffect(() => {
+    if (!currentUser?.id || dmConversations.length === 0) return;
+    const myId = currentUser.id;
+    const channelIds = dmConversations.map(d => d.channelId);
+
+    supabase.from('channel_reads')
+      .select('channel_id, last_read_at')
+      .eq('user_id', myId)
+      .in('channel_id', channelIds)
+      .then(({ data }) => {
+        const reads = {};
+        for (const r of (data ?? [])) reads[r.channel_id] = r.last_read_at;
+        setMyReadAt(reads);
+
+        // Count unread per channel
+        Promise.all(channelIds.map(async chId => {
+          const since = reads[chId] ?? '1970-01-01T00:00:00Z';
+          const { count } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('channel', chId)
+            .neq('sender_id', myId)
+            .gt('created_at', since);
+          return [chId, count ?? 0];
+        })).then(pairs => {
+          setUnreadCounts(Object.fromEntries(pairs));
+        });
+      });
+  }, [currentUser?.id, dmConversations.length]);
+
+  // When active DM channel changes: mark as read, load partner read time, subscribe
+  useEffect(() => {
+    if (!activeChannel || !isDM(activeChannel) || !currentUser?.id) return;
+
+    markAsRead(activeChannel);
+
+    // Load both users' read timestamps
+    supabase.from('channel_reads')
+      .select('user_id, last_read_at')
+      .eq('channel_id', activeChannel)
+      .then(({ data }) => {
+        const inner   = activeChannel.slice(3);
+        const sep     = inner.indexOf('_');
+        const a       = inner.slice(0, sep);
+        const b       = inner.slice(sep + 1);
+        const otherId = a === currentUser.id ? b : a;
+        const row     = (data ?? []).find(r => r.user_id === otherId);
+        setPartnerReadAt(row?.last_read_at ?? null);
+      });
+
+    // Realtime: watch for partner marking messages as read
+    readSubRef.current?.unsubscribe();
+    const rs = supabase.channel(`reads-${activeChannel}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'channel_reads',
+        filter: `channel_id=eq.${activeChannel}`,
+      }, payload => {
+        if (payload.new?.user_id !== currentUser.id) {
+          setPartnerReadAt(payload.new.last_read_at);
+        }
+      })
+      .subscribe();
+    readSubRef.current = rs;
+    return () => { rs.unsubscribe(); readSubRef.current = null; };
+  }, [activeChannel, currentUser?.id]);
+
   // Resolve DM conversation names from profiles
   const dmConversationsWithNames = dmConversations.map(dm => {
     const other = profiles.find(p => p.id === dm.otherId);
@@ -615,6 +709,10 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             const updated = prev.map(d => d.channelId === activeChannel ? { ...d, latestAt: newMsg.created_at } : d);
             return [...updated].sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
           });
+          // Auto-mark as read if message is from partner (channel is open)
+          if (newMsg.sender_id && newMsg.sender_id !== currentUser?.id) {
+            markAsRead(activeChannel);
+          }
         }
       })
       .subscribe();
@@ -765,6 +863,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         onManage={() => setShowManage(true)}
         uiLang={uiLang}
         mobileOpen={showChanList}
+        unreadCounts={unreadCounts}
       />
 
       <div className={styles.chatArea}>
@@ -802,15 +901,36 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
                 : (uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : 'No messages yet. Be the first to say something!')}
             </p>
           )}
-          {messages.map(msg => (
-            <Message
-              key={msg.id}
-              msg={msg}
-              isMe={msg.user_name === currentUser.name}
-              uiLang={uiLang}
-              currentUserAvatarUrl={currentUser.avatarUrl}
-            />
-          ))}
+          {(() => {
+            // Last sent message that the DM partner has read
+            const lastReadId = isActiveDM && partnerReadAt
+              ? [...messages].reverse().find(m =>
+                  m.user_name === currentUser.name && !m._optimistic &&
+                  m.created_at <= partnerReadAt
+                )?.id
+              : null;
+            const readTime = partnerReadAt
+              ? new Date(partnerReadAt).toLocaleTimeString(
+                  uiLang === 'ja' ? 'ja-JP' : 'en-GB',
+                  { hour: '2-digit', minute: '2-digit' }
+                )
+              : null;
+            return messages.map(msg => (
+              <div key={msg.id}>
+                <Message
+                  msg={msg}
+                  isMe={msg.user_name === currentUser.name}
+                  uiLang={uiLang}
+                  currentUserAvatarUrl={currentUser.avatarUrl}
+                />
+                {msg.id === lastReadId && (
+                  <div className={styles.readReceipt}>
+                    ✓ {uiLang === 'ja' ? `既読 ${readTime}` : `Read ${readTime}`}
+                  </div>
+                )}
+              </div>
+            ));
+          })()}
           <div ref={endRef} />
         </div>
 

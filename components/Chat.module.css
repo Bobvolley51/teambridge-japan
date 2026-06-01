@@ -155,6 +155,32 @@
 
 .channelActive .dmItemSub { color: rgba(255,255,255,0.6); }
 
+/* Unread badge on DM sidebar items */
+.dmUnreadBadge {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+/* Read receipt under sent messages */
+.readReceipt {
+  text-align: right;
+  font-size: 10px;
+  color: #9ca3af;
+  padding: 0 16px 6px;
+  margin-top: -4px;
+}
+
 /* New DM modal — user list */
 .dmUserList {
   display: flex;
