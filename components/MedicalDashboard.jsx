@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
 import { useTranslated } from '@/lib/translate';
+import AvatarPhoto from './AvatarPhoto';
 import styles from './MedicalDashboard.module.css';
 
 const STATUS_CFG = {
@@ -89,10 +90,13 @@ function AvailabilityCard({ player, lang, canEdit, onEdit, onQuickStatus }) {
   return (
     <div className={styles.avCard} style={{ borderColor: cfg.border, background: cfg.bg }}>
       <div className={styles.avPhotoRow}>
-        {player.avatar_url
-          ? <img src={player.avatar_url} alt={player.player_name} className={styles.avPhoto} />
-          : <div className={styles.avPhotoPlaceholder} style={{ background: cfg.color }}>{initials}</div>
-        }
+        <AvatarPhoto
+          url={player.avatar_url}
+          initials={initials}
+          name={player.player_name}
+          size={56}
+          bg={cfg.color}
+        />
         <div className={styles.avHeaderInfo}>
           <div className={styles.avName}>{player.player_name}</div>
           <div className={styles.avMeta2}>
