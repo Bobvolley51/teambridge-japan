@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDateStr, toJstDateStart, dateToYmd } from '@/lib/date';
+import AvatarPhoto from './AvatarPhoto';
 import styles from './WellnessDashboard.module.css';
 
 // ── Constants ─────────────────────────────────────────────────
@@ -221,6 +222,7 @@ export default function WellnessDashboard({ lang }) {
   const [weekPain,   setWeekPain]   = useState([]);
   const [bwRows,     setBwRows]     = useState([]);
   const [loading,    setLoading]    = useState(true);
+  const [profiles,   setProfiles]   = useState([]);
 
   const loadToday = useCallback(async () => {
     setLoading(true);
@@ -259,6 +261,21 @@ export default function WellnessDashboard({ lang }) {
   useEffect(() => {
     if (tab === 'today') loadToday(); else loadWeek();
   }, [tab, loadToday, loadWeek]);
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, display_name, email, avatar_url')
+      .eq('role', 'Player').then(({ data }) => setProfiles(data ?? []));
+  }, []);
+
+  // display_name → avatar_url map for quick lookup
+  const avatarByName = useMemo(() => {
+    const m = {};
+    for (const p of profiles) {
+      const n = p.display_name || p.email;
+      if (n) m[n] = p.avatar_url ?? null;
+    }
+    return m;
+  }, [profiles]);
 
   const bwMap = {};
   for (const r of bwRows) {
@@ -376,7 +393,17 @@ export default function WellnessDashboard({ lang }) {
                           const pct        = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                           return (
                             <tr key={name} className={styles.tr}>
-                              <td className={styles.tdName}>{name}</td>
+                              <td className={styles.tdName}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <AvatarPhoto
+                                    url={avatarByName[name]}
+                                    initials={name.slice(0, 2)}
+                                    name={name}
+                                    size={28}
+                                  />
+                                  <span>{name}</span>
+                                </div>
+                              </td>
                               {QUESTIONS.map(q => (
                                 <td key={q.key} className={`${styles.td} ${qs[q.key] != null && qs[q.key] < 40 ? styles.lowCell : ''}`}>
                                   <ScoreBadge score={qs[q.key]} alarm={qs[q.key] != null && qs[q.key] < 40} />
@@ -577,7 +604,12 @@ export default function WellnessDashboard({ lang }) {
                             const pct     = curBw && prevBw ? ((curBw - prevBw) / prevBw * 100).toFixed(1) : null;
                             return (
                               <tr key={name} className={styles.tr}>
-                                <td className={styles.tdName}>{name}</td>
+                                <td className={styles.tdName}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <AvatarPhoto url={avatarByName[name]} initials={name.slice(0, 2)} name={name} size={28} />
+                                    <span>{name}</span>
+                                  </div>
+                                </td>
                                 {QUESTIONS.map(q => (
                                   <td key={q.key} className={`${styles.td} ${avgs[q.key] != null && avgs[q.key] < 40 ? styles.lowCell : ''}`}>
                                     <ScoreBadge score={avgs[q.key]} alarm={avgs[q.key] != null && avgs[q.key] < 40} />

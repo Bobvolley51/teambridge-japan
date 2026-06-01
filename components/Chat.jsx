@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { sendPush } from '@/lib/push';
 import { translate } from '@/lib/translate';
 import { SkeletonList } from './Skeleton';
+import AvatarPhoto from './AvatarPhoto';
 import styles from './Chat.module.css';
 
 const MAX_HISTORY = 50;
@@ -60,7 +61,7 @@ function Avatar({ initials, isMe, avatarUrl }) {
 
 // ── Message ──────────────────────────────────────────────────────────────────
 
-function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
+function Message({ msg, isMe, uiLang, avatarUrl, senderName }) {
   const [jaText, setJaText] = useState(null);
   const [enText, setEnText] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
@@ -81,7 +82,13 @@ function Message({ msg, isMe, uiLang, currentUserAvatarUrl }) {
 
   return (
     <div className={`${styles.message} ${isMe ? styles.messageMe : ''}`}>
-      <Avatar initials={msg.user_initials} isMe={isMe} avatarUrl={isMe ? currentUserAvatarUrl : null} />
+      <AvatarPhoto
+        url={avatarUrl}
+        initials={msg.user_initials}
+        name={senderName ?? msg.user_name}
+        size={32}
+        bg={isMe ? '#7e0027' : undefined}
+      />
       <div className={styles.messageBody}>
         <div className={styles.messageHeader}>
           <span className={styles.userName}>{msg.user_name}</span>
@@ -642,6 +649,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return () => { rs.unsubscribe(); readSubRef.current = null; };
   }, [activeChannel, currentUser?.id]);
 
+  // Profile lookup by ID — for avatar/name resolution in messages
+  const profilesById = useMemo(() => {
+    const m = {};
+    for (const p of profiles) m[p.id] = p;
+    return m;
+  }, [profiles]);
+
   // Resolve DM conversation names from profiles
   const dmConversationsWithNames = dmConversations.map(dm => {
     const other = profiles.find(p => p.id === dm.otherId);
@@ -915,13 +929,19 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
                   { hour: '2-digit', minute: '2-digit' }
                 )
               : null;
-            return messages.map(msg => (
+            return messages.map(msg => {
+              const isMe   = msg.user_name === currentUser.name;
+              const sender = msg.sender_id ? profilesById[msg.sender_id] : null;
+              const url    = isMe ? currentUser.avatarUrl : (sender?.avatar_url ?? null);
+              const name   = isMe ? currentUser.name : (sender ? profileFullName(sender) : msg.user_name);
+              return (
               <div key={msg.id}>
                 <Message
                   msg={msg}
-                  isMe={msg.user_name === currentUser.name}
+                  isMe={isMe}
                   uiLang={uiLang}
-                  currentUserAvatarUrl={currentUser.avatarUrl}
+                  avatarUrl={url}
+                  senderName={name}
                 />
                 {msg.id === lastReadId && (
                   <div className={styles.readReceipt}>
@@ -929,7 +949,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
                   </div>
                 )}
               </div>
-            ));
+            );
+          });
           })()}
           <div ref={endRef} />
         </div>
