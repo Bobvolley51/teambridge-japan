@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDate, dateToYmd } from '@/lib/date';
 import styles from './RoleManager.module.css';
 
 const ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
@@ -52,15 +53,15 @@ function AppStats({ profiles, lang }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const since = new Date();
+    const since = toJstDate(new Date());
     since.setDate(since.getDate() - 7);
     const sinceIso  = since.toISOString();
-    const sinceDate = since.toISOString().slice(0, 10);
+    const sinceDate = dateToYmd(since);
 
     const curWeekStart = (() => {
-      const d = new Date(); const day = d.getDay();
+      const d = toJstDate(new Date()); const day = d.getDay();
       d.setDate(d.getDate() - ((day + 6) % 7)); d.setHours(0,0,0,0);
-      return d.toISOString().slice(0,10);
+      return dateToYmd(d);
     })();
 
     Promise.all([

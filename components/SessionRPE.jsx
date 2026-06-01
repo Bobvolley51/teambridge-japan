@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDate, dateToYmd } from '@/lib/date';
 import { sendAlertDM } from '@/lib/alertDM';
 import styles from './SessionRPE.module.css';
 
@@ -96,7 +97,7 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
           user_name:             userName,
           event_id:              event.id,
           event_title:           event.title,
-          event_date:            event.start_time.slice(0, 10),
+          event_date:            dateToYmd(toJstDate(event.start_time)),
           rpe,
           duration_min:          dur,
           load_au:               rpe * dur,
@@ -109,8 +110,8 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
       );
 
       // ACWR alert check
-      const since28 = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
-      const since7  = new Date(Date.now() -  7 * 86400000).toISOString().slice(0, 10);
+      const since28 = dateToYmd(toJstDate(new Date(Date.now() - 28 * 86400000)));
+      const since7  = dateToYmd(toJstDate(new Date(Date.now() -  7 * 86400000)));
       const { data: rpeData } = await supabase
         .from('session_rpe')
         .select('event_date, load_au')

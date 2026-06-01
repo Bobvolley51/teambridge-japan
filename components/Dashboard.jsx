@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { timeAgo } from '@/lib/date';
+import { timeAgo, toJstDateStart, toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated } from '@/lib/translate';
 import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
@@ -29,6 +29,8 @@ function fmtDate(lang) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+function toDateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
 function fmtEventTime(ev, lang) {
   if (ev.all_day) return lang === 'ja' ? '終日' : 'All day';
@@ -277,19 +279,21 @@ export default function Dashboard({
 
   async function load() {
     setLoading(true);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStart = toJstDateStart(new Date());
     const weekEnd = new Date(todayStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
     weekEnd.setHours(23, 59, 59, 999);
 
-    const todayDateStr    = todayStart.toISOString().slice(0, 10);
+    const todayDateStr    = dateToYmd(todayStart);
     const yesterday       = new Date(todayStart);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayDateStr = yesterday.toISOString().slice(0, 10);
+    const yesterdayDateStr = dateToYmd(yesterday);
+    const tomorrow        = new Date(todayStart);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDateStr = dateToYmd(tomorrow);
     const week7Ago        = new Date(todayStart);
     week7Ago.setDate(week7Ago.getDate() - 7);
-    const week7AgoStr     = week7Ago.toISOString().slice(0, 10);
+    const week7AgoStr     = dateToYmd(week7Ago);
 
     const isPlayer         = profile?.role === 'Player';
     const canSeeWellness   = WELLNESS_ALERT_ROLES.includes(profile?.role);
@@ -359,6 +363,7 @@ export default function Dashboard({
         ? supabase.from('wellness_responses')
             .select('user_name, question_key, score, response_date')
             .gte('response_date', yesterdayDateStr)
+            .lt('response_date', tomorrowDateStr)
             .in('question_key', ['physical_readiness', 'mental_readiness', 'sleep_quality'])
             .lt('score', 40)
             .order('response_date', { ascending: false })
@@ -368,7 +373,8 @@ export default function Dashboard({
       canSeeWellness
         ? supabase.from('wellness_responses')
             .select('user_id')
-            .eq('response_date', todayDateStr)
+            .gte('response_date', todayDateStr)
+            .lt('response_date', tomorrowDateStr)
         : Promise.resolve({ data: [] }),
       // #2: Total player count
       canSeeWellness
@@ -378,7 +384,7 @@ export default function Dashboard({
       canSeeWellness
         ? supabase.from('session_rpe')
             .select('user_id, user_name, event_date, load_au')
-            .gte('event_date', (() => { const d = new Date(); d.setDate(d.getDate() - 28); return d.toISOString().slice(0, 10); })())
+            .gte('event_date', (() => { const d = toJstDate(new Date()); d.setDate(d.getDate() - 28); return dateToYmd(d); })())
         : Promise.resolve({ data: [] }),
       // Calendar change notifications
       currentUserId
@@ -422,7 +428,7 @@ export default function Dashboard({
         : Promise.resolve({ data: [] }),
       // Nutrition submission count today (staff view)
       canSeeWellness
-        ? supabase.from('nutrition_entries').select('user_id').eq('meal_date', todayDateStr)
+        ? supabase.from('nutrition_entries').select('user_id').gte('meal_date', todayDateStr).lt('meal_date', tomorrowDateStr)
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -596,11 +602,11 @@ export default function Dashboard({
 
   // ── Derived data ─────────────────────────────────────────────────────────────
 
-  const now            = new Date();
-  const todayEnd       = new Date(); todayEnd.setHours(23, 59, 59, 999);
-  const todayDateStr   = now.toISOString().slice(0, 10);
-  const yest           = new Date(); yest.setDate(yest.getDate() - 1);
-  const yesterdayDateStr = yest.toISOString().slice(0, 10);
+  const now            = toJstDate(new Date());
+  const todayEnd       = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+  const todayDateStr   = dateToYmd(now);
+  const yest           = new Date(now); yest.setDate(yest.getDate() - 1);
+  const yesterdayDateStr = dateToYmd(yest);
 
   const todayEvents     = events.filter(ev => new Date(ev.start_time) <= todayEnd);
   const upcomingEvents  = events.filter(ev => new Date(ev.start_time) > todayEnd);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDateStr } from '@/lib/date';
 import styles from './BodyWeightCheck.module.css';
 
 export default function BodyWeightCheck({ userId, userName, weekStart, lang, onComplete }) {
@@ -21,7 +22,7 @@ export default function BodyWeightCheck({ userId, userName, weekStart, lang, onC
         user_name:     userName,
         weight_kg:     kg,
         week_start:    weekStart,
-        recorded_date: new Date().toISOString().slice(0, 10),
+        recorded_date: toJstDateStr(new Date()),
       },
       { onConflict: 'user_id,week_start' }
     );

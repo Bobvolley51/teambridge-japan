@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDateStr } from '@/lib/date';
 import { sendAlertDM } from '@/lib/alertDM';
 import styles from './WellnessCheck.module.css';
 
@@ -56,8 +57,8 @@ const BODY_PARTS = [
 
 function wellnessColor(v) {
   if (v == null) return '#9ca3af';
-  if (v <= 39)   return '#ef4444';
-  if (v <= 59)   return '#f59e0b';
+  if (v < 40)    return '#ef4444';
+  if (v < 60)    return '#f59e0b';
   return '#10b981';
 }
 
@@ -87,6 +88,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [painLevels,      setPainLevels]      = useState({});
   const [otherMessage,    setOtherMessage]    = useState('');
   const [saving,          setSaving]          = useState(false);
+  const [submitError,     setSubmitError]     = useState('');
 
   const allAnswered = QUESTIONS.every(q => scores[q.key] != null)
     && sleepHours   != null
@@ -126,7 +128,8 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
 
   const handleSubmit = async () => {
     setSaving(true);
-    const today = new Date().toISOString().slice(0, 10);
+    setSubmitError('');
+    const today = toJstDateStr(new Date());
 
     const wellnessRows = [
       ...QUESTIONS.map(q => ({
@@ -146,9 +149,15 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       });
     }
 
-    await supabase.from('wellness_responses').upsert(wellnessRows, {
+    const { error: upsertError } = await supabase.from('wellness_responses').upsert(wellnessRows, {
       onConflict: 'user_id,question_key,response_date',
     });
+    if (upsertError) {
+      console.error('wellness_responses upsert failed:', upsertError);
+      setSubmitError(lang === 'ja' ? '送信に失敗しました。再試行してください。' : 'Failed to submit wellness. Please try again.');
+      setSaving(false);
+      return;
+    }
 
     await supabase.from('wellness_body_pain')
       .delete().eq('user_id', userId).eq('response_date', today);
@@ -209,7 +218,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
     // Alert DM for low wellness scores or high pain
     const alerts = [];
     for (const q of QUESTIONS) {
-      if (scores[q.key] != null && scores[q.key] <= 40) {
+      if (scores[q.key] != null && scores[q.key] < 40) {
         alerts.push(`⚠️ Low ${q.en.toLowerCase()}: ${scores[q.key]}/100`);
       }
     }
@@ -386,6 +395,11 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                   : (lang === 'ja' ? '送信する' : 'Submit')}
               </button>
             </div>
+            {submitError && (
+              <div style={{ color: '#b91c1c', marginTop: 10, fontSize: 13 }}>
+                {submitError}
+              </div>
+            )}
             <p className={styles.privacyNote}>
               🔒 {lang === 'ja'
                 ? 'このデータはヘッドコーチ、アスレチックトレーナー、フィジオのみ閲覧できます'

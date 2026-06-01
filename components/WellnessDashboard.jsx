@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDateStr, toJstDateStart, dateToYmd } from '@/lib/date';
 import styles from './WellnessDashboard.module.css';
 
 // ── Constants ─────────────────────────────────────────────────
@@ -37,16 +38,13 @@ const DAY_LABELS = {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function pad(n) { return String(n).padStart(2, '0'); }
-
 function toDateStr(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return dateToYmd(d);
 }
 
 function getPeriodStart(days, offset = 0) {
-  const d = new Date();
+  const d = toJstDateStart(new Date());
   d.setDate(d.getDate() - (days - 1) + offset * 7);
-  d.setHours(0, 0, 0, 0);
   return d;
 }
 
@@ -209,8 +207,8 @@ function AvailBadge({ value, lang }) {
 
 // ── Main Component ────────────────────────────────────────────
 
-export default function WellnessDashboard({ lang, profile }) {
-  const todayStr = toDateStr(new Date());
+export default function WellnessDashboard({ lang }) {
+  const todayStr = toJstDateStr(new Date());
 
   const [tab,        setTab]        = useState('today');
   const [date,       setDate]       = useState(todayStr);

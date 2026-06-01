@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated } from '@/lib/translate';
 import styles from './NutritionDashboard.module.css';
 
@@ -22,10 +23,11 @@ const TRAINER_ROLES = ['Athletic Trainer', 'Headcoach', 'Coaching Staff', 'GM'];
 
 function getLast14Days() {
   const days = [];
+  const today = toJstDate(new Date());
   for (let i = 13; i >= 0; i--) {
-    const d = new Date();
+    const d = new Date(today);
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(dateToYmd(d));
   }
   return days;
 }
@@ -334,9 +336,9 @@ export default function NutritionDashboard({ lang, profile }) {
   // Delete own photos older than 30 days on mount
   useEffect(() => {
     if (!profile?.id) return;
-    const cutoff = new Date();
+    const cutoff = toJstDate(new Date());
     cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = dateToYmd(cutoff);
     (async () => {
       const { data: oldEntries } = await supabase
         .from('nutrition_entries')
