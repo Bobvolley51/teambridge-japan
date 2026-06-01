@@ -14,8 +14,12 @@ export async function POST(request) {
     }
 
     const deeplLang = targetLang === 'Japanese' ? 'JA' : 'EN';
+    // Free keys end with ':fx', paid keys use the standard endpoint
+    const baseUrl = apiKey.endsWith(':fx')
+      ? 'https://api-free.deepl.com'
+      : 'https://api.deepl.com';
 
-    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    const res = await fetch(`${baseUrl}/v2/translate`, {
       method: 'POST',
       headers: {
         'Authorization': `DeepL-Auth-Key ${apiKey}`,
@@ -29,8 +33,8 @@ export async function POST(request) {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error('DeepL error:', body);
-      return NextResponse.json({ error: 'Translation API error' }, { status: 500 });
+      console.error('DeepL error:', res.status, body);
+      return NextResponse.json({ error: 'Translation API error', status: res.status }, { status: 500 });
     }
 
     const data = await res.json();
