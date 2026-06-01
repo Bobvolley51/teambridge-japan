@@ -728,7 +728,7 @@ function MonthView({ referenceDate, events, lang, today, onDayClick, onEventClic
                   const cc = catColor(ev.category);
                   return (
                     <div key={ev._key ?? ev.id} className={styles.pill}
-                      style={{ background: otherMonth ? '#f0f0f0' : cc.bg, color: otherMonth ? '#aaa' : cc.text }}
+                      style={{ background: cc.bg, color: cc.text }}
                       onClick={e => { e.stopPropagation(); onEventClick(ev); }}
                       title={tTitle(ev.title)}>
                       {ev.recurrence && <span className={styles.recurIcon}>↻</span>}
