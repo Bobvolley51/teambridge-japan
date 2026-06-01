@@ -250,9 +250,11 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
       if (p.position) { (byPos[p.position]  = byPos[p.position]  ?? []).push(p.id); }
       if (p.role && p.role !== 'Player') { (byRole[p.role] = byRole[p.role] ?? []).push(p.id); }
     }
-    const all = profiles.map(p => p.id);
-    const groups = [];
-    if (all.length > 0) groups.push({ label: lang === 'ja' ? '全員' : 'All', ids: all });
+    const all     = profiles.map(p => p.id);
+    const players = profiles.filter(p => p.role === 'Player').map(p => p.id);
+    const groups  = [];
+    if (all.length > 0)     groups.push({ label: lang === 'ja' ? '全員' : 'All', ids: all });
+    if (players.length > 0) groups.push({ label: lang === 'ja' ? '全選手' : 'All Players', ids: players });
     for (const pos of POS_ORDER) {
       if (byPos[pos]?.length) groups.push({ label: pos, ids: byPos[pos] });
     }
