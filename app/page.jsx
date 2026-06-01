@@ -305,10 +305,10 @@ export default function Home() {
   };
 
   const checkPendingRPE = async (userId) => {
-    const cutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
+    // 3-day window: catches next-day logins after evening training
+    const cutoff = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
     const now    = new Date().toISOString();
 
-    // Trigger from start_time so players can log RPE as soon as practice begins
     const { data: participation } = await supabase
       .from('event_participants')
       .select('event_id')
@@ -327,7 +327,7 @@ export default function Home() {
 
     if (!events || events.length === 0) return;
 
-    // Filter out already logged
+    // Only DB determines whether RPE was already submitted (no localStorage bypass)
     const { data: logged } = await supabase
       .from('session_rpe')
       .select('event_id')
@@ -335,11 +335,7 @@ export default function Home() {
       .in('event_id', events.map(e => e.id));
 
     const loggedIds = new Set((logged ?? []).map(l => l.event_id));
-
-    const pending = events.filter(e =>
-      !loggedIds.has(e.id) &&
-      !localStorage.getItem(`rpe_done_${userId}_${e.id}`)
-    );
+    const pending   = events.filter(e => !loggedIds.has(e.id));
 
     if (pending.length > 0) {
       setPendingRPEEvents(pending);

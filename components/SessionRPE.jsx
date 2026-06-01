@@ -62,7 +62,6 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
   );
 
   function advanceEvent() {
-    localStorage.setItem(`rpe_done_${userId}_${event.id}`, '1');
     const next = idx + 1;
     if (next >= pendingEvents.length) {
       onComplete();
@@ -77,8 +76,6 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
       setPracticeGoal(null);
     }
   }
-
-  const handleSkip = () => advanceEvent();
 
   const handleRpeNext = () => {
     if (isBallPractice) {
@@ -215,9 +212,6 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
             </div>
 
             <div className={styles.actions}>
-              <button className={styles.skipBtn} onClick={handleSkip}>
-                {lang === 'ja' ? 'スキップ' : 'Skip'}
-              </button>
               <button className={styles.submitBtn} disabled={!rpe || saving} onClick={handleRpeNext}>
                 {isBallPractice
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
