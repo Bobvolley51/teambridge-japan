@@ -80,20 +80,23 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     setLoading(true); setMessage(null);
-    let loginEmail = identifier.trim();
-    if (!loginEmail.includes('@')) {
-      // username lookup
-      const res = await fetch('/api/lookup-username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginEmail }),
-      });
-      const json = await res.json();
-      if (!res.ok) { setMessage({ type: 'error', text: t.errorLogin }); setLoading(false); return; }
-      loginEmail = json.email;
+    try {
+      let loginEmail = identifier.trim();
+      if (!loginEmail.includes('@')) {
+        const res = await fetch('/api/lookup-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: loginEmail }),
+        });
+        const json = await res.json();
+        if (!res.ok) { setMessage({ type: 'error', text: t.errorLogin }); setLoading(false); return; }
+        loginEmail = json.email;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      if (error) setMessage({ type: 'error', text: t.errorLogin });
+    } catch {
+      setMessage({ type: 'error', text: t.errorLogin });
     }
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-    if (error) setMessage({ type: 'error', text: t.errorLogin });
     setLoading(false);
   };
 

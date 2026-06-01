@@ -31,7 +31,12 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then(cache => cache.put('/', copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match('/'))
+      .catch(async () => {
+        const cached = await caches.match('/');
+        // If nothing cached yet, return a network error so iOS shows its native retry page
+        // rather than crashing with an undefined response
+        return cached ?? Response.error();
+      })
   );
 });
 
