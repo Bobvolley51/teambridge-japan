@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDate, dateToYmd } from '@/lib/date';
+import AvatarPhoto from './AvatarPhoto';
 import styles from './RoleManager.module.css';
 
 const ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
@@ -617,9 +618,12 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
               <div key={profile.id} className={styles.row}>
                 {/* User info */}
                 <div className={styles.userCell}>
-                  <div className={styles.avatar}>
-                    {displayName.slice(0, 2).toUpperCase()}
-                  </div>
+                  <AvatarPhoto
+                    url={profile.avatar_url ?? null}
+                    initials={displayName.slice(0, 2).toUpperCase()}
+                    name={displayName}
+                    size={36}
+                  />
                   <div className={styles.userInfo}>
                     <span className={styles.userName}>
                       {profile.role === 'Player' && profile.jersey_number != null && (

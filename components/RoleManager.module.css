@@ -87,7 +87,7 @@
 
 .tableHead {
   display: grid;
-  grid-template-columns: 1fr 190px 110px;
+  grid-template-columns: 1fr 220px 110px;
   padding: 0 12px 6px;
   font-size: 11px;
   font-weight: 600;
@@ -99,7 +99,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 190px 110px;
+  grid-template-columns: 1fr 220px 110px;
   align-items: center;
   padding: 10px 12px;
   border: 1px solid #f3f4f6;
@@ -260,7 +260,7 @@
 .roleSelect {
   flex: 1;
   min-width: 0;
-  max-width: 140px;
+  max-width: 165px;
   font-size: 12px;
   padding: 5px 7px;
   border: 1px solid #d1d5db;
@@ -941,14 +941,12 @@
     align-items: center;
   }
 
-  /* Show role badge on mobile (inline, no background box — just colored text) */
+  /* Show role badge on mobile as a proper colored pill */
   .roleBadge {
     display: inline-flex;
-    background: none;
-    padding: 0;
-    font-size: 12px;
+    font-size: 11px;
+    padding: 2px 8px;
   }
-  /* Keep admin/superadmin badges visible */
   .adminBadge, .superAdminBadge { display: inline; }
 
   .roleSelect {
@@ -980,4 +978,7 @@
     font-size: 15px;
     opacity: 0.6;
   }
+
+  /* Wider tableInner on mobile */
+  .tableInner { max-width: none; }
 }
