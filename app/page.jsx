@@ -207,6 +207,10 @@ export default function Home() {
           if (navParam) { setNav(navParam); localStorage.setItem('tb_nav', navParam); }
         } catch {}
       }
+      // Badge count from service worker fallback (when SW can't call setAppBadge directly)
+      if (e.data?.type === 'SET_BADGE' && 'setAppBadge' in navigator) {
+        navigator.setAppBadge(e.data.count).catch(() => {});
+      }
       // iOS APNs token renewal — re-register the new subscription
       if (e.data?.type === 'PUSH_RESUBSCRIBE' && e.data.subscription) {
         const userId = session?.user?.id;
