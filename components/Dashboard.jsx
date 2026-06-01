@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo, toJstDateStart, toJstDate, dateToYmd } from '@/lib/date';
-import { useTranslated } from '@/lib/translate';
+import { useTranslated, translate } from '@/lib/translate';
 import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
 import SetupPrompt from './SetupPrompt';
@@ -178,7 +178,7 @@ function PlayerSummaryCard({ lang, lastRpe, wellnessAvg, nextEvent, onNavigate }
             {nextEvent ? (
               <div className={styles.playerStatVal} style={{ cursor: 'pointer' }} onClick={() => onNavigate('calendar')}>
                 <span className={styles.alertDot} style={{ background: CAT_COLOR[nextEvent.category] ?? '#6b7280', display: 'inline-block', marginRight: 5, verticalAlign: 'middle' }} />
-                <strong>{nextEvent.title}</strong>
+                <strong>{tEvent(nextEvent.title)}</strong>
                 <span className={styles.playerStatSub}> · {fmtEventTime(nextEvent, lang)}</span>
               </div>
             ) : (
@@ -274,8 +274,21 @@ export default function Dashboard({
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true
   );
   const [loading,           setLoading]           = useState(true);
+  const [eventTitleMap,     setEventTitleMap]     = useState(new Map());
 
   useEffect(() => { load(); }, [currentUserId, profile?.role]);
+
+  // Translate event titles whenever events or language changes
+  useEffect(() => {
+    let cancelled = false;
+    const unique = [...new Set(events.map(ev => ev.title).filter(Boolean))];
+    if (!unique.length) { setEventTitleMap(new Map()); return; }
+    Promise.all(unique.map(async t => [t, await translate(t, lang)]))
+      .then(pairs => { if (!cancelled) setEventTitleMap(new Map(pairs)); });
+    return () => { cancelled = true; };
+  }, [events, lang]);
+
+  const tEvent = (title) => eventTitleMap.get(title) ?? title;
 
   async function load() {
     setLoading(true);
@@ -829,7 +842,7 @@ export default function Dashboard({
                   <div className={styles.nextUpBlock} onClick={() => onNavigate('calendar')}>
                     <span className={styles.nextUpDot} style={{ background: CAT_COLOR[nextEvent.category] ?? '#6b7280' }} />
                     <div className={styles.nextUpInfo}>
-                      <div className={styles.nextUpTitle}>{nextEvent.title}</div>
+                      <div className={styles.nextUpTitle}>{tEvent(nextEvent.title)}</div>
                       <div className={styles.nextUpTime}>{fmtEventTime(nextEvent, lang)}{nextEvent.location ? ` · ${nextEvent.location}` : ''}</div>
                     </div>
                     <span className={styles.nextUpCountdown}>{countdown(nextEvent.start_time, lang)}</span>
@@ -846,7 +859,7 @@ export default function Dashboard({
                         <div key={ev.id} className={styles.alertItem}>
                           <span className={styles.alertDot} style={{ background: CAT_COLOR[ev.category] ?? '#6b7280', cursor: 'pointer' }} onClick={() => onNavigate('calendar')} />
                           <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onNavigate('calendar')}>
-                            <div className={styles.alertText}>{ev.title}</div>
+                            <div className={styles.alertText}>{tEvent(ev.title)}</div>
                             <div className={styles.alertSub}>
                               {fmtEventTime(ev, lang)}{ev.location ? ` · ${ev.location}` : ''}
                             </div>
