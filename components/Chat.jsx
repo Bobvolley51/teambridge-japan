@@ -127,7 +127,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
   const [target,         setTarget]         = useState(null);
   const [formName,       setFormName]       = useState('');
   const [formDesc,       setFormDesc]       = useState('');
-  const [addProfileId,   setAddProfileId]   = useState('');
+  const [addProfileIds,  setAddProfileIds]  = useState(new Set());
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState('');
 
@@ -137,7 +137,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
 
   async function loadAll() {
     const [{ data: ch }, { data: pr }] = await Promise.all([
-      supabase.from('channels').select('id, name, description, created_at').order('created_at'),
+      supabase.from('channels').select('id, name, description, created_at, sort_order').order('sort_order'),
       supabase.from('profiles').select('id, display_name, email, role').order('display_name'),
     ]);
     setChannels(ch ?? []);
@@ -157,11 +157,13 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     const id = slugify(formName);
     if (!id) { setError(t('Channel name is required.', 'チャンネル名が必要です。')); return; }
     setSaving(true);
+    const maxOrder = channels.reduce((m, c) => Math.max(m, c.sort_order ?? 0), 0);
     const { error: err } = await supabase.from('channels').insert({
       id,
       name:        formName.trim(),
       description: formDesc.trim() || null,
       created_by:  currentUserId,
+      sort_order:  maxOrder + 1,
     });
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -189,11 +191,32 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     await loadAll();
   }
 
-  async function handleAddMember() {
-    if (!addProfileId) return;
-    await supabase.from('channel_members').insert({ channel_id: target.id, profile_id: addProfileId });
-    setAddProfileId('');
+  async function handleAddMembers() {
+    if (!addProfileIds.size) return;
+    const rows = [...addProfileIds].map(pid => ({ channel_id: target.id, profile_id: pid }));
+    await supabase.from('channel_members').insert(rows);
+    setAddProfileIds(new Set());
     await loadMembers(target.id);
+  }
+
+  function toggleAddProfile(id) {
+    setAddProfileIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleMove(ch, dir) {
+    const idx     = channels.findIndex(c => c.id === ch.id);
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= channels.length) return;
+    const other = channels[swapIdx];
+    await Promise.all([
+      supabase.from('channels').update({ sort_order: other.sort_order }).eq('id', ch.id),
+      supabase.from('channels').update({ sort_order: ch.sort_order   }).eq('id', other.id),
+    ]);
+    await loadAll();
   }
 
   async function handleRemoveMember(profileId) {
@@ -220,8 +243,12 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
             <button className={styles.createBtn} onClick={() => setView('create')}>
               + {t('New Channel', '新しいチャンネル')}
             </button>
-            {channels.map(ch => (
+            {channels.map((ch, idx) => (
               <div key={ch.id} className={styles.channelRow}>
+                <div className={styles.sortBtns}>
+                  <button className={styles.sortBtn} disabled={idx === 0} onClick={() => handleMove(ch, -1)}>↑</button>
+                  <button className={styles.sortBtn} disabled={idx === channels.length - 1} onClick={() => handleMove(ch, 1)}>↓</button>
+                </div>
                 <span className={styles.channelRowName}># {ch.name}</span>
                 <div className={styles.channelRowActions}>
                   <button className={styles.rowBtn} onClick={() => {
@@ -281,22 +308,28 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
 
             {view === 'members' && (
               <>
-                <div className={styles.addMemberRow}>
-                  <select className={styles.modalSelect} value={addProfileId}
-                    onChange={e => setAddProfileId(e.target.value)}>
-                    <option value="">{t('— select user —', '— ユーザーを選択 —')}</option>
-                    {profiles
-                      .filter(p => !members.some(m => m.profile_id === p.id))
-                      .map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.display_name || p.email} ({p.role})
-                        </option>
-                      ))}
-                  </select>
-                  <button className={styles.saveBtn} onClick={handleAddMember} disabled={!addProfileId}>
-                    {t('Add', '追加')}
-                  </button>
-                </div>
+                {/* Multi-select add */}
+                {profiles.filter(p => !members.some(m => m.profile_id === p.id)).length > 0 && (
+                  <div className={styles.addMemberMulti}>
+                    <div className={styles.addMemberMultiList}>
+                      {profiles
+                        .filter(p => !members.some(m => m.profile_id === p.id))
+                        .map(p => (
+                          <label key={p.id} className={styles.memberCheckRow}>
+                            <input type="checkbox"
+                              checked={addProfileIds.has(p.id)}
+                              onChange={() => toggleAddProfile(p.id)} />
+                            <span className={styles.memberCheckName}>{p.display_name || p.email}</span>
+                            <span className={styles.memberCheckRole}>{p.role}</span>
+                          </label>
+                        ))}
+                    </div>
+                    <button className={styles.saveBtn} onClick={handleAddMembers} disabled={!addProfileIds.size}>
+                      {t(`Add (${addProfileIds.size})`, `追加 (${addProfileIds.size})`)}
+                    </button>
+                  </div>
+                )}
+                <div className={styles.memberDivider} />
                 {members.length === 0 ? (
                   <div className={styles.emptyMembers}>{t('No members yet — channel is open to all.', 'まだメンバーがいません。全員が参加できます。')}</div>
                 ) : (
