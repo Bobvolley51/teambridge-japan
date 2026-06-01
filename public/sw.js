@@ -19,9 +19,9 @@ self.addEventListener('push', (e) => {
   try { payload = e.data.json(); }
   catch { payload = { title: 'TeamBridge', body: e.data.text() }; }
 
-  const { title = 'TeamBridge', body = '', url = '/', icon = '/icon-192.png', badge = '/icon-192.png', tag } = payload;
+  const { title = 'TeamBridge', body = '', url = '/', icon = '/icon-192.png', badge = '/icon-192.png', tag, badgeCount } = payload;
 
-  e.waitUntil(
+  const tasks = [
     self.registration.showNotification(title, {
       body,
       icon,
@@ -29,8 +29,15 @@ self.addEventListener('push', (e) => {
       tag: tag || 'tb-default',
       renotify: true,
       data: { url },
-    })
-  );
+    }),
+  ];
+
+  // Set the home-screen app icon badge (works even when app is closed)
+  if (badgeCount != null && 'setAppBadge' in self.navigator) {
+    tasks.push(self.navigator.setAppBadge(badgeCount));
+  }
+
+  e.waitUntil(Promise.all(tasks));
 });
 
 // ── Push subscription renewal (iOS APNs tokens expire silently) ─────────
@@ -52,6 +59,8 @@ self.addEventListener('pushsubscriptionchange', (e) => {
 // ── Notification click: focus or open app ───────────────────────────────
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  // Clear badge when user taps the notification
+  if ('clearAppBadge' in self.navigator) self.navigator.clearAppBadge();
   const target = e.notification.data?.url || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {

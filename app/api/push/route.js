@@ -44,20 +44,25 @@ export async function POST(req) {
   }
   if (!targetIds.length) return Response.json({ sent: 0, reason: 'pref_disabled' });
 
-  const { data: subs } = await admin
-    .from('push_subscriptions')
-    .select('endpoint, subscription, user_id')
-    .in('user_id', targetIds);
+  const [{ data: subs }, { data: unreadRows }] = await Promise.all([
+    admin.from('push_subscriptions').select('endpoint, subscription, user_id').in('user_id', targetIds),
+    // Unread notification count per user — used to set home-screen badge
+    admin.from('notifications').select('user_id').in('user_id', targetIds).eq('is_read', false),
+  ]);
 
   if (!subs?.length) return Response.json({ sent: 0 });
 
-  const payload = JSON.stringify({ title, body, url, tag, icon: '/icon-192.png', badge: '/icon-192.png' });
+  // Build per-user unread count map (push adds 1 since the new notif isn't in DB yet)
+  const unreadMap = {};
+  for (const r of (unreadRows ?? [])) unreadMap[r.user_id] = (unreadMap[r.user_id] ?? 0) + 1;
 
   const results = await Promise.allSettled(
     subs.map(async (row) => {
+      const badgeCount = (unreadMap[row.user_id] ?? 0) + 1;
+      const p = JSON.stringify({ title, body, url, tag, icon: '/icon-192.png', badge: '/icon-192.png', badgeCount });
       const sub = JSON.parse(row.subscription);
       try {
-        await webpush.sendNotification(sub, payload);
+        await webpush.sendNotification(sub, p);
       } catch (err) {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await admin.from('push_subscriptions').delete().eq('endpoint', row.endpoint);
