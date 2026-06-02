@@ -19,7 +19,7 @@ const RATINGS = [
   { v: 'red',    e: '🔴', en: 'Improve', ja: '要改善' },
 ];
 
-const TRAINER_ROLES = ['Athletic Trainer', 'Headcoach', 'Coaching Staff', 'GM / Director'];
+const TRAINER_ROLES = ['Athletic Trainer', 'Therapist', 'Headcoach', 'Coaching Staff', 'GM / Director'];
 
 function getLast14Days() {
   const days = [];
@@ -407,7 +407,7 @@ export default function NutritionDashboard({ lang, profile }) {
     const next = !current;
     await supabase.from('nutrition_entries').update({ coach_review_requested: next }).eq('id', id);
     if (next) {
-      const { data: trainers } = await supabase.from('profiles').select('id').eq('role', 'Athletic Trainer');
+      const { data: trainers } = await supabase.from('profiles').select('id').in('role', ['Athletic Trainer', 'Therapist']);
       if (trainers?.length) {
         const meal = MEALS.find(m => m.id === mealType);
         await supabase.from('notifications').insert(
