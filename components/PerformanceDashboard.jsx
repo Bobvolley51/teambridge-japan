@@ -355,6 +355,23 @@ export default function PerformanceDashboard({ lang, profile }) {
                 const maxRpe  = Math.max(...rpes);
                 const avgLoad = Math.round(s.players.reduce((sum, p) => sum + (p.load_au ?? 0), 0) / s.players.length);
                 const sorted  = [...s.players].sort((a, b) => b.rpe - a.rpe);
+                const hasExtraSess = s.players.some(p => p.energy_level != null || p.focus_level != null);
+                const playersWithEnergy = s.players.filter(p => p.energy_level != null);
+                const playersWithFocus  = s.players.filter(p => p.focus_level  != null);
+                const avgEnergy = playersWithEnergy.length ? Math.round(playersWithEnergy.reduce((sum, p) => sum + p.energy_level, 0) / playersWithEnergy.length) : null;
+                const avgFocus  = playersWithFocus.length  ? Math.round(playersWithFocus.reduce((sum, p) => sum + p.focus_level,  0) / playersWithFocus.length)  : null;
+                const mindfulYes = s.players.filter(p => p.mindfulness === true).length;
+                const goalYes    = s.players.filter(p => p.practice_goal_reached === true).length;
+                const mindfulTotal = s.players.filter(p => p.mindfulness != null).length;
+                const goalTotal    = s.players.filter(p => p.practice_goal_reached != null).length;
+
+                function energyColor(v) {
+                  if (v == null) return '#9ca3af';
+                  if (v >= 70) return '#10b981';
+                  if (v >= 40) return '#f59e0b';
+                  return '#ef4444';
+                }
+
                 return (
                   <div key={key} className={styles.sessionCard}>
                     <button
@@ -385,6 +402,24 @@ export default function PerformanceDashboard({ lang, profile }) {
                           <span className={styles.sessStatLabel}>{lang === 'ja' ? '平均負荷' : 'Avg Load'}</span>
                           <span className={styles.sessStatVal}>{avgLoad}<span className={styles.sessAu}> AU</span></span>
                         </div>
+                        {hasExtraSess && avgEnergy != null && (
+                          <div className={styles.sessStat}>
+                            <span className={styles.sessStatLabel}>{lang === 'ja' ? 'エネルギー' : 'Energy'}</span>
+                            <span className={styles.sessStatVal} style={{ color: energyColor(avgEnergy) }}>{avgEnergy}</span>
+                          </div>
+                        )}
+                        {hasExtraSess && avgFocus != null && (
+                          <div className={styles.sessStat}>
+                            <span className={styles.sessStatLabel}>{lang === 'ja' ? 'フォーカス' : 'Focus'}</span>
+                            <span className={styles.sessStatVal} style={{ color: energyColor(avgFocus) }}>{avgFocus}</span>
+                          </div>
+                        )}
+                        {hasExtraSess && goalTotal > 0 && (
+                          <div className={styles.sessStat}>
+                            <span className={styles.sessStatLabel}>{lang === 'ja' ? '目標達成' : 'Goal ✓'}</span>
+                            <span className={styles.sessStatVal} style={{ color: '#10b981' }}>{goalYes}/{goalTotal}</span>
+                          </div>
+                        )}
                       </div>
                     </button>
 
@@ -397,6 +432,11 @@ export default function PerformanceDashboard({ lang, profile }) {
                               <th className={styles.sessTh}>RPE</th>
                               <th className={styles.sessTh}>{lang === 'ja' ? '時間' : 'Min'}</th>
                               <th className={styles.sessTh}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                              {hasExtraSess && <th className={styles.sessThDiv} />}
+                              {hasExtraSess && <th className={styles.sessTh}>{lang === 'ja' ? 'Energy' : 'Energy'}</th>}
+                              {hasExtraSess && <th className={styles.sessTh}>{lang === 'ja' ? 'Focus' : 'Focus'}</th>}
+                              {hasExtraSess && <th className={styles.sessTh}>{lang === 'ja' ? '集中' : 'Mindful'}</th>}
+                              {hasExtraSess && <th className={styles.sessTh}>{lang === 'ja' ? '目標' : 'Goal'}</th>}
                               {hasVert && <th className={styles.sessThDiv} />}
                               {hasVert && <th className={styles.sessTh}>{lang === 'ja' ? 'ジャンプ' : 'Jumps'}</th>}
                               {hasVert && <th className={styles.sessTh}>{lang === 'ja' ? '最高跳躍' : 'Hi Jump'}</th>}
@@ -416,6 +456,35 @@ export default function PerformanceDashboard({ lang, profile }) {
                                   </td>
                                   <td className={styles.sessTd}>{p.duration_min ?? <span className={styles.noData}>—</span>}</td>
                                   <td className={styles.sessTd}><span className={styles.loadNum}>{p.load_au}</span></td>
+                                  {hasExtraSess && <td className={styles.sessTdDiv} />}
+                                  {hasExtraSess && (
+                                    <td className={styles.sessTd}>
+                                      {p.energy_level != null
+                                        ? <span className={styles.extraStatVal} style={{ color: energyColor(p.energy_level) }}>{p.energy_level}</span>
+                                        : <span className={styles.noData}>—</span>}
+                                    </td>
+                                  )}
+                                  {hasExtraSess && (
+                                    <td className={styles.sessTd}>
+                                      {p.focus_level != null
+                                        ? <span className={styles.extraStatVal} style={{ color: energyColor(p.focus_level) }}>{p.focus_level}</span>
+                                        : <span className={styles.noData}>—</span>}
+                                    </td>
+                                  )}
+                                  {hasExtraSess && (
+                                    <td className={styles.sessTd}>
+                                      {p.mindfulness === true  ? <span className={styles.checkYes}>✓</span>
+                                     : p.mindfulness === false ? <span className={styles.checkNo}>✗</span>
+                                     : <span className={styles.noData}>—</span>}
+                                    </td>
+                                  )}
+                                  {hasExtraSess && (
+                                    <td className={styles.sessTd}>
+                                      {p.practice_goal_reached === true  ? <span className={styles.checkYes}>✓</span>
+                                     : p.practice_goal_reached === false ? <span className={styles.checkNo}>✗</span>
+                                     : <span className={styles.noData}>—</span>}
+                                    </td>
+                                  )}
                                   {hasVert && <td className={styles.sessTdDiv} />}
                                   {hasVert && <td className={styles.sessTd}>{v?.jumps ?? <span className={styles.noData}>—</span>}</td>}
                                   {hasVert && <td className={styles.sessTd}>{v?.avg_hi_jump_cm != null ? `${v.avg_hi_jump_cm} cm` : <span className={styles.noData}>—</span>}</td>}
