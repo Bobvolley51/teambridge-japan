@@ -973,3 +973,240 @@
     background: rgba(0, 0, 0, 0.3);
   }
 }
+
+/* ── Message action buttons (hover / long-press) ─────────────── */
+
+.message { position: relative; }
+
+.msgActions {
+  position: absolute;
+  top: -28px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 3px 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  z-index: 10;
+}
+
+.msgActionsMe {
+  right: auto;
+  left: 4px;
+}
+
+.msgActionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.1s;
+  color: #374151;
+}
+.msgActionBtn:hover { background: #f3f4f6; }
+
+/* Emoji quick-picker popup */
+.emojiPickerWrap {
+  position: relative;
+}
+
+.emojiQuickPicker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 5px 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.quickEmoji {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 2px 3px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: transform 0.1s, background 0.1s;
+}
+.quickEmoji:hover { transform: scale(1.25); background: #f3f4f6; }
+
+/* Reactions bar below message */
+.reactionsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.reactionBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 2px 7px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  font-family: inherit;
+}
+.reactionBtn:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+.reactionBtnMe {
+  background: #fdf2f4;
+  border-color: #fca5a5;
+  color: #7e0027;
+}
+.reactionBtnMe:hover { background: #fce8ed; border-color: #f87171; }
+
+/* Reply quote */
+.replyQuote {
+  font-size: 12px;
+  background: #f3f4f6;
+  border-left: 3px solid #9ca3af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  max-width: 100%;
+  overflow: hidden;
+}
+.messageMe .replyQuote { border-left-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); }
+
+.replyQuoteName {
+  font-weight: 700;
+  color: #7e0027;
+  flex-shrink: 0;
+}
+.messageMe .replyQuoteName { color: rgba(255,255,255,0.8); }
+
+.replyQuoteText {
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.messageMe .replyQuoteText { color: rgba(255,255,255,0.6); }
+
+/* Reply indicator above input */
+.replyBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: #fdf2f4;
+  border-top: 1px solid #fecaca;
+  font-size: 12px;
+  color: #7e0027;
+}
+.replyBarText {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.replyBarClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #9ca3af;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.replyBarClose:hover { color: #374151; }
+
+/* Edit mode */
+.editWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.editInput {
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 10px;
+  border: 1px solid #7e0027;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.editActions {
+  display: flex;
+  gap: 6px;
+}
+.editSaveBtn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: #7e0027;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.editSaveBtn:hover { background: #6b001f; }
+.editCancelBtn {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #6b7280;
+  transition: background 0.1s;
+}
+.editCancelBtn:hover { background: #f3f4f6; }
+
+.editedTag {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 400;
+}
+.content .editedTag { color: #9ca3af; }
+
+/* Deleted message */
+.deletedMsg {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+/* Shared image */
+.msgImage {
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 10px;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+  margin-top: 4px;
+}

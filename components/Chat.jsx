@@ -1157,6 +1157,14 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         </div>
 
         <div className={styles.inputWrap}>
+          {replyTo && (
+            <div className={styles.replyBar}>
+              <span className={styles.replyBarText}>
+                ↩ {uiLang === 'ja' ? `${replyTo.user_name} に返信` : `Replying to ${replyTo.user_name}`}: {replyTo.content?.slice(0, 60)}{replyTo.content?.length > 60 ? '…' : ''}
+              </span>
+              <button className={styles.replyBarClose} onClick={() => setReplyTo(null)}>✕</button>
+            </div>
+          )}
           {mentionQuery && mentionMatches.length > 0 && (
             <div className={styles.mentionDropdown}>
               {mentionMatches.map((p, i) => (
