@@ -445,7 +445,7 @@ export default function Tasks({ lang = 'en', profile }) {
     else if (type === 'sort') setSortBy(value);
   }, []);
 
-  const STAFF_ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
+  const STAFF_ROLES = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
   const isStaff = STAFF_ROLES.includes(profile?.role);
 
   const visibleTasks = tasks

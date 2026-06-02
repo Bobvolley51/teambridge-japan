@@ -19,7 +19,7 @@ const RATINGS = [
   { v: 'red',    e: '🔴', en: 'Improve', ja: '要改善' },
 ];
 
-const TRAINER_ROLES = ['Athletic Trainer', 'Headcoach', 'Coaching Staff', 'GM'];
+const TRAINER_ROLES = ['Athletic Trainer', 'Headcoach', 'Coaching Staff', 'GM / Director'];
 
 function getLast14Days() {
   const days = [];

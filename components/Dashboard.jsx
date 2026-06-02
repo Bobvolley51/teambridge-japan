@@ -101,8 +101,8 @@ function countdown(startTime, lang) {
   return lang === 'ja' ? `${h}時間${m}分後` : `in ${h}h ${m}m`;
 }
 
-const WELLNESS_ALERT_ROLES      = ['GM', 'Headcoach', 'Coaching Staff', 'Athletic Trainer', 'Therapist'];
-const AVAILABILITY_VIEWER_ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
+const WELLNESS_ALERT_ROLES      = ['GM / Director', 'Headcoach', 'Coaching Staff', 'Athletic Trainer', 'Therapist'];
+const AVAILABILITY_VIEWER_ROLES = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
 const QUESTION_LABELS = {
   physical_readiness: { en: 'Physical',   ja: '身体' },
@@ -311,7 +311,7 @@ export default function Dashboard({
     const isPlayer         = profile?.role === 'Player';
     const canSeeWellness   = WELLNESS_ALERT_ROLES.includes(profile?.role);
     const canSeeAvail      = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
-    const isAdminSchedule  = ['GM', 'Headcoach', 'Coaching Staff'].includes(profile?.role);
+    const isAdminSchedule  = ['GM / Director', 'Headcoach', 'Coaching Staff'].includes(profile?.role);
 
     const [
       { data: myPartsData },

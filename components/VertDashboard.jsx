@@ -89,7 +89,7 @@ export default function VertDashboard({ lang, profile }) {
   const fileInputRef = useRef();
 
   const isJa      = lang === 'ja';
-  const canUpload = ['Headcoach', 'Athletic Trainer', 'Coaching Staff', 'GM'].includes(profile?.role);
+  const canUpload = ['Headcoach', 'Athletic Trainer', 'Coaching Staff', 'GM / Director'].includes(profile?.role);
 
   useEffect(() => {
     supabase.from('profiles').select('id, display_name, position')

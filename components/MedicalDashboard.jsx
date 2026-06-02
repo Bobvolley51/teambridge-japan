@@ -656,7 +656,7 @@ function AlertPanel({ records, painData, availability, noticedIds, onNotice, lan
 // ── Main component ────────────────────────────────────────────────────────────
 
 const THERAPIST_ROLES = ['Therapist', 'Athletic Trainer'];
-const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
+const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM / Director', 'Coaching Staff'];
 
 export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '' }) {
   const toast        = useToast();

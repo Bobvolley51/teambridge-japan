@@ -81,10 +81,10 @@ const NAV_MEDICAL     = { id: 'medical',     Icon: IconPin,      label: { en: 'M
 const PLAYERS_IDS     = new Set(['wellness', 'nutrition', 'performance', 'medical']);
 
 // Roles that can view the wellness dashboard
-const WELLNESS_VIEWERS    = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
-const PERFORMANCE_VIEWERS = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
-const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM', 'Coaching Staff'];
-const TACTICS_VIEWERS     = ['GM', 'Headcoach', 'Coaching Staff'];
+const WELLNESS_VIEWERS    = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
+const PERFORMANCE_VIEWERS = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff'];
+const MEDICAL_VIEWERS     = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM / Director', 'Coaching Staff'];
+const TACTICS_VIEWERS     = ['GM / Director', 'Headcoach', 'Coaching Staff'];
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -514,7 +514,7 @@ export default function Home() {
     || user.email;
   const initials     = (displayName ?? 'U').slice(0, 2).toUpperCase();
   const isAdminUser    = profile?.is_admin === true;
-  const isAdmin        = ['GM', 'Headcoach', 'Organisation Staff'].includes(profile?.role) || isAdminUser;
+  const isAdmin        = ['GM / Director', 'Headcoach', 'Organisation Staff'].includes(profile?.role) || isAdminUser;
   const isPlayer       = profile?.role === 'Player';
   const canWellness    = WELLNESS_VIEWERS.includes(profile?.role);
   const canNutrition   = isPlayer || canWellness;

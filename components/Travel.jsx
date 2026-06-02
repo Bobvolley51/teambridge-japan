@@ -11,7 +11,7 @@ function TText({ text, lang }) {
   return <>{t}</>;
 }
 
-const EDIT_ROLES = ['Organisation Staff', 'Coaching Staff', 'GM', 'Headcoach'];
+const EDIT_ROLES = ['Organisation Staff', 'Coaching Staff', 'GM / Director', 'Headcoach'];
 
 const ITEM_TYPES = [
   { key: 'flight',   icon: '✈️', en: 'Flight',   ja: 'フライト'     },
@@ -255,7 +255,7 @@ function ParticipantsModal({ tripId, currentIds, lang, onSave, onClose }) {
     onClose();
   };
 
-  const ROLE_ORDER = ['Player', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'GM'];
+  const ROLE_ORDER = ['Player', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'GM / Director'];
   const grouped = ROLE_ORDER.reduce((acc, role) => {
     const members = allProfiles.filter(p => p.role === role);
     if (members.length) acc.push({ role, members });

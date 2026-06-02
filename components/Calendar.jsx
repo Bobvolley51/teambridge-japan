@@ -241,7 +241,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   };
 
   const POS_ORDER  = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Universal'];
-  const ROLE_ORDER = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
+  const ROLE_ORDER = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
   const participantGroups = useMemo(() => {
     const byPos  = {};
@@ -927,7 +927,7 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
   const [detailEv,    setDetailEv]    = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [copied,    setCopied]    = useState(false);
-  const canEdit = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'].includes(role);
+  const canEdit = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'].includes(role);
 
   useEffect(() => {
     supabase.from('profiles').select('id, display_name, email, role, position')
