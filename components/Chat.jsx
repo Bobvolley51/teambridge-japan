@@ -590,7 +590,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   useEffect(() => {
     async function loadChannels() {
       const { data } = await supabase
-        .from('channels').select('id, name, description').order('created_at');
+        .from('channels').select('id, name, description').order('sort_order').order('created_at');
       const list = data ?? [];
       setChannels(list);
       if (list.length > 0 && !activeChannel) setActiveChannel(list[0].id);
@@ -1196,7 +1196,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         <ChannelManageModal
           onClose={() => {
             setShowManage(false);
-            supabase.from('channels').select('id, name, description').order('created_at')
+            supabase.from('channels').select('id, name, description').order('sort_order').order('created_at')
               .then(({ data }) => {
                 setChannels(data ?? []);
                 if (data && data.length > 0 && !data.find(c => c.id === activeChannel)) {
