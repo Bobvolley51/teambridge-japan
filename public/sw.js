@@ -99,8 +99,12 @@ self.addEventListener('pushsubscriptionchange', (e) => {
 // ── Notification click: focus or open app ───────────────────────────────
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  // Clear badge when user taps the notification
-  if ('clearAppBadge' in self.navigator) self.navigator.clearAppBadge();
+  // Clear badge when user taps the notification — try all API paths (mirrors setAppBadge logic)
+  try {
+    if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch?.(() => {});
+    else if ('clearAppBadge' in self) self.clearAppBadge().catch?.(() => {});
+    else if (self.navigator && 'clearAppBadge' in self.navigator) self.navigator.clearAppBadge().catch?.(() => {});
+  } catch (_) {}
   const target = e.notification.data?.url || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {

@@ -52,13 +52,14 @@ export async function POST(req) {
 
   if (!subs?.length) return Response.json({ sent: 0 });
 
-  // Build per-user unread count map (push adds 1 since the new notif isn't in DB yet)
+  // Build per-user unread count map
+  // Notifications are already inserted in DB before sendPush is called, so no +1 needed.
   const unreadMap = {};
   for (const r of (unreadRows ?? [])) unreadMap[r.user_id] = (unreadMap[r.user_id] ?? 0) + 1;
 
   const results = await Promise.allSettled(
     subs.map(async (row) => {
-      const badgeCount = (unreadMap[row.user_id] ?? 0) + 1;
+      const badgeCount = unreadMap[row.user_id] ?? 0;
       const p = JSON.stringify({ title, body, url, tag, icon: '/icon-192.png', badge: '/icon-192.png', badgeCount });
       const sub = JSON.parse(row.subscription);
       try {

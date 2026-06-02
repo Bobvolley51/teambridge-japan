@@ -99,7 +99,7 @@ export default function Home() {
   const [lang,          setLang]          = useState(() =>
     (typeof window !== 'undefined' && localStorage.getItem('tb_lang')) || 'en'
   );
-  const navigate = (id) => { setNav(id); localStorage.setItem('tb_nav', id); };
+  const navigate = (id) => { setNav(id); navRef.current = id; localStorage.setItem('tb_nav', id); };
 
   const [calGroupOpen,     setCalGroupOpen]     = useState(() =>
     ['calendar', 'tasks', 'feed', 'travel'].includes(
@@ -127,6 +127,7 @@ export default function Home() {
   const [idleCountdown,    setIdleCountdown]    = useState(120);
   const idleTimer       = useRef(null);
   const warnTimer       = useRef(null);
+  const navRef          = useRef(nav);
   const mainRef         = useRef(null);
   const touchStartYRef  = useRef(0);
   const isPullingRef    = useRef(false);
@@ -312,7 +313,8 @@ export default function Home() {
     const userId = session.user.id;
     const ch = supabase.channel('unread-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
-        if (p.new.sender_id !== userId) {
+        // Skip if the user sent it, or if they're currently viewing the chat tab
+        if (p.new.sender_id !== userId && navRef.current !== 'chat') {
           setUnreadChat(n => n + 1);
         }
       })
