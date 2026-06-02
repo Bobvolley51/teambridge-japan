@@ -24,6 +24,13 @@ function rpeColor(rpe) {
   return '#ef4444';
 }
 
+function energyColor(v) {
+  if (v == null) return '#9ca3af';
+  if (v >= 70) return '#10b981';
+  if (v >= 40) return '#f59e0b';
+  return '#ef4444';
+}
+
 function daysAgo(n) {
   const d = new Date();
   d.setDate(d.getDate() - n);
@@ -77,10 +84,19 @@ export default function PerformanceDashboard({ lang, profile }) {
     const recent = [...p.all]
       .sort((a, b) => a.event_date.localeCompare(b.event_date))
       .slice(-7);
-    return { uid, name: p.name, acute, chronic, acwr, recent };
+    const ballPract   = p.all.filter(s => s.energy_level != null);
+    const withFocus   = ballPract.filter(s => s.focus_level != null);
+    const avgEnergy   = ballPract.length  ? Math.round(ballPract.reduce((sum, s) => sum + s.energy_level, 0) / ballPract.length) : null;
+    const avgFocus    = withFocus.length  ? Math.round(withFocus.reduce((sum, s) => sum + s.focus_level, 0)  / withFocus.length)  : null;
+    const mindfulYes  = ballPract.filter(s => s.mindfulness === true).length;
+    const mindfulTotal= ballPract.filter(s => s.mindfulness != null).length;
+    const goalYes     = ballPract.filter(s => s.practice_goal_reached === true).length;
+    const goalTotal   = ballPract.filter(s => s.practice_goal_reached != null).length;
+    return { uid, name: p.name, acute, chronic, acwr, recent, avgEnergy, avgFocus, mindfulYes, mindfulTotal, goalYes, goalTotal };
   });
 
   acwrRows.sort((a, b) => (b.acwr ?? -1) - (a.acwr ?? -1));
+  const hasExtraData = acwrRows.some(r => r.avgEnergy != null || r.avgFocus != null);
 
   return (
     <div className={styles.wrapper}>
@@ -230,6 +246,10 @@ export default function PerformanceDashboard({ lang, profile }) {
                       <th className={styles.th}>ACWR</th>
                       <th className={styles.th}>{lang === 'ja' ? 'ステータス' : 'Status'}</th>
                       <th className={styles.th}>{lang === 'ja' ? '直近RPE' : 'Recent RPE'}</th>
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Energy' : 'Energy'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Focus' : 'Focus'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '集中' : 'Mindful'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '目標' : 'Goal'}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -265,6 +285,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                                 : <span className={styles.noData}>—</span>}
                             </td>
                             <td className={styles.td}>
+                              {/* RPE dots */}
                               <div className={styles.dotRow}>
                                 {row.recent.map((s, i) => (
                                   <span key={i} className={styles.rpeDot}
@@ -272,11 +293,63 @@ export default function PerformanceDashboard({ lang, profile }) {
                                     title={`${s.event_title} — RPE ${s.rpe} (${s.load_au} AU)`} />
                                 ))}
                               </div>
+                              {/* Energy dots (Ball Practice only) */}
+                              {row.recent.some(s => s.energy_level != null) && (
+                                <div className={styles.dotRow} style={{ marginTop: 3 }}>
+                                  {row.recent.map((s, i) => (
+                                    s.energy_level != null
+                                      ? <span key={i} className={styles.rpeDot}
+                                          style={{ background: energyColor(s.energy_level) }}
+                                          title={`Energy ${s.energy_level}`} />
+                                      : <span key={i} className={styles.rpeDotEmpty} />
+                                  ))}
+                                </div>
+                              )}
+                              {/* Focus dots (Ball Practice only) */}
+                              {row.recent.some(s => s.focus_level != null) && (
+                                <div className={styles.dotRow} style={{ marginTop: 3 }}>
+                                  {row.recent.map((s, i) => (
+                                    s.focus_level != null
+                                      ? <span key={i} className={styles.rpeDot}
+                                          style={{ background: energyColor(s.focus_level), borderRadius: 3 }}
+                                          title={`Focus ${s.focus_level}`} />
+                                      : <span key={i} className={styles.rpeDotEmpty} />
+                                  ))}
+                                </div>
+                              )}
                             </td>
+                            {hasExtraData && (
+                              <td className={styles.td}>
+                                {row.avgEnergy != null
+                                  ? <span className={styles.extraStatVal} style={{ color: energyColor(row.avgEnergy) }}>{row.avgEnergy}</span>
+                                  : <span className={styles.noData}>—</span>}
+                              </td>
+                            )}
+                            {hasExtraData && (
+                              <td className={styles.td}>
+                                {row.avgFocus != null
+                                  ? <span className={styles.extraStatVal} style={{ color: energyColor(row.avgFocus) }}>{row.avgFocus}</span>
+                                  : <span className={styles.noData}>—</span>}
+                              </td>
+                            )}
+                            {hasExtraData && (
+                              <td className={styles.td}>
+                                {row.mindfulTotal > 0
+                                  ? <span className={styles.extraStatVal} style={{ color: '#6366f1' }}>{row.mindfulYes}/{row.mindfulTotal}</span>
+                                  : <span className={styles.noData}>—</span>}
+                              </td>
+                            )}
+                            {hasExtraData && (
+                              <td className={styles.td}>
+                                {row.goalTotal > 0
+                                  ? <span className={styles.extraStatVal} style={{ color: '#10b981' }}>{row.goalYes}/{row.goalTotal}</span>
+                                  : <span className={styles.noData}>—</span>}
+                              </td>
+                            )}
                           </tr>
                           {open && (
                             <tr key={`${row.uid}-detail`} className={styles.trDetail}>
-                              <td colSpan={6} className={styles.tdDetail}>
+                              <td colSpan={6 + (hasExtraData ? 4 : 0)} className={styles.tdDetail}>
                                 <table className={styles.detailTable}>
                                   <thead>
                                     <tr>
@@ -285,6 +358,10 @@ export default function PerformanceDashboard({ lang, profile }) {
                                       <th className={styles.detailTh}>RPE</th>
                                       <th className={styles.detailTh}>{lang === 'ja' ? '時間' : 'Min'}</th>
                                       <th className={styles.detailTh}>{lang === 'ja' ? '負荷 AU' : 'Load AU'}</th>
+                                      {hasExtraData && <th className={styles.detailTh}>Energy</th>}
+                                      {hasExtraData && <th className={styles.detailTh}>Focus</th>}
+                                      {hasExtraData && <th className={styles.detailTh}>{lang === 'ja' ? '集中' : 'Mindful'}</th>}
+                                      {hasExtraData && <th className={styles.detailTh}>{lang === 'ja' ? '目標' : 'Goal'}</th>}
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -297,6 +374,34 @@ export default function PerformanceDashboard({ lang, profile }) {
                                         </td>
                                         <td className={styles.detailTdC}>{s.duration_min ?? <span className={styles.noData}>—</span>}</td>
                                         <td className={styles.detailTdC}><span className={styles.loadNum}>{s.load_au}</span></td>
+                                        {hasExtraData && (
+                                          <td className={styles.detailTdC}>
+                                            {s.energy_level != null
+                                              ? <span className={styles.extraStatVal} style={{ color: energyColor(s.energy_level) }}>{s.energy_level}</span>
+                                              : <span className={styles.noData}>—</span>}
+                                          </td>
+                                        )}
+                                        {hasExtraData && (
+                                          <td className={styles.detailTdC}>
+                                            {s.focus_level != null
+                                              ? <span className={styles.extraStatVal} style={{ color: energyColor(s.focus_level) }}>{s.focus_level}</span>
+                                              : <span className={styles.noData}>—</span>}
+                                          </td>
+                                        )}
+                                        {hasExtraData && (
+                                          <td className={styles.detailTdC}>
+                                            {s.mindfulness === true  ? <span className={styles.checkYes}>✓</span>
+                                           : s.mindfulness === false ? <span className={styles.checkNo}>✗</span>
+                                           : <span className={styles.noData}>—</span>}
+                                          </td>
+                                        )}
+                                        {hasExtraData && (
+                                          <td className={styles.detailTdC}>
+                                            {s.practice_goal_reached === true  ? <span className={styles.checkYes}>✓</span>
+                                           : s.practice_goal_reached === false ? <span className={styles.checkNo}>✗</span>
+                                           : <span className={styles.noData}>—</span>}
+                                          </td>
+                                        )}
                                       </tr>
                                     ))}
                                   </tbody>
@@ -364,13 +469,6 @@ export default function PerformanceDashboard({ lang, profile }) {
                 const goalYes    = s.players.filter(p => p.practice_goal_reached === true).length;
                 const mindfulTotal = s.players.filter(p => p.mindfulness != null).length;
                 const goalTotal    = s.players.filter(p => p.practice_goal_reached != null).length;
-
-                function energyColor(v) {
-                  if (v == null) return '#9ca3af';
-                  if (v >= 70) return '#10b981';
-                  if (v >= 40) return '#f59e0b';
-                  return '#ef4444';
-                }
 
                 return (
                   <div key={key} className={styles.sessionCard}>
