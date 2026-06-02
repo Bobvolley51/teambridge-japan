@@ -1131,6 +1131,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
                   uiLang={uiLang}
                   avatarUrl={url}
                   senderName={name}
+                  currentUserId={currentUser.id}
+                  msgReactions={reactions[msg.id] ?? []}
+                  onReact={toggleReaction}
+                  onReply={setReplyTo}
+                  onEdit={(m) => { setEditingId(m.id); setEditText(m.content); }}
+                  onDelete={deleteMessage}
+                  editingId={editingId}
+                  editText={editText}
+                  onEditChange={setEditText}
+                  onEditSave={saveEdit}
+                  onEditCancel={() => { setEditingId(null); setEditText(''); }}
+                  replyMsg={msg.reply_to_id ? (messagesByChannel[activeChannel] ?? []).find(m => m.id === msg.reply_to_id) : null}
                 />
                 {msg.id === lastReadId && (
                   <div className={styles.readReceipt}>
