@@ -53,6 +53,7 @@ import PlayerStats           from '@/components/PlayerStats';
 import GlobalSearch          from '@/components/GlobalSearch';
 import NutritionDashboard   from '@/components/NutritionDashboard';
 import { syncPushSubscription } from '@/lib/push-register';
+import { computeEWMA }          from '@/lib/acwr';
 import styles                from './page.module.css';
 import {
   IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
@@ -333,16 +334,14 @@ export default function Home() {
 
   const checkPerfAlerts = async () => {
     const since = new Date();
-    since.setDate(since.getDate() - 28);
+    since.setDate(since.getDate() - 90); // 90 days for stable EWMA
     const { data } = await supabase
       .from('session_rpe')
       .select('user_id, event_date, load_au')
-      .gte('event_date', since.toISOString().slice(0, 10));
+      .gte('event_date', since.toISOString().slice(0, 10))
+      .order('event_date', { ascending: true });
     if (!data || data.length === 0) return;
 
-    const now   = new Date();
-    const day7  = new Date(now); day7.setDate(day7.getDate() - 7);
-    const day28 = new Date(now); day28.setDate(day28.getDate() - 28);
     const map = {};
     for (const r of data) {
       if (!map[r.user_id]) map[r.user_id] = [];
@@ -350,9 +349,8 @@ export default function Home() {
     }
     let count = 0;
     for (const sessions of Object.values(map)) {
-      const acute   = sessions.filter(s => new Date(s.event_date) >= day7).reduce((a, s) => a + s.load_au, 0);
-      const chronic = sessions.filter(s => new Date(s.event_date) >= day28).reduce((a, s) => a + s.load_au, 0) / 4;
-      if (chronic > 0 && (acute / chronic) > 1.3) count++;
+      const { acwr } = computeEWMA(sessions);
+      if (acwr != null && acwr > 1.3) count++;
     }
     setPerfAlertCount(count);
   };

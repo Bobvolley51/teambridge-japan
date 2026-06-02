@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { computeEWMA } from '@/lib/acwr';
 import styles from './PerformanceDashboard.module.css';
 import VertDashboard from './VertDashboard';
 
@@ -37,41 +38,7 @@ function daysAgo(n) {
   return d;
 }
 
-// EWMA-based ACWR per Gabbett 2016 / PDF spec
-// λ_acute = 2/(7+1) = 0.25   λ_chronic = 2/(28+1) ≈ 0.069
-// Initialized on first session day: Acute = Chronic = sRPE → ACWR = 1.0
-// Every calendar day (including rest days with sRPE=0) advances the EWMAs.
-function computeEWMA(sessions) {
-  // Aggregate load per calendar date (two sessions same day sum)
-  const loadByDate = {};
-  for (const s of sessions) {
-    if (s.load_au > 0) loadByDate[s.event_date] = (loadByDate[s.event_date] ?? 0) + s.load_au;
-  }
-  const sortedDates = Object.keys(loadByDate).sort();
-  if (!sortedDates.length) return { acute: 0, chronic: 0, acwr: null };
-
-  // Day 1 bootstrap: Acute = Chronic = first day's load → ACWR = 1.0
-  const firstLoad = loadByDate[sortedDates[0]];
-  let acute   = firstLoad;
-  let chronic = firstLoad;
-
-  // Advance one calendar day at a time from day 2 through today
-  const today = new Date().toISOString().slice(0, 10);
-  const cur   = new Date(sortedDates[0]);
-  cur.setDate(cur.getDate() + 1);
-  const end = new Date(today);
-
-  while (cur <= end) {
-    const d    = cur.toISOString().slice(0, 10);
-    const load = loadByDate[d] ?? 0;
-    acute   = load * 0.25  + acute   * 0.75;
-    chronic = load * 0.069 + chronic * 0.931;
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  const acwr = chronic > 0 ? Math.round((acute / chronic) * 100) / 100 : null;
-  return { acute: Math.round(acute), chronic: Math.round(chronic), acwr };
-}
+// computeEWMA imported from lib/acwr.js
 
 export default function PerformanceDashboard({ lang, profile }) {
   const [tab,              setTab]              = useState('acwr');

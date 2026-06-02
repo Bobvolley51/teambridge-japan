@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDate, dateToYmd } from '@/lib/date';
 import { sendAlertDM } from '@/lib/alertDM';
+import { computeEWMA } from '@/lib/acwr';
 import styles from './SessionRPE.module.css';
 
 function rpeBtnStyle(n, selected) {
@@ -129,32 +130,24 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         { onConflict: 'user_id,event_id' }
       );
 
-      // ACWR alert check
-      const since28 = dateToYmd(toJstDate(new Date(Date.now() - 28 * 86400000)));
-      const since7  = dateToYmd(toJstDate(new Date(Date.now() -  7 * 86400000)));
+      // ACWR alert check — EWMA method, 90-day window so values are stable
+      const since90 = dateToYmd(toJstDate(new Date(Date.now() - 90 * 86400000)));
       const { data: rpeData } = await supabase
         .from('session_rpe')
         .select('event_date, load_au')
         .eq('user_id', userId)
-        .gte('event_date', since28);
+        .gte('event_date', since90)
+        .order('event_date', { ascending: true });
 
-      // ACWR requires ≥ 28 days of history to be mathematically valid.
-      // With less data the chronic baseline is too thin and ratios are misleading.
       if (rpeData?.length) {
-        const oldest  = rpeData.reduce((min, r) => r.event_date < min ? r.event_date : min, rpeData[0].event_date);
-        const spanDays = Math.round((Date.now() - new Date(oldest)) / 86400000);
-        if (spanDays >= 28) {
-          const acute   = rpeData.filter(r => r.event_date >= since7).reduce((s, r) => s + r.load_au, 0);
-          const chronic = rpeData.reduce((s, r) => s + r.load_au, 0) / 4;
-          if (chronic > 0 && acute / chronic > 1.3) {
-            const ratio = (acute / chronic).toFixed(1);
-            sendAlertDM(userId, userName, [
-              `📊 High training load — ${userName}`,
-              `⚠️ ACWR: ${ratio} (above 1.3 threshold)`,
-              `   Acute load (7d): ${Math.round(acute)} AU`,
-              `   Chronic load (28d avg): ${Math.round(chronic)} AU`,
-            ]).catch(() => {});
-          }
+        const { acute, chronic, acwr } = computeEWMA(rpeData);
+        if (acwr != null && acwr > 1.3) {
+          sendAlertDM(userId, userName, [
+            `📊 High training load — ${userName}`,
+            `⚠️ ACWR: ${acwr.toFixed(2)} (above 1.3 threshold)`,
+            `   Acute load (EWMA): ${acute} AU`,
+            `   Chronic load (EWMA): ${chronic} AU`,
+          ]).catch(() => {});
         }
       }
     } catch (_) {}

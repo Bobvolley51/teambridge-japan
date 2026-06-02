@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { computeEWMA } from '@/lib/acwr';
 import { supabase } from '@/lib/supabase';
 import { timeAgo, toJstDateStart, toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated, translate } from '@/lib/translate';
@@ -418,11 +419,12 @@ export default function Dashboard({
       canSeeWellness
         ? supabase.from('profiles').select('id').eq('role', 'Player')
         : Promise.resolve({ data: [] }),
-      // ACWR RPE data
+      // ACWR RPE data — 90-day window so EWMA is stable
       canSeeWellness
         ? supabase.from('session_rpe')
             .select('user_id, user_name, event_date, load_au')
-            .gte('event_date', (() => { const d = toJstDate(new Date()); d.setDate(d.getDate() - 28); return dateToYmd(d); })())
+            .gte('event_date', (() => { const d = toJstDate(new Date()); d.setDate(d.getDate() - 90); return dateToYmd(d); })())
+            .order('event_date', { ascending: true })
         : Promise.resolve({ data: [] }),
       // Calendar change notifications
       currentUserId
@@ -557,23 +559,20 @@ export default function Dashboard({
       setNutritionProgress({ submitted: nutriUnique, total: (playerCountData ?? []).length });
     }
 
-    // ACWR
+    // ACWR — EWMA method
     const rpeRows = rpeData ?? [];
     if (rpeRows.length > 0) {
-      const day7  = new Date(); day7.setDate(day7.getDate() - 7);
-      const day28 = new Date(); day28.setDate(day28.getDate() - 28);
       const pMap = {};
       for (const r of rpeRows) {
-        if (!pMap[r.user_id]) pMap[r.user_id] = { name: r.user_name, all: [] };
-        pMap[r.user_id].all.push(r);
+        if (!pMap[r.user_id]) pMap[r.user_id] = { name: r.user_name, sessions: [] };
+        pMap[r.user_id].sessions.push(r);
       }
       const alerts = [];
       for (const p of Object.values(pMap)) {
-        const acute   = p.all.filter(s => new Date(s.event_date) >= day7).reduce((a, s) => a + s.load_au, 0);
-        const chronic = p.all.filter(s => new Date(s.event_date) >= day28).reduce((a, s) => a + s.load_au, 0) / 4;
-        if (chronic <= 0) continue;
-        const acwr = Math.round((acute / chronic) * 100) / 100;
-        if (acwr > 1.3) alerts.push({ name: p.name, acwr, zone: acwr > 1.5 ? 'highrisk' : 'caution' });
+        const { acwr } = computeEWMA(p.sessions);
+        if (acwr != null && acwr > 1.3) {
+          alerts.push({ name: p.name, acwr, zone: acwr > 1.5 ? 'highrisk' : 'caution' });
+        }
       }
       alerts.sort((a, b) => b.acwr - a.acwr);
       setAcwrAlerts(alerts);
