@@ -73,7 +73,11 @@
   }
 }
 
-html { height: -webkit-fill-available; }
+html {
+  height: -webkit-fill-available;
+  overflow-x: hidden;              /* block any horizontal scroll */
+  overscroll-behavior-x: none;    /* kill iOS rubber-band sideways bounce */
+}
 
 body {
   background: var(--tb-bg);
@@ -83,6 +87,8 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
