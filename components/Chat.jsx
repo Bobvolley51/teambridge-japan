@@ -1184,7 +1184,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             />
             <button
               className={styles.sendButton}
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={sending || !inputValue.trim() || !activeChannel}>
               {uiLang === 'ja' ? '送信' : 'Send'}
             </button>
