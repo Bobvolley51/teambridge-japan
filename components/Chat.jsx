@@ -61,10 +61,21 @@ function Avatar({ initials, isMe, avatarUrl }) {
 
 // ── Message ──────────────────────────────────────────────────────────────────
 
-function Message({ msg, isMe, uiLang, avatarUrl, senderName }) {
+const QUICK_EMOJIS = ['👍','❤️','😂','🔥','👏','😮'];
+
+function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, currentUserId,
+                   onReply, onReact, onEdit, onDelete, replyMsg, editingId, editText, onEditChange, onEditSave, onEditCancel }) {
   const [jaText, setJaText] = useState(null);
   const [enText, setEnText] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const longPressTimer = useRef(null);
+
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(() => { setShowActions(true); setShowEmojiPicker(true); }, 450);
+  };
+  const handleTouchEnd = () => { clearTimeout(longPressTimer.current); };
 
   useEffect(() => {
     if (!showTranslations) return;
@@ -79,47 +90,110 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName }) {
   }, [msg.content, showTranslations]);
 
   const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  const isEditing = editingId === msg.id;
+  const isDeleted = msg.is_deleted;
+
+  // Group reactions: { emoji: { count, byMe } }
+  const rxnGroups = {};
+  for (const r of (msgReactions ?? [])) {
+    if (!rxnGroups[r.emoji]) rxnGroups[r.emoji] = { count: 0, byMe: false };
+    rxnGroups[r.emoji].count++;
+    if (r.user_id === currentUserId) rxnGroups[r.emoji].byMe = true;
+  }
 
   return (
-    <div className={`${styles.message} ${isMe ? styles.messageMe : ''}`}>
-      <AvatarPhoto
-        url={avatarUrl}
-        initials={msg.user_initials}
-        name={senderName ?? msg.user_name}
-        size={32}
-        bg={isMe ? '#7e0027' : undefined}
-      />
+    <div className={`${styles.message} ${isMe ? styles.messageMe : ''}`}
+         onMouseEnter={() => setShowActions(true)}
+         onMouseLeave={() => { setShowActions(false); setShowEmojiPicker(false); }}
+         onTouchStart={handleTouchStart}
+         onTouchEnd={handleTouchEnd}
+         onTouchMove={handleTouchEnd}>
+      <AvatarPhoto url={avatarUrl} initials={msg.user_initials} name={senderName ?? msg.user_name}
+        size={32} bg={isMe ? '#7e0027' : undefined} />
       <div className={styles.messageBody}>
         <div className={styles.messageHeader}>
           <span className={styles.userName}>{msg.user_name}</span>
-          <span className={styles.time}>{time}</span>
+          <span className={styles.time}>{time}{msg.edited_at && <span className={styles.editedTag}> {uiLang === 'ja' ? '(編集済)' : '(edited)'}</span>}</span>
         </div>
-        <p className={styles.content}>{renderContent(msg.content)}</p>
-        <button
-          className={styles.translateBtn}
-          onClick={() => setShowTranslations(v => !v)}
-        >
-          {showTranslations
-            ? (uiLang === 'ja' ? '翻訳を隠す' : 'Hide translations')
-            : (uiLang === 'ja' ? '翻訳' : 'Translate')}
-        </button>
-        {showTranslations && (
-          <div className={styles.translations}>
-            {enText && enText !== msg.content && (
-              <div className={styles.translation}>
-                <span className={styles.translationLabel}>EN:</span>
-                {enText}
+
+        {/* Quoted reply */}
+        {replyMsg && !isDeleted && (
+          <div className={styles.replyQuote}>
+            <span className={styles.replyQuoteName}>{replyMsg.user_name}</span>
+            <span className={styles.replyQuoteText}>{replyMsg.content || '📷'}</span>
+          </div>
+        )}
+
+        {/* Content or edit input */}
+        {isDeleted ? (
+          <p className={styles.deletedMsg}>{uiLang === 'ja' ? '🗑 削除されました' : '🗑 Message deleted'}</p>
+        ) : isEditing ? (
+          <div className={styles.editWrap}>
+            <input className={styles.editInput} value={editText} onChange={e => onEditChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') onEditSave(); if (e.key === 'Escape') onEditCancel(); }}
+              autoFocus />
+            <div className={styles.editActions}>
+              <button className={styles.editSaveBtn} onClick={onEditSave}>{uiLang === 'ja' ? '保存' : 'Save'}</button>
+              <button className={styles.editCancelBtn} onClick={onEditCancel}>{uiLang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {msg.image_url && (
+              <img src={msg.image_url} alt="shared" className={styles.msgImage}
+                onClick={() => window.open(msg.image_url, '_blank')} />
+            )}
+            {msg.content && <p className={styles.content}>{renderContent(msg.content)}</p>}
+          </>
+        )}
+
+        {/* Reactions bar */}
+        {Object.keys(rxnGroups).length > 0 && (
+          <div className={styles.reactionsBar}>
+            {Object.entries(rxnGroups).map(([emoji, { count, byMe }]) => (
+              <button key={emoji} className={`${styles.reactionBtn} ${byMe ? styles.reactionBtnMe : ''}`}
+                onClick={() => onReact(msg.id, emoji)}>
+                {emoji} {count}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Translate */}
+        {!isDeleted && msg.content && (
+          <>
+            <button className={styles.translateBtn} onClick={() => setShowTranslations(v => !v)}>
+              {showTranslations ? (uiLang === 'ja' ? '翻訳を隠す' : 'Hide') : (uiLang === 'ja' ? '翻訳' : 'Translate')}
+            </button>
+            {showTranslations && (
+              <div className={styles.translations}>
+                {enText && enText !== msg.content && <div className={styles.translation}><span className={styles.translationLabel}>EN:</span>{enText}</div>}
+                {jaText && jaText !== msg.content && <div className={styles.translation}><span className={styles.translationLabel}>日本語:</span>{jaText}</div>}
               </div>
             )}
-            {jaText && jaText !== msg.content && (
-              <div className={styles.translation}>
-                <span className={styles.translationLabel}>日本語:</span>
-                {jaText}
+          </>
+        )}
+      </div>
+
+      {/* Hover action buttons */}
+      {showActions && !isDeleted && !isEditing && (
+        <div className={`${styles.msgActions} ${isMe ? styles.msgActionsMe : ''}`}>
+          <div className={styles.emojiPickerWrap}>
+            <button className={styles.msgActionBtn} title="React" onClick={() => setShowEmojiPicker(v => !v)}>😊</button>
+            {showEmojiPicker && (
+              <div className={styles.emojiQuickPicker}>
+                {QUICK_EMOJIS.map(e => (
+                  <button key={e} className={styles.quickEmoji}
+                    onClick={() => { onReact(msg.id, e); setShowEmojiPicker(false); }}>{e}</button>
+                ))}
               </div>
             )}
           </div>
-        )}
-      </div>
+          <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '返信' : 'Reply'} onClick={() => onReply(msg)}>↩</button>
+          {isMe && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '編集' : 'Edit'} onClick={() => onEdit(msg)}>✏️</button>}
+          {isMe && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '削除' : 'Delete'} onClick={() => onDelete(msg.id)}>🗑️</button>}
+        </div>
+      )}
     </div>
   );
 }
@@ -484,12 +558,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [profiles,      setProfiles]      = useState([]);
   const [mentionQuery,  setMentionQuery]  = useState(null);
   const [mentionIdx,    setMentionIdx]    = useState(0);
-  // { channelId: last_read_at } for current user
   const [myReadAt,      setMyReadAt]      = useState({});
-  // last_read_at of the DM partner in the active channel
   const [partnerReadAt, setPartnerReadAt] = useState(null);
-  // { channelId: unreadCount }
   const [unreadCounts,  setUnreadCounts]  = useState({});
+  // New features
+  const [replyTo,       setReplyTo]       = useState(null);   // message being replied to
+  const [reactions,     setReactions]     = useState({});     // { msgId: [{emoji,count,byMe}] }
+  const [typingUsers,   setTypingUsers]   = useState([]);     // names of who is typing
+  const [editingId,     setEditingId]     = useState(null);   // message id being edited
+  const [editText,      setEditText]      = useState('');
+  const [searchQuery,   setSearchQuery]   = useState('');
+  const [showSearch,    setShowSearch]    = useState(false);
+  const fileInputRef = useRef(null);
 
   const endRef           = useRef(null);
   const subscriptionRef  = useRef(null);
@@ -688,6 +768,20 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         setError((uiLang === 'ja' ? 'メッセージを読み込めませんでした：' : 'Could not load messages: ') + dbError.message);
       } else {
         setMessagesByChannel(prev => ({ ...prev, [activeChannel]: data ?? [] }));
+        // Load reactions for these messages
+        if (data?.length) {
+          const ids = data.map(m => m.id);
+          supabase.from('message_reactions').select('*').in('message_id', ids)
+            .then(({ data: rxns }) => {
+              if (!rxns || cancelled) return;
+              const map = {};
+              for (const r of rxns) {
+                if (!map[r.message_id]) map[r.message_id] = [];
+                map[r.message_id].push(r);
+              }
+              if (!cancelled) setReactions(map);
+            });
+        }
       }
       setLoading(false);
     }
@@ -730,9 +824,97 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           }
         }
       })
+      // Also subscribe to reaction changes and message updates
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions',
+        filter: `message_id=in.(${[].join(',')})` }, () => {
+        // Reload reactions for active channel when any reaction changes
+        supabase.from('message_reactions').select('*')
+          .in('message_id', (messagesByChannel[activeChannel] ?? []).map(m => m.id))
+          .then(({ data: rxns }) => {
+            if (!rxns) return;
+            const map = {};
+            for (const r of rxns) {
+              if (!map[r.message_id]) map[r.message_id] = [];
+              map[r.message_id].push(r);
+            }
+            setReactions(map);
+          });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages',
+        filter: `channel=eq.${activeChannel}` }, payload => {
+        setMessagesByChannel(prev => {
+          const existing = prev[activeChannel] ?? [];
+          const updated  = existing.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m);
+          return { ...prev, [activeChannel]: updated };
+        });
+      })
+      // Typing indicator via broadcast
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId === currentUser?.id) return;
+        setTypingUsers(prev => {
+          const filtered = prev.filter(u => u.id !== payload.userId);
+          if (!payload.typing) return filtered;
+          return [...filtered, { id: payload.userId, name: payload.name }];
+        });
+        // Clear typing indicator after 3s
+        setTimeout(() => {
+          setTypingUsers(prev => prev.filter(u => u.id !== payload.userId));
+        }, 3000);
+      })
       .subscribe();
     subscriptionRef.current = channel;
-    return () => { channel.unsubscribe(); };
+    return () => { channel.unsubscribe(); setTypingUsers([]); };
+  }, [activeChannel]);
+
+  // ── New feature handlers ───────────────────────────────────────────────
+
+  const broadcastTyping = useCallback(() => {
+    if (!activeChannel || !subscriptionRef.current) return;
+    subscriptionRef.current.send({
+      type: 'broadcast', event: 'typing',
+      payload: { userId: currentUser?.id, name: currentUser?.name, typing: true },
+    });
+  }, [activeChannel, currentUser]);
+
+  const toggleReaction = useCallback(async (messageId, emoji) => {
+    if (!currentUser?.id) return;
+    const existing = (reactions[messageId] ?? []).find(r => r.user_id === currentUser.id && r.emoji === emoji);
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id);
+    } else {
+      await supabase.from('message_reactions').insert({
+        message_id: messageId, user_id: currentUser.id,
+        user_name: currentUser.name, emoji,
+      });
+    }
+    // Reload reactions
+    const allIds = (messagesByChannel[activeChannel] ?? []).map(m => m.id);
+    const { data: rxns } = await supabase.from('message_reactions').select('*').in('message_id', allIds);
+    if (rxns) {
+      const map = {};
+      for (const r of rxns) { if (!map[r.message_id]) map[r.message_id] = []; map[r.message_id].push(r); }
+      setReactions(map);
+    }
+  }, [reactions, activeChannel, messagesByChannel, currentUser]);
+
+  const deleteMessage = useCallback(async (msgId) => {
+    await supabase.from('messages').update({ is_deleted: true, content: '' }).eq('id', msgId);
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId || !editText.trim()) return;
+    await supabase.from('messages').update({ content: editText.trim(), edited_at: new Date().toISOString() }).eq('id', editingId);
+    setEditingId(null); setEditText('');
+  }, [editingId, editText]);
+
+  const uploadImage = useCallback(async (file) => {
+    if (!file || !activeChannel) return;
+    const ext  = file.name.split('.').pop();
+    const path = `${activeChannel}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file);
+    if (upErr) return;
+    const { data: { publicUrl } } = supabase.storage.from('chat-images').getPublicUrl(path);
+    return publicUrl;
   }, [activeChannel]);
 
   const mentionMatches = mentionQuery
@@ -756,11 +938,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     }, 0);
   }, [inputValue, mentionQuery]);
 
-  const sendMessage = useCallback(async () => {
+  const sendMessage = useCallback(async (imageUrl = null) => {
     const text = inputValue.trim();
-    if (!text || sending || !activeChannel) return;
+    if ((!text && !imageUrl) || sending || !activeChannel) return;
     setSending(true);
     setInputValue('');
+    const replyId = replyTo?.id ?? null;
+    setReplyTo(null);
 
     const optimisticMsg = {
       id:            crypto.randomUUID(),
@@ -768,6 +952,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       user_name:     currentUser.name,
       user_initials: currentUser.initials,
       content:       text,
+      image_url:     imageUrl,
+      reply_to_id:   replyId,
       created_at:    new Date().toISOString(),
       _optimistic:   true,
     };
@@ -782,6 +968,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       user_initials: currentUser.initials,
       content:       text,
       sender_id:     currentUser.id,
+      image_url:     imageUrl ?? null,
+      reply_to_id:   replyId,
     });
 
     // Bump DM to top of list
