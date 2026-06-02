@@ -77,6 +77,17 @@
 
 .hint { font-size: 13px; color: #9ca3af; }
 
+.filterBar  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 4px; flex-shrink: 0; }
+.filterLabel { font-size: 12px; font-weight: 600; color: #7e0027; white-space: nowrap; }
+.filterBtns { display: flex; gap: 4px; flex-wrap: wrap; }
+.filterBtn  {
+  padding: 4px 10px; font-size: 12px; font-weight: 600;
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+  color: #6b7280; cursor: pointer; font-family: inherit; transition: background 0.1s, color 0.1s;
+}
+.filterBtn:hover    { background: #fdf2f4; color: #7e0027; border-color: #7e0027; }
+.filterBtnActive    { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+
 .alarm {
   background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #7e0027;
   border-radius: 8px; padding: 10px 14px;

@@ -48,6 +48,34 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [showLegend,       setShowLegend]       = useState(false);
   const [expandedSession,  setExpandedSession]  = useState(null);
   const [expandedAcwr,     setExpandedAcwr]     = useState(null);
+  const [playerProfiles,   setPlayerProfiles]   = useState({});  // user_id → profile
+  const [positionFilter,   setPositionFilter]   = useState('');
+
+  const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+
+  // Load player profiles once so all tabs can show proper names + jersey numbers
+  useEffect(() => {
+    supabase.from('profiles')
+      .select('id, first_name, last_name, display_name, jersey_number, position')
+      .eq('role', 'Player')
+      .then(({ data }) => {
+        const map = {};
+        for (const p of (data ?? [])) map[p.id] = p;
+        setPlayerProfiles(map);
+      });
+  }, []);
+
+  // Full Latin name + jersey from profile; falls back to stored user_name
+  function playerLabel(userId, fallbackName) {
+    const p = playerProfiles[userId];
+    if (!p) return fallbackName ?? '—';
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || fallbackName;
+    return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
+  }
+
+  function playerPosition(userId) {
+    return playerProfiles[userId]?.position ?? null;
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +125,7 @@ export default function PerformanceDashboard({ lang, profile }) {
   });
 
   acwrRows.sort((a, b) => (b.acwr ?? -1) - (a.acwr ?? -1));
+  const filteredAcwrRows = positionFilter ? acwrRows.filter(row => playerPosition(row.uid) === positionFilter) : acwrRows;
   const hasExtraData = acwrRows.some(r => r.avgEnergy != null || r.avgFocus != null);
 
   return (
@@ -122,6 +151,26 @@ export default function PerformanceDashboard({ lang, profile }) {
         <button className={styles.refreshBtn} onClick={load} title="Refresh">↻</button>
       </div>
 
+      {/* Position filter — shown on ACWR and Sessions tabs */}
+      {(tab === 'acwr' || tab === 'sessions') && (
+        <div className={styles.filterBar}>
+          <span className={styles.filterLabel}>{lang === 'ja' ? 'ポジション' : 'Position'}</span>
+          <div className={styles.filterBtns}>
+            <button className={`${styles.filterBtn} ${!positionFilter ? styles.filterBtnActive : ''}`}
+              onClick={() => setPositionFilter('')}>
+              {lang === 'ja' ? '全員' : 'All'}
+            </button>
+            {POSITIONS.map(pos => (
+              <button key={pos}
+                className={`${styles.filterBtn} ${positionFilter === pos ? styles.filterBtnActive : ''}`}
+                onClick={() => setPositionFilter(p => p === pos ? '' : pos)}>
+                {pos}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ACWR alert banner — shown whenever at-risk players exist */}
       {!loading && (() => {
         const highRisk = acwrRows.filter(r => r.acwr != null && r.acwr > 1.5);
@@ -140,7 +189,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                 </span>
                 {highRisk.map(r => (
                   <span key={r.uid} className={styles.alarmPlayer}>
-                    {r.name} — ACWR {r.acwr?.toFixed(2)}
+                    {playerLabel(r.uid, r.name)} — ACWR {r.acwr?.toFixed(2)}
                   </span>
                 ))}
               </div>
@@ -152,7 +201,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                 </span>
                 {caution.map(r => (
                   <span key={r.uid} className={styles.alarmPlayer}>
-                    {r.name} — ACWR {r.acwr?.toFixed(2)}
+                    {playerLabel(r.uid, r.name)} — ACWR {r.acwr?.toFixed(2)}
                   </span>
                 ))}
               </div>
@@ -254,7 +303,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {acwrRows.map(row => {
+                    {filteredAcwrRows.map(row => {
                       const zone    = row.acwr != null ? getZone(row.acwr) : null;
                       const open    = expandedAcwr === row.uid;
                       const allSess = [...(playerMap[row.uid]?.all ?? [])]
@@ -266,7 +315,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                             onClick={() => setExpandedAcwr(open ? null : row.uid)}>
                             <td className={styles.tdName}>
                               <span className={styles.acwrCaret}>{open ? '▾' : '▸'}</span>
-                              {row.name}
+                              {playerLabel(row.uid, row.name)}
                             </td>
                             <td className={styles.td}>{row.acute}</td>
                             <td className={styles.td}>{row.chronic}</td>
@@ -470,7 +519,8 @@ export default function PerformanceDashboard({ lang, profile }) {
                 const minRpe  = Math.min(...rpes);
                 const maxRpe  = Math.max(...rpes);
                 const avgLoad = Math.round(s.players.reduce((sum, p) => sum + (p.load_au ?? 0), 0) / s.players.length);
-                const sorted  = [...s.players].sort((a, b) => b.rpe - a.rpe);
+                const filteredPlayers = positionFilter ? s.players.filter(p => playerPosition(p.user_id) === positionFilter) : s.players;
+                const sorted  = [...filteredPlayers].sort((a, b) => b.rpe - a.rpe);
                 const hasExtraSess = s.players.some(p => p.energy_level != null || p.focus_level != null);
                 const playersWithEnergy = s.players.filter(p => p.energy_level != null);
                 const playersWithFocus  = s.players.filter(p => p.focus_level  != null);
@@ -559,7 +609,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                               const elevClass = elevPct == null ? '' : elevPct >= 20 ? styles.cellRed : elevPct >= 10 ? styles.cellAmber : styles.cellGreen;
                               return (
                                 <tr key={i} className={styles.sessTr}>
-                                  <td className={styles.sessTdName}>{p.user_name}</td>
+                                  <td className={styles.sessTdName}>{playerLabel(p.user_id, p.user_name)}</td>
                                   <td className={styles.sessTd}>
                                     <span className={styles.rpeBadge} style={{ background: rpeColor(p.rpe), color: '#fff' }}>{p.rpe}</span>
                                   </td>

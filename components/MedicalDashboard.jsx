@@ -231,7 +231,7 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
   const handlePlayerChange = (e) => {
     const p = players.find(pl => pl.id === e.target.value);
     setPlayerId(e.target.value);
-    setPlayerName(p?.display_name ?? e.target.value);
+    setPlayerName([p?.first_name, p?.last_name].filter(Boolean).join(' ') || p?.display_name || e.target.value);
   };
 
   const submit = async (e) => {
@@ -266,7 +266,11 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
           {players.length > 0
             ? <select className={styles.input} value={playerId} onChange={handlePlayerChange} required>
                 <option value="">{lang === 'ja' ? '選択してください' : 'Select player'}</option>
-                {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+                {players.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.jersey_number != null ? `#${p.jersey_number} ` : ''}{[p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name}
+                  </option>
+                ))}
               </select>
             : <input className={styles.input} value={playerName} onChange={e => setPlayerName(e.target.value)}
                 required placeholder="Player name" />
@@ -657,6 +661,7 @@ function AlertPanel({ records, painData, availability, noticedIds, onNotice, lan
 
 const THERAPIST_ROLES = ['Therapist', 'Athletic Trainer'];
 const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM / Director', 'Coaching Staff'];
+const POSITIONS       = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
 
 export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '' }) {
   const toast        = useToast();
@@ -688,7 +693,8 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     });
   };
 
-  const [recFilter,    setRecFilter]    = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
+  const [recFilter,      setRecFilter]      = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
+  const [positionFilter, setPositionFilter] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -696,7 +702,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     const thirtyAgoStr = `${d30.getFullYear()}-${pad(d30.getMonth()+1)}-${pad(d30.getDate())}`;
 
     const [{ data: profData }, { data: avData }, { data: commData }, { data: painRows }] = await Promise.all([
-      supabase.from('profiles').select('id, display_name, role, avatar_url, jersey_number, position').eq('role', 'Player').order('display_name'),
+      supabase.from('profiles').select('id, first_name, last_name, display_name, role, avatar_url, jersey_number, position').eq('role', 'Player').order('jersey_number', { ascending: true, nullsFirst: false }),
       supabase.from('player_availability').select('*').order('player_name'),
       supabase.from('medical_comms').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('wellness_body_pain').select('user_name, body_part, response_date').gte('response_date', thirtyAgoStr),
@@ -709,7 +715,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     const merged = (profData ?? []).map(p => ({
       ...(avMap[p.id] ?? { status: 'full', reason: null, updated_at: null }),
       player_id:     p.id,
-      player_name:   p.display_name,
+      player_name:   [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name,
       avatar_url:    p.avatar_url ?? null,
       jersey_number: p.jersey_number ?? null,
       position:      p.position ?? null,
@@ -844,11 +850,23 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                 })}
               </div>
 
+              <div className={styles.filterRow} style={{ marginBottom: 4 }}>
+                <button className={`${styles.filterBtn} ${!positionFilter ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter('')}>
+                  {lang === 'ja' ? '全員' : 'All'}
+                </button>
+                {POSITIONS.map(pos => (
+                  <button key={pos} className={`${styles.filterBtn} ${positionFilter === pos ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter(p => p === pos ? '' : pos)}>
+                    {pos}
+                  </button>
+                ))}
+              </div>
+
               {(() => {
                 // Group by position, sort by jersey number within group
                 const POSITION_ORDER = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+                const filteredAvailability = positionFilter ? availability.filter(p => p.position === positionFilter) : availability;
                 const groups = {};
-                for (const p of availability) {
+                for (const p of filteredAvailability) {
                   const key = p.position || (lang === 'ja' ? 'その他' : 'Other');
                   if (!groups[key]) groups[key] = [];
                   groups[key].push(p);

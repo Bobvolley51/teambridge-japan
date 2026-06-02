@@ -28,6 +28,17 @@
 }
 .refreshBtn:hover { background: #fdf2f4; }
 
+.filterBar   { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 20px 8px; border-bottom: 1px solid #f5c2ce; flex-shrink: 0; background: #fff; }
+.filterLabel { font-size: 12px; font-weight: 600; color: #7e0027; white-space: nowrap; }
+.filterBtns  { display: flex; gap: 4px; flex-wrap: wrap; }
+.filterBtn   {
+  padding: 4px 10px; font-size: 12px; font-weight: 600;
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+  color: #6b7280; cursor: pointer; font-family: inherit; transition: background 0.1s, color 0.1s;
+}
+.filterBtn:hover  { background: #fdf2f4; color: #7e0027; border-color: #7e0027; }
+.filterBtnActive  { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+
 .alarmBanner {
   flex-shrink: 0; margin: 0; padding: 12px 20px;
   background: #fef2f2; border-bottom: 1px solid #fecaca;

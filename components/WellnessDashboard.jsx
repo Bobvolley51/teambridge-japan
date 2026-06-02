@@ -6,6 +6,8 @@ import { toJstDateStr, toJstDateStart, dateToYmd } from '@/lib/date';
 import AvatarPhoto from './AvatarPhoto';
 import styles from './WellnessDashboard.module.css';
 
+const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+
 // ── Constants ─────────────────────────────────────────────────
 
 const QUESTIONS = [
@@ -221,8 +223,9 @@ export default function WellnessDashboard({ lang }) {
   const [todayPain,  setTodayPain]  = useState([]);
   const [weekPain,   setWeekPain]   = useState([]);
   const [bwRows,     setBwRows]     = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [profiles,   setProfiles]   = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [profiles,      setProfiles]      = useState([]);
+  const [positionFilter, setPositionFilter] = useState('');
 
   const loadToday = useCallback(async () => {
     setLoading(true);
@@ -263,9 +266,19 @@ export default function WellnessDashboard({ lang }) {
   }, [tab, loadToday, loadWeek]);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, email, avatar_url')
+    supabase.from('profiles').select('id, first_name, last_name, display_name, email, avatar_url, jersey_number, position')
       .eq('role', 'Player').then(({ data }) => setProfiles(data ?? []));
   }, []);
+
+  // display_name → profile map for quick lookup
+  const profileByNickname = useMemo(() => {
+    const m = {};
+    for (const p of profiles) {
+      const n = p.display_name || p.email;
+      if (n) m[n] = p;
+    }
+    return m;
+  }, [profiles]);
 
   // display_name → avatar_url map for quick lookup
   const avatarByName = useMemo(() => {
@@ -276,6 +289,14 @@ export default function WellnessDashboard({ lang }) {
     }
     return m;
   }, [profiles]);
+
+  // Returns "#jersey FirstName LastName" for a display_name (nickname) key
+  function nameLabel(nickname) {
+    const p = profileByNickname[nickname];
+    if (!p) return nickname ?? '—';
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || nickname;
+    return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
+  }
 
   const bwMap = {};
   for (const r of bwRows) {
@@ -296,7 +317,10 @@ export default function WellnessDashboard({ lang }) {
     if (!todayPlayers[r.user_name]) todayPlayers[r.user_name] = {};
     todayPlayers[r.user_name][r.question_key] = r.score;
   }
-  const todayList    = Object.entries(todayPlayers);
+  const todayListAll = Object.entries(todayPlayers);
+  const todayList    = positionFilter
+    ? todayListAll.filter(([name]) => profileByNickname[name]?.position === positionFilter)
+    : todayListAll;
   const alarmedToday = [...new Set(rows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
 
   // ── Week ───────────────────────────────────────────────────
@@ -323,12 +347,15 @@ export default function WellnessDashboard({ lang }) {
     if (!weekPlayers[r.user_name][r.question_key]) weekPlayers[r.user_name][r.question_key] = [];
     weekPlayers[r.user_name][r.question_key].push(r.score);
   }
-  const weekPlayerList = Object.entries(weekPlayers).map(([name, qs]) => ({
+  const weekPlayerListAll = Object.entries(weekPlayers).map(([name, qs]) => ({
     name,
     avgs:       Object.fromEntries(QUESTIONS.map(q => [q.key, avg(qs[q.key] ?? [])])),
     sleepHours: avg(qs['sleep_hours'] ?? []),
     avail:      avg(qs['availability'] ?? []),
   }));
+  const weekPlayerList = positionFilter
+    ? weekPlayerListAll.filter(p => profileByNickname[p.name]?.position === positionFilter)
+    : weekPlayerListAll;
 
   const alarmedWeek = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
   const weekLabel   = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
@@ -360,9 +387,23 @@ export default function WellnessDashboard({ lang }) {
 
           {alarmedToday.length > 0 && (
             <div className={styles.alarm}>
-              ⚠️&nbsp;{lang === 'ja' ? `低スコア検出 — ${alarmedToday.join('、')}` : `Low score alert — ${alarmedToday.join(', ')}`}
+              ⚠️&nbsp;{lang === 'ja' ? `低スコア検出 — ${alarmedToday.map(n => nameLabel(n)).join('、')}` : `Low score alert — ${alarmedToday.map(n => nameLabel(n)).join(', ')}`}
             </div>
           )}
+
+          <div className={styles.filterBar}>
+            <span className={styles.filterLabel}>{lang === 'ja' ? 'ポジション' : 'Position'}</span>
+            <div className={styles.filterBtns}>
+              <button className={`${styles.filterBtn} ${!positionFilter ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter('')}>
+                {lang === 'ja' ? '全員' : 'All'}
+              </button>
+              {POSITIONS.map(pos => (
+                <button key={pos} className={`${styles.filterBtn} ${positionFilter === pos ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter(p => p === pos ? '' : pos)}>
+                  {pos}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {loading
             ? <p className={styles.hint}>{lang === 'ja' ? '読込中…' : 'Loading…'}</p>
@@ -401,7 +442,7 @@ export default function WellnessDashboard({ lang }) {
                                     name={name}
                                     size={28}
                                   />
-                                  <span>{name}</span>
+                                  <span>{nameLabel(name)}</span>
                                 </div>
                               </td>
                               {QUESTIONS.map(q => (
@@ -486,7 +527,7 @@ export default function WellnessDashboard({ lang }) {
                 }, {})
               ).map(([name, entries]) => (
                 <div key={name} className={styles.painRow}>
-                  <span className={styles.painName}>{name}</span>
+                  <span className={styles.painName}>{nameLabel(name)}</span>
                   <div className={styles.painParts}>
                     {entries.map(r => {
                       const label     = BODY_PARTS.find(b => b.key === r.body_part);
@@ -545,9 +586,23 @@ export default function WellnessDashboard({ lang }) {
             </button>
           </div>
 
+          <div className={styles.filterBar}>
+            <span className={styles.filterLabel}>{lang === 'ja' ? 'ポジション' : 'Position'}</span>
+            <div className={styles.filterBtns}>
+              <button className={`${styles.filterBtn} ${!positionFilter ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter('')}>
+                {lang === 'ja' ? '全員' : 'All'}
+              </button>
+              {POSITIONS.map(pos => (
+                <button key={pos} className={`${styles.filterBtn} ${positionFilter === pos ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter(p => p === pos ? '' : pos)}>
+                  {pos}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {alarmedWeek.length > 0 && (
             <div className={styles.alarm}>
-              ⚠️&nbsp;{lang === 'ja' ? `今週の低スコア — ${alarmedWeek.join('、')}` : `Low scores (last 7 days) — ${alarmedWeek.join(', ')}`}
+              ⚠️&nbsp;{lang === 'ja' ? `今週の低スコア — ${alarmedWeek.map(n => nameLabel(n)).join('、')}` : `Low scores (last 7 days) — ${alarmedWeek.map(n => nameLabel(n)).join(', ')}`}
             </div>
           )}
 
@@ -607,7 +662,7 @@ export default function WellnessDashboard({ lang }) {
                                 <td className={styles.tdName}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <AvatarPhoto url={avatarByName[name]} initials={name.slice(0, 2)} name={name} size={28} />
-                                    <span>{name}</span>
+                                    <span>{nameLabel(name)}</span>
                                   </div>
                                 </td>
                                 {QUESTIONS.map(q => (

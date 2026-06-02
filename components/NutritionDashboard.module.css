@@ -143,6 +143,17 @@
   font-weight: 600;
   color: #6b7280;
 }
+
+.filterBar   { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.filterLabel { font-size: 12px; font-weight: 600; color: #374151; white-space: nowrap; }
+.filterBtns  { display: flex; gap: 4px; flex-wrap: wrap; }
+.filterBtn   {
+  padding: 4px 10px; font-size: 12px; font-weight: 600;
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+  color: #6b7280; cursor: pointer; font-family: inherit; transition: background 0.1s, color 0.1s;
+}
+.filterBtn:hover  { background: #f3f4f6; color: #111827; }
+.filterBtnActive  { background: #111827 !important; color: #fff !important; border-color: #111827 !important; }
 .statsTableWrap {
   border: 1px solid #e5e7eb;
   border-radius: 12px;

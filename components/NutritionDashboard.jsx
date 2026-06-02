@@ -20,6 +20,12 @@ const RATINGS = [
 ];
 
 const TRAINER_ROLES = ['Athletic Trainer', 'Therapist', 'Headcoach', 'Coaching Staff', 'GM / Director'];
+const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+
+function playerFullLabel(p) {
+  const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || '—';
+  return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
+}
 
 function getLast14Days() {
   const days = [];
@@ -240,14 +246,16 @@ export default function NutritionDashboard({ lang, profile }) {
   const [uploading,    setUploading]    = useState({});
   const [lightbox,     setLightbox]     = useState(null);
   const [uploadError,  setUploadError]  = useState(null);
-  const [statsRows,    setStatsRows]    = useState(null); // null = not loaded yet
-  const [myStats,      setMyStats]      = useState(null); // player's own 14-day summary
+  const [statsRows,      setStatsRows]      = useState(null); // null = not loaded yet
+  const [myStats,        setMyStats]        = useState(null); // player's own 14-day summary
+  const [positionFilter, setPositionFilter] = useState('');
 
   // Load player list for trainer dropdown
   useEffect(() => {
     if (!isTrainer) return;
-    supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name').then(({ data }) => {
-      setPlayers(data ?? []);
+    supabase.from('profiles').select('id, first_name, last_name, display_name, jersey_number, position').eq('role', 'Player').then(({ data }) => {
+      const sorted = (data ?? []).slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
+      setPlayers(sorted);
     });
   }, [isTrainer]);
 
@@ -258,13 +266,14 @@ export default function NutritionDashboard({ lang, profile }) {
     const since = DAYS[0];
     if (isTrainer) {
       const [{ data: allPlayers }, { data: entries }] = await Promise.all([
-        supabase.from('profiles').select('id, display_name').eq('role', 'Player').order('display_name'),
+        supabase.from('profiles').select('id, first_name, last_name, display_name, jersey_number, position').eq('role', 'Player'),
         supabase.from('nutrition_entries').select('user_id, player_rating').gte('meal_date', since),
       ]);
       if (!allPlayers) return;
+      const sortedPlayers = allPlayers.slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
       const map = {};
-      for (const p of allPlayers) {
-        map[p.id] = { name: p.display_name ?? '—', total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
+      for (const p of sortedPlayers) {
+        map[p.id] = { name: playerFullLabel(p), position: p.position ?? '', total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
       }
       for (const e of (entries ?? [])) {
         if (!map[e.user_id]) continue;
@@ -275,7 +284,8 @@ export default function NutritionDashboard({ lang, profile }) {
         else if (e.player_rating === 'red')    r.red++;
         else r.unrated++;
       }
-      setStatsRows(Object.values(map));
+      // Preserve jersey sort order from sortedPlayers
+      setStatsRows(sortedPlayers.map(p => map[p.id]).filter(Boolean));
     } else {
       // Player: load own summary
       const { data } = await supabase
@@ -543,7 +553,7 @@ export default function NutritionDashboard({ lang, profile }) {
                 setViewUserId(ev.target.value);
                 setViewUserName(p?.display_name ?? '');
               }}>
-              {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+              {players.map(p => <option key={p.id} value={p.id}>{playerFullLabel(p)}</option>)}
             </select>
             {reviewRequests > 0 && (
               <span className={styles.reviewBanner}>
@@ -566,6 +576,19 @@ export default function NutritionDashboard({ lang, profile }) {
       {view === 'stats' && isTrainer && (
         <div className={styles.statsContent}>
           <div className={styles.statsHeader}>{lang === 'ja' ? '直近14日間の栄養記録' : 'Last 14 Days — Nutrition Submissions'}</div>
+          <div className={styles.filterBar}>
+            <span className={styles.filterLabel}>{lang === 'ja' ? 'ポジション' : 'Position'}</span>
+            <div className={styles.filterBtns}>
+              <button className={`${styles.filterBtn} ${!positionFilter ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter('')}>
+                {lang === 'ja' ? '全員' : 'All'}
+              </button>
+              {POSITIONS.map(pos => (
+                <button key={pos} className={`${styles.filterBtn} ${positionFilter === pos ? styles.filterBtnActive : ''}`} onClick={() => setPositionFilter(p => p === pos ? '' : pos)}>
+                  {pos}
+                </button>
+              ))}
+            </div>
+          </div>
           {!statsRows ? (
             <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
           ) : statsRows.length === 0 ? (
@@ -585,7 +608,7 @@ export default function NutritionDashboard({ lang, profile }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {statsRows.map((r, i) => {
+                  {(positionFilter ? statsRows.filter(r => r.position === positionFilter) : statsRows).map((r, i) => {
                     const rated = r.green + r.yellow + r.red;
                     const ratedPct = r.total > 0 ? Math.round(rated / r.total * 100) : 0;
                     const gPct = rated > 0 ? r.green / rated * 100 : 0;
