@@ -296,12 +296,12 @@ export default function PerformanceDashboard({ lang, profile }) {
                             </td>
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {/* Energy dots — neutral color */}
                                 {row.recent.some(s => s.energy_level != null) ? (
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.energy_level != null
-                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                        ? <span key={i} className={styles.rpeDot}
+                                            style={{ background: energyColor(s.energy_level) }}
                                             title={`Energy ${s.energy_level}`} />
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
@@ -311,12 +311,12 @@ export default function PerformanceDashboard({ lang, profile }) {
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {/* Focus dots — neutral color */}
                                 {row.recent.some(s => s.focus_level != null) ? (
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.focus_level != null
-                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                        ? <span key={i} className={styles.rpeDot}
+                                            style={{ background: energyColor(s.focus_level) }}
                                             title={`Focus ${s.focus_level}`} />
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
@@ -326,12 +326,12 @@ export default function PerformanceDashboard({ lang, profile }) {
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {/* Mindful dots — neutral color, circle */}
                                 {row.recent.some(s => s.mindfulness != null) ? (
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.mindfulness != null
-                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                        ? <span key={i} className={styles.rpeDot}
+                                            style={{ background: s.mindfulness ? '#10b981' : '#ef4444' }}
                                             title={s.mindfulness ? 'Mindful ✓' : 'Mindful ✗'} />
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
@@ -341,12 +341,12 @@ export default function PerformanceDashboard({ lang, profile }) {
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {/* Goal dots — neutral color */}
                                 {row.recent.some(s => s.practice_goal_reached != null) ? (
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.practice_goal_reached != null
-                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                        ? <span key={i} className={styles.rpeDot}
+                                            style={{ background: s.practice_goal_reached ? '#10b981' : '#ef4444' }}
                                             title={s.practice_goal_reached ? 'Goal ✓' : 'Goal ✗'} />
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
