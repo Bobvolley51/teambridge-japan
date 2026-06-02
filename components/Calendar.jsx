@@ -240,7 +240,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
     );
   };
 
-  const POS_ORDER  = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Universal'];
+  const POS_ORDER  = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero', 'Universal'];
   const ROLE_ORDER = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
   const participantGroups = useMemo(() => {

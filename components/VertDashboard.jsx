@@ -736,8 +736,8 @@ export default function VertDashboard({ lang, profile }) {
                 { key: 'elevated_pct',    label: isJa ? '上昇%'    : 'Elevated%', unit: '%',   inv: true  },
                 { key: 'intensity',       label: isJa ? '強度'     : 'Intensity', unit: '',    inv: false },
               ];
-              const POS_ORDER = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Other'];
-              const POS_LABEL = { Setter: isJa ? 'セッター' : 'Setter', Middle: isJa ? 'ミドル' : 'Middle', Outside: isJa ? 'アウトサイド' : 'Outside', Opposite: isJa ? 'オポジット' : 'Opposite', Libero: isJa ? 'リベロ' : 'Libero', Other: isJa ? 'その他' : 'Other' };
+              const POS_ORDER = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero', 'Other'];
+              const POS_LABEL = { Setter: isJa ? 'セッター' : 'Setter', 'Outside Hitter': isJa ? 'アウトサイド' : 'Outside Hitter', 'Middle Blocker': isJa ? 'ミドル' : 'Middle Blocker', Opposite: isJa ? 'オポジット' : 'Opposite', Libero: isJa ? 'リベロ' : 'Libero', Other: isJa ? 'その他' : 'Other' };
               const byPos = {};
               for (const row of avgRows) {
                 const pos = row.position || 'Other';

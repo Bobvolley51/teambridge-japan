@@ -19,8 +19,8 @@ const CATEGORIES = [
 
 const PLAYER_CATS = new Set(['setters', 'servers', 'spikers']);
 
-const POSITIONS        = ['Setter', 'Middle', 'Outside', 'Opposite', 'Universal'];
-const ROSTER_POSITIONS = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero', 'Universal'];
+const POSITIONS        = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Universal'];
+const ROSTER_POSITIONS = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero', 'Universal'];
 const COMMANDS         = ['Step Left', 'Half Step Left', 'Leave both Lines', 'Half Step Right', 'Step Right'];
 const ZONES            = ['1', '2', '3', '4', '5', '6'];
 const COURT_LAYOUT     = [['4','3','2'],['5','6','1']];
@@ -28,12 +28,12 @@ const COURT_POSITIONS  = [['pos4','pos3','pos2'],['pos5','pos6','pos1']];
 const POS_LABELS       = { pos1:'1', pos2:'2', pos3:'3', pos4:'4', pos5:'5', pos6:'6' };
 
 const AUTO_TABS = {
-  Setter:    ['servers', 'setters'],
-  Middle:    ['servers', 'spikers'],
-  Outside:   ['servers', 'spikers'],
-  Opposite:  ['servers', 'spikers'],
-  Libero:    ['servers'],
-  Universal: ['servers', 'spikers'],
+  Setter:          ['servers', 'setters'],
+  'Outside Hitter':['servers', 'spikers'],
+  'Middle Blocker':['servers', 'spikers'],
+  Opposite:        ['servers', 'spikers'],
+  Libero:          ['servers'],
+  Universal:       ['servers', 'spikers'],
 };
 
 const COMMAND_COLORS = {

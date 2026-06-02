@@ -9,7 +9,7 @@ import AvatarPhoto from './AvatarPhoto';
 import styles from './RoleManager.module.css';
 
 const ROLES = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
-const POSITIONS = ['Setter', 'Middle', 'Outside', 'Opposite', 'Libero'];
+const POSITIONS = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero'];
 
 const ROLE_COLORS = {
   GM:                   styles.roleGM,

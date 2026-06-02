@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './ProfileSetup.module.css';
 
-const POSITIONS = ['Setter', 'Outside', 'Middle', 'Opposite', 'Libero'];
+const POSITIONS = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero'];
 
 export default function ProfileSetup({ userId, currentRole, lang, onComplete }) {
   const isJa     = lang === 'ja';

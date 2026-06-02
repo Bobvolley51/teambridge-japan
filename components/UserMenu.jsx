@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import InstallPrompt from './InstallPrompt';
 import styles from './UserMenu.module.css';
 
-const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
+const POSITIONS = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero'];
 
 export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
   const [open,        setOpen]        = useState(false);
