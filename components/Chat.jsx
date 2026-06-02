@@ -494,17 +494,33 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
   );
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
+// ── Sidebar / Chat List ───────────────────────────────────────────────────────
 
-function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen, unreadCounts, currentUserId }) {
+function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId }) {
   return (
-    <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarMobileOpen : ''}`}>
-      <div className={styles.sidebarHead}>
+    <aside className={styles.sidebar}>
+      {/* Mobile-only colored header (hidden on desktop via CSS) */}
+      <div className={styles.mobileListHeader}>
+        <span className={styles.mobileListTitle}>{uiLang === 'ja' ? 'チャット' : 'Chat'}</span>
+        <div className={styles.mobileListActions}>
+          {canManage && (
+            <button className={styles.mobileListBtn} onClick={onManage} title="Manage channels">⚙️</button>
+          )}
+          <button className={styles.mobileListBtn} onClick={onNewDM} title="New DM">✏️</button>
+        </div>
+      </div>
+
+      {/* Desktop channel header */}
+      <div className={`${styles.sidebarHead} ${styles.desktopSidebarHead}`}>
         <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'チャンネル' : 'Channels'}</span>
         {canManage && (
           <button className={styles.manageBtn} onClick={onManage} title={uiLang === 'ja' ? 'チャンネル管理' : 'Manage channels'}>⚙</button>
         )}
       </div>
+
+      {/* Mobile section label */}
+      <div className={styles.mobileSectionLabel}>{uiLang === 'ja' ? 'チャンネル' : 'CHANNELS'}</div>
+
       {channels.map(ch => {
         const unread = unreadCounts?.[ch.id] ?? 0;
         return (
@@ -522,10 +538,12 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
 
       <div className={styles.sidebarDivider} />
 
+      {/* DM section header */}
       <div className={styles.sidebarHead}>
         <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'ダイレクト' : 'Direct Messages'}</span>
         <button className={styles.manageBtn} onClick={onNewDM} title={uiLang === 'ja' ? '新規DM' : 'New DM'}>+</button>
       </div>
+
       {dmConversations.map(dm => {
         const unread = unreadCounts?.[dm.channelId] ?? 0;
         const lastTime = dm.lastMsg?.created_at
@@ -540,7 +558,7 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
           <button key={dm.channelId}
             className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
             onClick={() => onSelect(dm.channelId)} title={dm.name}>
-            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={36} />
+            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={40} />
             <div className={styles.dmItemInfo}>
               <div className={styles.dmItemHeader}>
                 <span className={styles.dmItemName}>{dm.name}</span>
@@ -578,7 +596,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [error,             setError]             = useState(null);
   const [showManage,        setShowManage]        = useState(false);
   const [showNewDM,         setShowNewDM]         = useState(false);
-  const [showChanList,      setShowChanList]      = useState(false);
+  const [mobileShowList,    setMobileShowList]    = useState(true);
 
   const [profiles,      setProfiles]      = useState([]);
   const [mentionQuery,  setMentionQuery]  = useState(null);
@@ -1080,7 +1098,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     });
     setActiveChannel(chId);
     setShowNewDM(false);
-    setShowChanList(false);
+    setMobileShowList(false);
   };
 
   const activeChannelObj = channels.find(c => c.id === activeChannel);
@@ -1096,21 +1114,16 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     : (uiLang === 'ja' ? `#${activeChannel ?? ''} にメッセージを送信...` : `Message #${activeChannel ?? ''}… (@ to mention)`);
 
   return (
-    <div className={styles.wrapper}>
-      {showChanList && (
-        <div className={styles.mobileOverlay} onClick={() => setShowChanList(false)} />
-      )}
-
+    <div className={`${styles.wrapper} ${mobileShowList ? styles.mobilePanelList : styles.mobilePanelChat}`}>
       <Sidebar
         channels={channels}
         dmConversations={dmConversationsWithNames}
         activeChannel={activeChannel}
-        onSelect={ch => { setActiveChannel(ch); setError(null); setShowChanList(false); }}
+        onSelect={ch => { setActiveChannel(ch); setError(null); setMobileShowList(false); }}
         onNewDM={() => setShowNewDM(true)}
         canManage={canManage}
         onManage={() => setShowManage(true)}
         uiLang={uiLang}
-        mobileOpen={showChanList}
         unreadCounts={unreadCounts}
         currentUserId={currentUser?.id}
       />
@@ -1118,17 +1131,21 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       <div className={styles.chatArea}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <button className={styles.mobileChanBtn} onClick={() => setShowChanList(v => !v)}>≡</button>
-            {isActiveDM && activeDM?.avatarUrl && (
-              <AvatarPhoto url={activeDM.avatarUrl} initials={activeDM.initials} name={activeDM.name} size={28} />
-            )}
-            <span className={styles.headerChannel}>{headerTitle}</span>
-            {!isActiveDM && activeChannelObj?.description && (
-              <span className={styles.headerDesc}>{activeChannelObj.description}</span>
-            )}
+            {/* Mobile back button — returns to chat list */}
+            <button className={styles.mobileBackBtn} onClick={() => setMobileShowList(true)}>‹</button>
+            {isActiveDM
+              ? <AvatarPhoto url={activeDM?.avatarUrl ?? null} initials={activeDM?.initials ?? '?'} name={activeDM?.name} size={32} />
+              : <span className={styles.headerHashIcon}>#</span>
+            }
+            <div className={styles.headerTitleWrap}>
+              <span className={styles.headerChannel}>{isActiveDM ? activeDM?.name : activeChannelObj?.name ?? activeChannel}</span>
+              {!isActiveDM && activeChannelObj?.description && (
+                <span className={styles.headerDesc}>{activeChannelObj.description}</span>
+              )}
+            </div>
           </div>
           <span className={styles.headerCount}>
-            {loading ? '…' : `${messages.length} ${uiLang === 'ja' ? 'メッセージ' : 'msg'}`}
+            {loading ? '…' : `${messages.length} ${uiLang === 'ja' ? 'msg' : 'msg'}`}
           </span>
         </div>
 
