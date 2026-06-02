@@ -52,6 +52,7 @@ import Travel                from '@/components/Travel';
 import PlayerStats           from '@/components/PlayerStats';
 import GlobalSearch          from '@/components/GlobalSearch';
 import NutritionDashboard   from '@/components/NutritionDashboard';
+import { syncPushSubscription } from '@/lib/push-register';
 import styles                from './page.module.css';
 import {
   IconHome, IconCalendar, IconChat, IconTactics, IconCheck,
@@ -211,6 +212,15 @@ export default function Home() {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   }, []);
+
+  // Auto-sync push subscription on every login.
+  // Covers: PWA reinstall (iOS), subscription expiry, browser data clear.
+  // If permission is granted but no subscription exists, re-subscribes silently.
+  // If subscription exists, upserts it so the DB stays current.
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    syncPushSubscription(session.user.id);
+  }, [session?.user?.id]);
 
   // Clean ?nav= query param from URL after reading it on first load
   useEffect(() => {
