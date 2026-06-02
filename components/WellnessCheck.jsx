@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDateStr } from '@/lib/date';
 import { sendAlertDM } from '@/lib/alertDM';
+import { sendPush } from '@/lib/push';
 import styles from './WellnessCheck.module.css';
 
 const QUESTIONS = [
@@ -177,7 +178,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       await supabase.from('wellness_body_pain').insert(painRows);
     }
 
-    // Notify on illness
+    // Notify on illness — in-app notification + push to Headcoach / Therapist / Athletic Trainer
     if (illness === 'yes') {
       const { data: recipients } = await supabase
         .from('profiles').select('id')
@@ -188,13 +189,25 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
           return s ? (lang === 'ja' ? s.ja : s.en) : k;
         }).join(', ');
         const tempStr = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
+        const body = `${symptomList || 'Illness reported'}${tempStr}`;
         await supabase.from('notifications').insert(
           recipients.map(r => ({
             user_id: r.id, type: 'wellness_illness',
             title: `${userName} reported illness`,
-            body: `${symptomList || 'Illness reported'}${tempStr}`,
+            body,
             nav_target: 'wellness',
           }))
+        );
+        // Push so staff are notified immediately even if app is closed
+        sendPush(
+          recipients.map(r => r.id),
+          {
+            title:   `🤒 ${userName} reported illness`,
+            body:    body.length > 80 ? body.slice(0, 80) + '…' : body,
+            url:     '/?nav=wellness',
+            tag:     `illness-${userId}`,
+            prefKey: 'wellness_illness',
+          }
         );
       }
     }
