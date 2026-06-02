@@ -8,7 +8,7 @@ import { SkeletonList } from './Skeleton';
 import AvatarPhoto from './AvatarPhoto';
 import styles from './Chat.module.css';
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 100;
 
 function profileFullName(p) {
   if (!p) return '';
@@ -23,6 +23,12 @@ function profileInitials(p) {
   return name.slice(0, 2).toUpperCase() || '?';
 }
 
+function nameInitials(name) {
+  const parts = (name || '').trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return (name || '').slice(0, 2).toUpperCase() || '?';
+}
+
 function slugify(str) {
   return (str || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -35,7 +41,31 @@ function isDM(channelId) {
   return typeof channelId === 'string' && channelId.startsWith('dm:');
 }
 
-// ── Mention renderer ─────────────────────────────────────────────────────────
+// ── Date separator ────────────────────────────────────────────────────────────
+
+function getDateLabel(dateStr, uiLang) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const toDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  if (toDay(d) === toDay(now)) return uiLang === 'ja' ? '今日' : 'Today';
+  const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+  if (toDay(d) === toDay(yest)) return uiLang === 'ja' ? '昨日' : 'Yesterday';
+  const opts = { day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(uiLang === 'ja' ? 'ja-JP' : 'en-GB', opts);
+}
+
+function DateSeparator({ dateStr, uiLang }) {
+  return (
+    <div className={styles.dateSep}>
+      <div className={styles.dateSepLine} />
+      <span className={styles.dateSepText}>{getDateLabel(dateStr, uiLang)}</span>
+      <div className={styles.dateSepLine} />
+    </div>
+  );
+}
+
+// ── Mention renderer ──────────────────────────────────────────────────────────
 
 function renderContent(content) {
   if (!content.includes('@')) return content;
@@ -47,24 +77,13 @@ function renderContent(content) {
   );
 }
 
-// ── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ initials, isMe, avatarUrl }) {
-  return (
-    <div className={`${styles.avatar} ${isMe ? styles.avatarMe : ''}`}>
-      {avatarUrl
-        ? <img src={avatarUrl} alt={initials} className={styles.avatarImg} />
-        : initials}
-    </div>
-  );
-}
-
-// ── Message ──────────────────────────────────────────────────────────────────
+// ── Message ───────────────────────────────────────────────────────────────────
 
 const QUICK_EMOJIS = ['👍','❤️','😂','🔥','👏','😮'];
 
 function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, currentUserId,
-                   onReply, onReact, onEdit, onDelete, replyMsg, editingId, editText, onEditChange, onEditSave, onEditCancel }) {
+                   onReply, onReact, onEdit, onDelete, replyMsg, editingId, editText,
+                   onEditChange, onEditSave, onEditCancel, isFirst, isChannel }) {
   const [jaText, setJaText] = useState(null);
   const [enText, setEnText] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
@@ -80,12 +99,8 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
   useEffect(() => {
     if (!showTranslations) return;
     let cancelled = false;
-    Promise.all([
-      translate(msg.content, 'ja'),
-      translate(msg.content, 'en'),
-    ]).then(([ja, en]) => {
-      if (!cancelled) { setJaText(ja); setEnText(en); }
-    });
+    Promise.all([translate(msg.content, 'ja'), translate(msg.content, 'en')])
+      .then(([ja, en]) => { if (!cancelled) { setJaText(ja); setEnText(en); } });
     return () => { cancelled = true; };
   }, [msg.content, showTranslations]);
 
@@ -93,7 +108,6 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
   const isEditing = editingId === msg.id;
   const isDeleted = msg.is_deleted;
 
-  // Group reactions: { emoji: { count, byMe } }
   const rxnGroups = {};
   for (const r of (msgReactions ?? [])) {
     if (!rxnGroups[r.emoji]) rxnGroups[r.emoji] = { count: 0, byMe: false };
@@ -102,34 +116,31 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
   }
 
   return (
-    <div className={`${styles.message} ${isMe ? styles.messageMe : ''}`}
-         onMouseEnter={() => setShowActions(true)}
-         onMouseLeave={() => { setShowActions(false); setShowEmojiPicker(false); }}
-         onTouchStart={handleTouchStart}
-         onTouchEnd={handleTouchEnd}
-         onTouchMove={handleTouchEnd}>
-      <AvatarPhoto url={avatarUrl} initials={msg.user_initials} name={senderName ?? msg.user_name}
-        size={32} bg={isMe ? '#7e0027' : undefined} />
-      <div className={styles.messageBody}>
-        <div className={styles.messageHeader}>
-          <span className={styles.userName}>{msg.user_name}</span>
-          <span className={styles.time}>{time}{msg.edited_at && <span className={styles.editedTag}> {uiLang === 'ja' ? '(編集済)' : '(edited)'}</span>}</span>
-        </div>
+    <div
+      className={`${styles.msgRow} ${isMe ? styles.msgRowMe : ''} ${!isFirst ? styles.msgGrouped : ''}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => { setShowActions(false); setShowEmojiPicker(false); }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
+    >
+      {/* Avatar column — others only */}
+      {!isMe && (
+        isFirst
+          ? <AvatarPhoto url={avatarUrl} initials={msg.user_initials || nameInitials(senderName)} name={senderName ?? msg.user_name} size={32} />
+          : <div className={styles.avatarSpacer} />
+      )}
 
-        {/* Quoted reply */}
-        {replyMsg && !isDeleted && (
-          <div className={styles.replyQuote}>
-            <span className={styles.replyQuoteName}>{replyMsg.user_name}</span>
-            <span className={styles.replyQuoteText}>{replyMsg.content || '📷'}</span>
-          </div>
+      <div className={styles.msgBubbleWrap}>
+        {/* Sender name: shown in channels, first msg in group, not mine */}
+        {isChannel && isFirst && !isMe && (
+          <div className={styles.msgSenderName}>{senderName ?? msg.user_name}</div>
         )}
 
-        {/* Content or edit input */}
-        {isDeleted ? (
-          <p className={styles.deletedMsg}>{uiLang === 'ja' ? '🗑 削除されました' : '🗑 Message deleted'}</p>
-        ) : isEditing ? (
+        {isEditing ? (
           <div className={styles.editWrap}>
-            <input className={styles.editInput} value={editText} onChange={e => onEditChange(e.target.value)}
+            <input className={styles.editInput} value={editText}
+              onChange={e => onEditChange(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') onEditSave(); if (e.key === 'Escape') onEditCancel(); }}
               autoFocus />
             <div className={styles.editActions}>
@@ -138,16 +149,41 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
             </div>
           </div>
         ) : (
-          <>
-            {msg.image_url && (
-              <img src={msg.image_url} alt="shared" className={styles.msgImage}
-                onClick={() => window.open(msg.image_url, '_blank')} />
+          <div className={`${styles.bubble}
+            ${isMe ? styles.bubbleMe : styles.bubbleThem}
+            ${isFirst ? (isMe ? styles.bubbleTailMe : styles.bubbleTail) : ''}`}>
+
+            {/* Reply quote */}
+            {replyMsg && !isDeleted && (
+              <div className={styles.replyQuote}>
+                <span className={styles.replyQuoteName}>{replyMsg.user_name}</span>
+                <span className={styles.replyQuoteText}>{replyMsg.content || '📷'}</span>
+              </div>
             )}
-            {msg.content && <p className={styles.content}>{renderContent(msg.content)}</p>}
-          </>
+
+            {isDeleted ? (
+              <span className={styles.deletedMsg}>{uiLang === 'ja' ? '🗑 このメッセージは削除されました' : '🗑 This message was deleted'}</span>
+            ) : (
+              <>
+                {msg.image_url && (
+                  <img src={msg.image_url} alt="shared" className={styles.msgImage}
+                    onClick={() => window.open(msg.image_url, '_blank')} />
+                )}
+                {msg.content && <span className={styles.bubbleText}>{renderContent(msg.content)}</span>}
+              </>
+            )}
+
+            {/* Time inside bubble */}
+            {!isDeleted && (
+              <span className={styles.timeInBubble}>
+                {msg.edited_at && <span className={styles.editedTag}>{uiLang === 'ja' ? '編集済 ' : 'edited '}</span>}
+                {time}
+              </span>
+            )}
+          </div>
         )}
 
-        {/* Reactions bar */}
+        {/* Reactions */}
         {Object.keys(rxnGroups).length > 0 && (
           <div className={styles.reactionsBar}>
             {Object.entries(rxnGroups).map(([emoji, { count, byMe }]) => (
@@ -240,11 +276,8 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
     setSaving(true);
     const maxOrder = channels.reduce((m, c) => Math.max(m, c.sort_order ?? 0), 0);
     const { error: err } = await supabase.from('channels').insert({
-      id,
-      name:        formName.trim(),
-      description: formDesc.trim() || null,
-      created_by:  currentUserId,
-      sort_order:  maxOrder + 1,
+      id, name: formName.trim(), description: formDesc.trim() || null,
+      created_by: currentUserId, sort_order: maxOrder + 1,
     });
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -254,15 +287,12 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
   }
 
   async function handleSaveDesc() {
-    setError('');
-    setSaving(true);
+    setError(''); setSaving(true);
     const { error: err } = await supabase.from('channels')
-      .update({ description: formDesc.trim() || null })
-      .eq('id', target.id);
+      .update({ description: formDesc.trim() || null }).eq('id', target.id);
     setSaving(false);
     if (err) { setError(err.message); return; }
-    await loadAll();
-    setView('members');
+    await loadAll(); setView('members');
   }
 
   async function handleDelete(ch) {
@@ -281,21 +311,17 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
   }
 
   function toggleAddProfile(id) {
-    setAddProfileIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setAddProfileIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   }
 
   async function handleMove(ch, dir) {
-    const idx     = channels.findIndex(c => c.id === ch.id);
+    const idx = channels.findIndex(c => c.id === ch.id);
     const swapIdx = idx + dir;
     if (swapIdx < 0 || swapIdx >= channels.length) return;
     const other = channels[swapIdx];
     await Promise.all([
       supabase.from('channels').update({ sort_order: other.sort_order }).eq('id', ch.id),
-      supabase.from('channels').update({ sort_order: ch.sort_order   }).eq('id', other.id),
+      supabase.from('channels').update({ sort_order: ch.sort_order }).eq('id', other.id),
     ]);
     await loadAll();
   }
@@ -312,11 +338,10 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
         <div className={styles.modalHeader}>
           <span>{view === 'list' ? t('Manage Channels', 'チャンネル管理')
                 : view === 'create' ? t('New Channel', '新しいチャンネル')
-                : view === 'edit'   ? t('Edit Channel', 'チャンネルを編集')
+                : view === 'edit' ? t('Edit Channel', 'チャンネルを編集')
                 : t('Members', 'メンバー')}</span>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
-
         {error && <div className={styles.modalError}>{error}</div>}
 
         {view === 'list' && (
@@ -337,9 +362,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
                     setView('edit'); loadMembers(ch.id);
                   }}>{t('Edit', '編集')}</button>
                   <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                    onClick={() => handleDelete(ch)}>
-                    {t('Delete', '削除')}
-                  </button>
+                    onClick={() => handleDelete(ch)}>{t('Delete', '削除')}</button>
                 </div>
               </div>
             ))}
@@ -371,7 +394,6 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
               <button className={`${styles.modalTab} ${view === 'members' ? styles.modalTabActive : ''}`}
                 onClick={() => { setView('members'); loadMembers(target.id); }}>{t('Members', 'メンバー')}</button>
             </div>
-
             {view === 'edit' && (
               <>
                 <label className={styles.modalLabel}>{t('Description', '説明')}</label>
@@ -386,25 +408,19 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
                 </div>
               </>
             )}
-
             {view === 'members' && (
               <>
-                {/* Multi-select add */}
                 {profiles.filter(p => !members.some(m => m.profile_id === p.id)).length > 0 && (
                   <div className={styles.addMemberMulti}>
                     <div className={styles.addMemberMultiList}>
-                      {profiles
-                        .filter(p => !members.some(m => m.profile_id === p.id))
-                        .map(p => (
-                          <label key={p.id} className={styles.memberCheckRow}>
-                            <input type="checkbox"
-                              checked={addProfileIds.has(p.id)}
-                              onChange={() => toggleAddProfile(p.id)} />
-                            <AvatarPhoto url={p.avatar_url ?? null} initials={profileInitials(p)} name={p.display_name || p.email} size={24} />
-                            <span className={styles.memberCheckName}>{p.display_name || p.email}</span>
-                            <span className={styles.memberCheckRole}>{p.role}</span>
-                          </label>
-                        ))}
+                      {profiles.filter(p => !members.some(m => m.profile_id === p.id)).map(p => (
+                        <label key={p.id} className={styles.memberCheckRow}>
+                          <input type="checkbox" checked={addProfileIds.has(p.id)} onChange={() => toggleAddProfile(p.id)} />
+                          <AvatarPhoto url={p.avatar_url ?? null} initials={profileInitials(p)} name={p.display_name || p.email} size={24} />
+                          <span className={styles.memberCheckName}>{p.display_name || p.email}</span>
+                          <span className={styles.memberCheckRole}>{p.role}</span>
+                        </label>
+                      ))}
                     </div>
                     <button className={styles.saveBtn} onClick={handleAddMembers} disabled={!addProfileIds.size}>
                       {t(`Add (${addProfileIds.size})`, `追加 (${addProfileIds.size})`)}
@@ -422,9 +438,7 @@ function ChannelManageModal({ onClose, currentUserId, uiLang }) {
                         <AvatarPhoto url={p?.avatar_url ?? null} initials={p ? profileInitials(p) : '?'} name={p?.display_name || p?.email} size={28} />
                         <span className={styles.memberName}>{p?.display_name || p?.email}</span>
                         <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                          onClick={() => handleRemoveMember(m.profile_id)}>
-                          {t('Remove', '削除')}
-                        </button>
+                          onClick={() => handleRemoveMember(m.profile_id)}>{t('Remove', '削除')}</button>
                       </div>
                     );
                   })
@@ -457,13 +471,9 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
         <div className={styles.modalBody}>
-          <input
-            className={styles.modalInput}
+          <input className={styles.modalInput}
             placeholder={uiLang === 'ja' ? '名前で検索…' : 'Search by name…'}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            autoFocus
-          />
+            value={query} onChange={e => setQuery(e.target.value)} autoFocus />
           <div className={styles.dmUserList}>
             {filtered.map(p => (
               <button key={p.id} className={styles.dmUserItem} onClick={() => onSelect(p)}>
@@ -486,47 +496,62 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen, unreadCounts }) {
+function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, mobileOpen, unreadCounts, currentUserId }) {
   return (
     <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarMobileOpen : ''}`}>
       <div className={styles.sidebarHead}>
         <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'チャンネル' : 'Channels'}</span>
         {canManage && (
-          <button className={styles.manageBtn} onClick={onManage} title={uiLang === 'ja' ? 'チャンネル管理' : 'Manage channels'}>
-            ⚙
-          </button>
+          <button className={styles.manageBtn} onClick={onManage} title={uiLang === 'ja' ? 'チャンネル管理' : 'Manage channels'}>⚙</button>
         )}
       </div>
-      {channels.map(ch => (
-        <button key={ch.id}
-          className={`${styles.channelItem} ${activeChannel === ch.id ? styles.channelActive : ''}`}
-          onClick={() => onSelect(ch.id)}
-          title={ch.description ?? ''}>
-          <span className={styles.hash}>#</span>
-          {ch.name}
-        </button>
-      ))}
+      {channels.map(ch => {
+        const unread = unreadCounts?.[ch.id] ?? 0;
+        return (
+          <button key={ch.id}
+            className={`${styles.channelItem} ${activeChannel === ch.id ? styles.channelActive : ''}`}
+            onClick={() => onSelect(ch.id)} title={ch.description ?? ''}>
+            <span className={styles.hash}>#</span>
+            <span className={styles.chanItemName}>{ch.name}</span>
+            {unread > 0 && activeChannel !== ch.id && (
+              <span className={styles.chanUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
+            )}
+          </button>
+        );
+      })}
 
       <div className={styles.sidebarDivider} />
 
       <div className={styles.sidebarHead}>
         <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'ダイレクト' : 'Direct Messages'}</span>
-        <button className={styles.manageBtn} onClick={onNewDM} title={uiLang === 'ja' ? '新規DM' : 'New DM'}>
-          +
-        </button>
+        <button className={styles.manageBtn} onClick={onNewDM} title={uiLang === 'ja' ? '新規DM' : 'New DM'}>+</button>
       </div>
       {dmConversations.map(dm => {
         const unread = unreadCounts?.[dm.channelId] ?? 0;
+        const lastTime = dm.lastMsg?.created_at
+          ? new Date(dm.lastMsg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
+          : null;
+        const lastContent = dm.lastMsg
+          ? (dm.lastMsg.image_url && !dm.lastMsg.content ? '📷 Photo' : dm.lastMsg.content?.slice(0, 32) ?? '')
+          : '';
+        const isMyLast = dm.lastMsg?.sender_id === currentUserId;
+
         return (
           <button key={dm.channelId}
             className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
-            onClick={() => onSelect(dm.channelId)}
-            title={dm.name}>
-            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={28} />
-            <span className={styles.dmItemInfo}>
-              <span className={styles.dmItemName}>{dm.name}</span>
-              {dm.subtitle && <span className={styles.dmItemSub}>{dm.subtitle}</span>}
-            </span>
+            onClick={() => onSelect(dm.channelId)} title={dm.name}>
+            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={36} />
+            <div className={styles.dmItemInfo}>
+              <div className={styles.dmItemHeader}>
+                <span className={styles.dmItemName}>{dm.name}</span>
+                {lastTime && <span className={styles.dmItemTime}>{lastTime}</span>}
+              </div>
+              {lastContent && (
+                <span className={styles.dmItemLastMsg}>
+                  {isMyLast ? (uiLang === 'ja' ? 'あなた: ' : 'You: ') : ''}{lastContent}
+                </span>
+              )}
+            </div>
             {unread > 0 && activeChannel !== dm.channelId && (
               <span className={styles.dmUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
             )}
@@ -561,25 +586,22 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [myReadAt,      setMyReadAt]      = useState({});
   const [partnerReadAt, setPartnerReadAt] = useState(null);
   const [unreadCounts,  setUnreadCounts]  = useState({});
-  // New features
-  const [replyTo,       setReplyTo]       = useState(null);   // message being replied to
-  const [reactions,     setReactions]     = useState({});     // { msgId: [{emoji,count,byMe}] }
-  const [typingUsers,   setTypingUsers]   = useState([]);     // names of who is typing
-  const [editingId,     setEditingId]     = useState(null);   // message id being edited
+  const [replyTo,       setReplyTo]       = useState(null);
+  const [reactions,     setReactions]     = useState({});
+  const [typingUsers,   setTypingUsers]   = useState([]);
+  const [editingId,     setEditingId]     = useState(null);
   const [editText,      setEditText]      = useState('');
-  const [searchQuery,   setSearchQuery]   = useState('');
-  const [showSearch,    setShowSearch]    = useState(false);
-  const fileInputRef = useRef(null);
 
+  const fileInputRef     = useRef(null);
   const endRef           = useRef(null);
   const subscriptionRef  = useRef(null);
   const readSubRef       = useRef(null);
   const inputRef         = useRef(null);
+  const typingStopRef    = useRef(null);
 
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
 
-  // Stamp last-visited time so Dashboard can filter already-seen messages
   useEffect(() => {
     if (currentUser?.id) {
       localStorage.setItem(`chat_last_visited_${currentUser.id}`, new Date().toISOString());
@@ -610,7 +632,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     const myId = currentUser.id;
     const storageKey = `dm_convs_${myId}`;
 
-    // Restore from localStorage immediately so sidebar shows on remount
     try {
       const stored = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
       if (stored.length > 0) setDmConversations(stored);
@@ -619,17 +640,17 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     async function loadDMs() {
       const { data } = await supabase
         .from('messages')
-        .select('channel, created_at')
+        .select('channel, created_at, content, user_name, sender_id, image_url')
         .like('channel', 'dm:%')
         .order('created_at', { ascending: false })
         .limit(500);
       if (!data) return;
-      const seen = new Map(); // channelId → latestAt
+      const seen = new Map();
       for (const row of data) {
-        if (!seen.has(row.channel)) seen.set(row.channel, row.created_at);
+        if (!seen.has(row.channel)) seen.set(row.channel, row);
       }
       const convs = [];
-      for (const [ch, latestAt] of seen) {
+      for (const [ch, row] of seen) {
         const inner = ch.slice(3);
         const sep = inner.indexOf('_');
         if (sep === -1) continue;
@@ -637,7 +658,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         const b = inner.slice(sep + 1);
         const otherId = a === myId ? b : b === myId ? a : null;
         if (!otherId) continue;
-        convs.push({ channelId: ch, otherId, latestAt });
+        convs.push({ channelId: ch, otherId, latestAt: row.created_at, lastMsg: row });
       }
       convs.sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
       if (convs.length > 0) {
@@ -648,9 +669,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     loadDMs();
   }, [currentUser?.id]);
 
-  // ── Read receipts ────────────────────────────────────────────
+  // ── Read receipts ─────────────────────────────────────────────
 
-  // Mark the active channel as read for the current user
   const markAsRead = useCallback(async (channelId) => {
     if (!currentUser?.id || !channelId) return;
     const now = new Date().toISOString();
@@ -668,24 +688,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     const myId = currentUser.id;
     const channelIds = dmConversations.map(d => d.channelId);
 
-    supabase.from('channel_reads')
-      .select('channel_id, last_read_at')
-      .eq('user_id', myId)
-      .in('channel_id', channelIds)
+    supabase.from('channel_reads').select('channel_id, last_read_at')
+      .eq('user_id', myId).in('channel_id', channelIds)
       .then(({ data }) => {
         const reads = {};
         for (const r of (data ?? [])) reads[r.channel_id] = r.last_read_at;
         setMyReadAt(reads);
 
-        // Count unread per channel
         Promise.all(channelIds.map(async chId => {
           const since = reads[chId] ?? '1970-01-01T00:00:00Z';
-          const { count } = await supabase
-            .from('messages')
+          const { count } = await supabase.from('messages')
             .select('id', { count: 'exact', head: true })
-            .eq('channel', chId)
-            .neq('sender_id', myId)
-            .gt('created_at', since);
+            .eq('channel', chId).neq('sender_id', myId).gt('created_at', since);
           return [chId, count ?? 0];
         })).then(pairs => {
           setUnreadCounts(Object.fromEntries(pairs));
@@ -693,16 +707,42 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       });
   }, [currentUser?.id, dmConversations.length]);
 
+  // Load unread counts for regular channels
+  useEffect(() => {
+    if (!currentUser?.id || channels.length === 0) return;
+    const myId = currentUser.id;
+    const chIds = channels.map(c => c.id);
+
+    supabase.from('channel_reads').select('channel_id, last_read_at')
+      .eq('user_id', myId).in('channel_id', chIds)
+      .then(({ data }) => {
+        const reads = {};
+        for (const r of (data ?? [])) reads[r.channel_id] = r.last_read_at;
+
+        Promise.all(chIds.map(async chId => {
+          const since = reads[chId] ?? '1970-01-01T00:00:00Z';
+          const { count } = await supabase.from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('channel', chId).neq('sender_id', myId).gt('created_at', since);
+          return [chId, count ?? 0];
+        })).then(pairs => {
+          setUnreadCounts(prev => ({ ...prev, ...Object.fromEntries(pairs) }));
+        });
+      });
+  }, [currentUser?.id, channels.length]);
+
+  // Mark channel as read when switching to it
+  useEffect(() => {
+    if (!activeChannel || isDM(activeChannel) || !currentUser?.id) return;
+    markAsRead(activeChannel);
+  }, [activeChannel, currentUser?.id]);
+
   // When active DM channel changes: mark as read, load partner read time, subscribe
   useEffect(() => {
     if (!activeChannel || !isDM(activeChannel) || !currentUser?.id) return;
-
     markAsRead(activeChannel);
 
-    // Load both users' read timestamps
-    supabase.from('channel_reads')
-      .select('user_id, last_read_at')
-      .eq('channel_id', activeChannel)
+    supabase.from('channel_reads').select('user_id, last_read_at').eq('channel_id', activeChannel)
       .then(({ data }) => {
         const inner   = activeChannel.slice(3);
         const sep     = inner.indexOf('_');
@@ -713,7 +753,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         setPartnerReadAt(row?.last_read_at ?? null);
       });
 
-    // Realtime: watch for partner marking messages as read
     readSubRef.current?.unsubscribe();
     const rs = supabase.channel(`reads-${activeChannel}`)
       .on('postgres_changes', {
@@ -729,7 +768,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return () => { rs.unsubscribe(); readSubRef.current = null; };
   }, [activeChannel, currentUser?.id]);
 
-  // Profile lookup by ID — for avatar/name resolution in messages
+  // Profile lookup by ID
   const profilesById = useMemo(() => {
     const m = {};
     for (const p of profiles) m[p.id] = p;
@@ -759,26 +798,20 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       setLoading(true);
       setError(null);
       const { data, error: dbError } = await supabase
-        .from('messages').select('*')
-        .eq('channel', activeChannel)
-        .order('created_at', { ascending: true })
-        .limit(MAX_HISTORY);
+        .from('messages').select('*').eq('channel', activeChannel)
+        .order('created_at', { ascending: true }).limit(MAX_HISTORY);
       if (cancelled) return;
       if (dbError) {
         setError((uiLang === 'ja' ? 'メッセージを読み込めませんでした：' : 'Could not load messages: ') + dbError.message);
       } else {
         setMessagesByChannel(prev => ({ ...prev, [activeChannel]: data ?? [] }));
-        // Load reactions for these messages
         if (data?.length) {
           const ids = data.map(m => m.id);
           supabase.from('message_reactions').select('*').in('message_id', ids)
             .then(({ data: rxns }) => {
               if (!rxns || cancelled) return;
               const map = {};
-              for (const r of rxns) {
-                if (!map[r.message_id]) map[r.message_id] = [];
-                map[r.message_id].push(r);
-              }
+              for (const r of rxns) { if (!map[r.message_id]) map[r.message_id] = []; map[r.message_id].push(r); }
               if (!cancelled) setReactions(map);
             });
         }
@@ -793,12 +826,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   useEffect(() => {
     if (!activeChannel) return;
     subscriptionRef.current?.unsubscribe();
-    const channel = supabase
-      .channel(`chat:${activeChannel}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'messages',
-        filter: `channel=eq.${activeChannel}`,
-      }, payload => {
+    const channel = supabase.channel(`chat:${activeChannel}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `channel=eq.${activeChannel}` }, payload => {
         const newMsg = payload.new;
         setMessagesByChannel(prev => {
           const existing = prev[activeChannel] ?? [];
@@ -815,28 +845,23 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         });
         if (isDM(activeChannel)) {
           setDmConversations(prev => {
-            const updated = prev.map(d => d.channelId === activeChannel ? { ...d, latestAt: newMsg.created_at } : d);
+            const updated = prev.map(d => d.channelId === activeChannel
+              ? { ...d, latestAt: newMsg.created_at, lastMsg: newMsg } : d);
             return [...updated].sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
           });
-          // Auto-mark as read if message is from partner (channel is open)
           if (newMsg.sender_id && newMsg.sender_id !== currentUser?.id) {
             markAsRead(activeChannel);
           }
         }
       })
-      // Also subscribe to reaction changes and message updates
       .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions',
         filter: `message_id=in.(${[].join(',')})` }, () => {
-        // Reload reactions for active channel when any reaction changes
         supabase.from('message_reactions').select('*')
           .in('message_id', (messagesByChannel[activeChannel] ?? []).map(m => m.id))
           .then(({ data: rxns }) => {
             if (!rxns) return;
             const map = {};
-            for (const r of rxns) {
-              if (!map[r.message_id]) map[r.message_id] = [];
-              map[r.message_id].push(r);
-            }
+            for (const r of rxns) { if (!map[r.message_id]) map[r.message_id] = []; map[r.message_id].push(r); }
             setReactions(map);
           });
       })
@@ -848,7 +873,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           return { ...prev, [activeChannel]: updated };
         });
       })
-      // Typing indicator via broadcast
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.userId === currentUser?.id) return;
         setTypingUsers(prev => {
@@ -856,7 +880,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           if (!payload.typing) return filtered;
           return [...filtered, { id: payload.userId, name: payload.name }];
         });
-        // Clear typing indicator after 3s
         setTimeout(() => {
           setTypingUsers(prev => prev.filter(u => u.id !== payload.userId));
         }, 3000);
@@ -866,7 +889,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return () => { channel.unsubscribe(); setTypingUsers([]); };
   }, [activeChannel]);
 
-  // ── New feature handlers ───────────────────────────────────────────────
+  // ── Feature handlers ──────────────────────────────────────────
 
   const broadcastTyping = useCallback(() => {
     if (!activeChannel || !subscriptionRef.current) return;
@@ -883,11 +906,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       await supabase.from('message_reactions').delete().eq('id', existing.id);
     } else {
       await supabase.from('message_reactions').insert({
-        message_id: messageId, user_id: currentUser.id,
-        user_name: currentUser.name, emoji,
+        message_id: messageId, user_id: currentUser.id, user_name: currentUser.name, emoji,
       });
     }
-    // Reload reactions
     const allIds = (messagesByChannel[activeChannel] ?? []).map(m => m.id);
     const { data: rxns } = await supabase.from('message_reactions').select('*').in('message_id', allIds);
     if (rxns) {
@@ -918,9 +939,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   }, [activeChannel]);
 
   const mentionMatches = mentionQuery
-    ? profiles
-        .filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase()))
-        .slice(0, 6)
+    ? profiles.filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase())).slice(0, 6)
     : [];
 
   const insertMention = useCallback((p) => {
@@ -951,6 +970,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       channel:       activeChannel,
       user_name:     currentUser.name,
       user_initials: currentUser.initials,
+      sender_id:     currentUser.id,
       content:       text,
       image_url:     imageUrl,
       reply_to_id:   replyId,
@@ -972,16 +992,15 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       reply_to_id:   replyId,
     });
 
-    // Bump DM to top of list
     if (isDM(activeChannel)) {
       const now = new Date().toISOString();
       setDmConversations(prev => {
-        const updated = prev.map(d => d.channelId === activeChannel ? { ...d, latestAt: now } : d);
+        const updated = prev.map(d => d.channelId === activeChannel
+          ? { ...d, latestAt: now, lastMsg: { content: text, sender_id: currentUser.id, image_url: imageUrl, created_at: now } } : d);
         return [...updated].sort((a, b) => (b.latestAt ?? '').localeCompare(a.latestAt ?? ''));
       });
     }
 
-    // Send notification + push to recipient for DMs
     if (!insertError && isDM(activeChannel)) {
       const inner = activeChannel.slice(3);
       const sep = inner.indexOf('_');
@@ -989,11 +1008,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       const b = inner.slice(sep + 1);
       const recipientId = a === currentUser.id ? b : a;
       supabase.from('notifications').insert({
-        user_id:    recipientId,
-        type:       'dm',
-        title:      currentUser.name,
-        body:       text,
-        nav_target: 'chat',
+        user_id: recipientId, type: 'dm', title: currentUser.name,
+        body: text, nav_target: 'chat',
       }).then();
       sendPush([recipientId], {
         title:   currentUser.name,
@@ -1002,6 +1018,35 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         tag:     `dm-${activeChannel}`,
         prefKey: 'chat_dm',
       });
+    }
+
+    // Channel @mention notifications
+    if (!insertError && !isDM(activeChannel) && text.includes('@')) {
+      const mentionTokens = (text.match(/@(\S+)/g) ?? []).map(m => m.slice(1).toLowerCase());
+      if (mentionTokens.length > 0) {
+        const mentionedProfiles = profiles.filter(p => {
+          const name = (profileFullName(p) || p.display_name || '').toLowerCase();
+          return mentionTokens.some(tok => name.includes(tok));
+        }).filter(p => p.id !== currentUser.id);
+
+        if (mentionedProfiles.length > 0) {
+          const recipientIds = mentionedProfiles.map(p => p.id);
+          recipientIds.forEach(uid => {
+            supabase.from('notifications').insert({
+              user_id: uid, type: 'mention', title: currentUser.name,
+              body: `mentioned you in #${activeChannel}: ${text.slice(0, 80)}`,
+              nav_target: 'chat',
+            }).then();
+          });
+          sendPush(recipientIds, {
+            title:   `${currentUser.name} in #${activeChannel}`,
+            body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+            url:     '/?nav=chat',
+            tag:     `mention-${activeChannel}`,
+            prefKey: 'chat_mention',
+          });
+        }
+      }
     }
 
     if (insertError) {
@@ -1013,7 +1058,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       setInputValue(text);
     }
     setSending(false);
-  }, [inputValue, sending, activeChannel, currentUser]);
+  }, [inputValue, sending, activeChannel, currentUser, replyTo, profiles]);
 
   const handleKeyDown = useCallback(e => {
     if (mentionQuery && mentionMatches.length > 0) {
@@ -1038,9 +1083,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     setShowChanList(false);
   };
 
-  const activeChannelObj  = channels.find(c => c.id === activeChannel);
-  const activeDM          = dmConversationsWithNames.find(d => d.channelId === activeChannel);
-  const isActiveDM        = isDM(activeChannel);
+  const activeChannelObj = channels.find(c => c.id === activeChannel);
+  const activeDM         = dmConversationsWithNames.find(d => d.channelId === activeChannel);
+  const isActiveDM       = isDM(activeChannel);
 
   const headerTitle = isActiveDM
     ? activeDM?.name ?? activeChannel
@@ -1067,24 +1112,23 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         uiLang={uiLang}
         mobileOpen={showChanList}
         unreadCounts={unreadCounts}
+        currentUserId={currentUser?.id}
       />
 
       <div className={styles.chatArea}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <button className={styles.mobileChanBtn} onClick={() => setShowChanList(v => !v)}>≡</button>
+            {isActiveDM && activeDM?.avatarUrl && (
+              <AvatarPhoto url={activeDM.avatarUrl} initials={activeDM.initials} name={activeDM.name} size={28} />
+            )}
             <span className={styles.headerChannel}>{headerTitle}</span>
             {!isActiveDM && activeChannelObj?.description && (
               <span className={styles.headerDesc}>{activeChannelObj.description}</span>
             )}
-            {isActiveDM && (
-              <span className={styles.headerDesc}>
-                {uiLang === 'ja' ? 'ダイレクトメッセージ' : 'Direct Message'}
-              </span>
-            )}
           </div>
           <span className={styles.headerCount}>
-            {loading ? '…' : `${messages.length} ${uiLang === 'ja' ? 'メッセージ' : 'messages'}`}
+            {loading ? '…' : `${messages.length} ${uiLang === 'ja' ? 'メッセージ' : 'msg'}`}
           </span>
         </div>
 
@@ -1100,59 +1144,95 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           {!loading && messages.length === 0 && (
             <p className={styles.emptyText}>
               {isActiveDM
-                ? (uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : `Start a conversation with ${activeDM?.name ?? ''}`)
+                ? (uiLang === 'ja' ? `${activeDM?.name ?? ''} にメッセージを送りましょう！` : `Start a conversation with ${activeDM?.name ?? ''}`)
                 : (uiLang === 'ja' ? 'まだメッセージがありません。最初に送信しましょう！' : 'No messages yet. Be the first to say something!')}
             </p>
           )}
           {(() => {
-            // Last sent message that the DM partner has read
             const lastReadId = isActiveDM && partnerReadAt
               ? [...messages].reverse().find(m =>
-                  m.user_name === currentUser.name && !m._optimistic &&
-                  m.created_at <= partnerReadAt
+                  (m.sender_id === currentUser.id || (!m.sender_id && m.user_name === currentUser.name)) &&
+                  !m._optimistic && m.created_at <= partnerReadAt
                 )?.id
               : null;
             const readTime = partnerReadAt
-              ? new Date(partnerReadAt).toLocaleTimeString(
-                  uiLang === 'ja' ? 'ja-JP' : 'en-GB',
-                  { hour: '2-digit', minute: '2-digit' }
-                )
+              ? new Date(partnerReadAt).toLocaleTimeString(uiLang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
               : null;
-            return messages.map(msg => {
-              const isMe   = msg.user_name === currentUser.name;
+
+            const items = [];
+            for (let i = 0; i < messages.length; i++) {
+              const msg  = messages[i];
+              const prev = messages[i - 1];
+
+              const msgDay  = new Date(msg.created_at).toDateString();
+              const prevDay = prev ? new Date(prev.created_at).toDateString() : null;
+
+              // Date separator
+              if (!prev || msgDay !== prevDay) {
+                items.push(<DateSeparator key={`date-${i}-${msg.id}`} dateStr={msg.created_at} uiLang={uiLang} />);
+              }
+
+              // Grouping: isFirst = new sender OR new day
+              const msgSenderId  = msg.sender_id || msg.user_name;
+              const prevSenderId = prev ? (prev.sender_id || prev.user_name) : null;
+              const isFirst = !prev || prevSenderId !== msgSenderId || msgDay !== prevDay;
+
+              const isMe   = msg.sender_id ? msg.sender_id === currentUser.id : msg.user_name === currentUser.name;
               const sender = msg.sender_id ? profilesById[msg.sender_id] : null;
               const url    = isMe ? currentUser.avatarUrl : (sender?.avatar_url ?? null);
               const name   = isMe ? currentUser.name : (sender ? profileFullName(sender) : msg.user_name);
-              return (
-              <div key={msg.id}>
-                <Message
-                  msg={msg}
-                  isMe={isMe}
-                  uiLang={uiLang}
-                  avatarUrl={url}
-                  senderName={name}
-                  currentUserId={currentUser.id}
-                  msgReactions={reactions[msg.id] ?? []}
-                  onReact={toggleReaction}
-                  onReply={setReplyTo}
-                  onEdit={(m) => { setEditingId(m.id); setEditText(m.content); }}
-                  onDelete={deleteMessage}
-                  editingId={editingId}
-                  editText={editText}
-                  onEditChange={setEditText}
-                  onEditSave={saveEdit}
-                  onEditCancel={() => { setEditingId(null); setEditText(''); }}
-                  replyMsg={msg.reply_to_id ? (messagesByChannel[activeChannel] ?? []).find(m => m.id === msg.reply_to_id) : null}
-                />
-                {msg.id === lastReadId && (
-                  <div className={styles.readReceipt}>
-                    ✓ {uiLang === 'ja' ? `既読 ${readTime}` : `Read ${readTime}`}
-                  </div>
-                )}
-              </div>
-            );
-          });
+
+              items.push(
+                <div key={msg.id}>
+                  <Message
+                    msg={msg}
+                    isMe={isMe}
+                    uiLang={uiLang}
+                    avatarUrl={url}
+                    senderName={name}
+                    currentUserId={currentUser.id}
+                    msgReactions={reactions[msg.id] ?? []}
+                    onReact={toggleReaction}
+                    onReply={setReplyTo}
+                    onEdit={(m) => { setEditingId(m.id); setEditText(m.content); }}
+                    onDelete={deleteMessage}
+                    editingId={editingId}
+                    editText={editText}
+                    onEditChange={setEditText}
+                    onEditSave={saveEdit}
+                    onEditCancel={() => { setEditingId(null); setEditText(''); }}
+                    replyMsg={msg.reply_to_id ? (messagesByChannel[activeChannel] ?? []).find(m => m.id === msg.reply_to_id) : null}
+                    isFirst={isFirst}
+                    isChannel={!isActiveDM}
+                  />
+                  {msg.id === lastReadId && (
+                    <div className={`${styles.readReceipt} ${isActiveDM ? styles.readReceiptDM : ''}`}>
+                      ✓✓ {uiLang === 'ja' ? `既読 ${readTime}` : `Read ${readTime}`}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return items;
           })()}
+
+          {/* Typing indicator */}
+          {typingUsers.length > 0 && (
+            <div className={styles.typingIndicator}>
+              <span className={styles.typingDots}>
+                <span className={styles.typingDot} />
+                <span className={styles.typingDot} />
+                <span className={styles.typingDot} />
+              </span>
+              <span className={styles.typingText}>
+                {typingUsers.map(u => u.name).join(', ')}{' '}
+                {typingUsers.length === 1
+                  ? (uiLang === 'ja' ? 'が入力中…' : 'is typing…')
+                  : (uiLang === 'ja' ? 'が入力中…' : 'are typing…')}
+              </span>
+            </div>
+          )}
+
           <div ref={endRef} />
         </div>
 
@@ -1178,6 +1258,29 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             </div>
           )}
           <div className={styles.inputBar}>
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={async e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setSending(true);
+                const url = await uploadImage(file);
+                if (url) await sendMessage(url);
+                setSending(false);
+                e.target.value = '';
+              }}
+            />
+            <button
+              className={styles.attachBtn}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || !activeChannel}
+              title={uiLang === 'ja' ? '画像を送信' : 'Send image'}>
+              📎
+            </button>
             <input
               ref={inputRef}
               type="text"
@@ -1186,6 +1289,16 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               onChange={e => {
                 const val = e.target.value;
                 setInputValue(val);
+                // Typing indicator
+                broadcastTyping();
+                clearTimeout(typingStopRef.current);
+                typingStopRef.current = setTimeout(() => {
+                  subscriptionRef.current?.send({
+                    type: 'broadcast', event: 'typing',
+                    payload: { userId: currentUser?.id, name: currentUser?.name, typing: false },
+                  });
+                }, 3000);
+                // @mention detection
                 if (!isActiveDM) {
                   const cursor = e.target.selectionStart ?? val.length;
                   const before = val.slice(0, cursor);
@@ -1206,7 +1319,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               className={styles.sendButton}
               onClick={() => sendMessage()}
               disabled={sending || !inputValue.trim() || !activeChannel}>
-              {uiLang === 'ja' ? '送信' : 'Send'}
+              {sending ? '…' : (uiLang === 'ja' ? '送信' : 'Send')}
             </button>
           </div>
         </div>
