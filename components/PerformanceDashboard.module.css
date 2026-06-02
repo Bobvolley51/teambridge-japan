@@ -119,6 +119,7 @@
 .checkYes { color: #10b981; font-weight: 700; font-size: 14px; }
 .checkNo  { color: #ef4444; font-weight: 700; font-size: 14px; }
 .rpeDotEmpty { width: 8px; height: 8px; display: inline-block; flex-shrink: 0; }
+.boolMark { font-size: 11px; font-weight: 700; line-height: 1; flex-shrink: 0; }
 
 .attControls { display: flex; align-items: center; gap: 6px; padding: 12px 16px 8px; flex-shrink: 0; }
 .attLabel    { font-size: 12px; color: #7e0027; font-weight: 600; margin-right: 2px; }

@@ -330,9 +330,10 @@ export default function PerformanceDashboard({ lang, profile }) {
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.mindfulness != null
-                                        ? <span key={i} className={styles.rpeDot}
-                                            style={{ background: s.mindfulness ? '#10b981' : '#ef4444' }}
-                                            title={s.mindfulness ? 'Mindful ✓' : 'Mindful ✗'} />
+                                        ? <span key={i} className={styles.boolMark}
+                                            style={{ color: s.mindfulness ? '#10b981' : '#ef4444' }}>
+                                            {s.mindfulness ? '✓' : '✗'}
+                                          </span>
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
                                   </div>
@@ -345,9 +346,10 @@ export default function PerformanceDashboard({ lang, profile }) {
                                   <div className={styles.dotRow}>
                                     {row.recent.map((s, i) => (
                                       s.practice_goal_reached != null
-                                        ? <span key={i} className={styles.rpeDot}
-                                            style={{ background: s.practice_goal_reached ? '#10b981' : '#ef4444' }}
-                                            title={s.practice_goal_reached ? 'Goal ✓' : 'Goal ✗'} />
+                                        ? <span key={i} className={styles.boolMark}
+                                            style={{ color: s.practice_goal_reached ? '#10b981' : '#ef4444' }}>
+                                            {s.practice_goal_reached ? '✓' : '✗'}
+                                          </span>
                                         : <span key={i} className={styles.rpeDotEmpty} />
                                     ))}
                                   </div>
