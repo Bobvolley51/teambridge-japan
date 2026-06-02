@@ -667,7 +667,7 @@ export default function Home() {
               })}
             </nav>
           )}
-          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} onOpenWellness={profile?.role === 'Player' ? () => setShowWellness(true) : undefined} />}
+          {nav==='dashboard' && <Dashboard lang={lang} profile={profile} currentUserId={user.id} currentUserName={displayName} currentUserInitials={initials} onNavigate={navigate} onOpenWellness={profile?.role === 'Player' ? () => setShowWellness(true) : undefined} onProfileUpdate={() => loadProfile(user.id, false)} />}
           {nav==='calendar'  && <Calendar          lang={lang} currentUserName={displayName} role={profile?.role} currentUserId={user.id} />}
           {nav==='chat'      && <Chat              uiLang={lang} currentUser={{ name: displayName, initials, id: user.id, avatarUrl: profile?.avatar_url }} profile={profile} />}
           {nav==='tasks'     && <Tasks             lang={lang} profile={profile} />}

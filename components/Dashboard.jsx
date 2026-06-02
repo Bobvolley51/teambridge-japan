@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo, toJstDateStart, toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated, translate } from '@/lib/translate';
@@ -246,6 +246,33 @@ function AnnItem({ ann, lang, onNavigate, onDismiss }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
+// Center-crop + resize to square — same logic as UserMenu
+function resizeAndCrop(file, maxPx = 400) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const size = Math.min(img.width, img.height);
+        const sx   = (img.width  - size) / 2;
+        const sy   = (img.height - size) / 2;
+        const out  = Math.min(size, maxPx);
+        const canvas = document.createElement('canvas');
+        canvas.width = out; canvas.height = out;
+        canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, out, out);
+        canvas.toBlob(
+          blob => blob ? resolve(blob) : reject(new Error('Conversion failed')),
+          'image/jpeg', 0.85
+        );
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Dashboard({
   lang = 'en',
   profile,
@@ -254,6 +281,7 @@ export default function Dashboard({
   currentUserName,
   onNavigate,
   onOpenWellness,
+  onProfileUpdate,
 }) {
   const [events,            setEvents]            = useState([]);
   const [messages,          setMessages]          = useState([]);
@@ -275,6 +303,12 @@ export default function Dashboard({
   );
   const [loading,           setLoading]           = useState(true);
   const [eventTitleMap,     setEventTitleMap]     = useState(new Map());
+
+  // Profile photo reminder
+  const [photoBlob,         setPhotoBlob]         = useState(null);
+  const [photoPreview,      setPhotoPreview]      = useState(null);
+  const [photoUploading,    setPhotoUploading]    = useState(false);
+  const photoInputRef = useRef(null);
 
   useEffect(() => { load(); }, [currentUserId, profile?.role]);
 
@@ -722,8 +756,92 @@ export default function Dashboard({
       : []),
   ];
 
+  // ── Profile photo reminder handlers ──────────────────────────────────────────
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const blob = await resizeAndCrop(file);
+      setPhotoBlob(blob);
+      setPhotoPreview(URL.createObjectURL(blob));
+    } catch { /* ignore */ }
+    e.target.value = '';
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoBlob || !currentUserId) return;
+    setPhotoUploading(true);
+    try {
+      const path = `avatars/${currentUserId}/avatar.jpg`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, photoBlob, { upsert: true, contentType: 'image/jpeg' });
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+        await supabase.from('profiles').update({ avatar_url: `${publicUrl}?t=${Date.now()}` }).eq('id', currentUserId);
+        onProfileUpdate?.();
+      }
+    } catch { /* ignore */ }
+    setPhotoBlob(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoUploading(false);
+  };
+
+  const cancelPhotoPreview = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoBlob(null);
+    setPhotoPreview(null);
+  };
+
   return (
     <div className={styles.wrapper}>
+
+      {/* Profile photo reminder — shown until user uploads a photo */}
+      {!profile?.avatar_url && (
+        <div className={styles.photoReminder}>
+          <input type="file" ref={photoInputRef} accept="image/*" style={{ display: 'none' }} onChange={handlePhotoSelect} />
+          {!photoPreview ? (
+            <>
+              <div className={styles.photoReminderLeft}>
+                <div className={styles.photoReminderCircle}>👤</div>
+                <div>
+                  <div className={styles.photoReminderTitle}>
+                    {lang === 'ja' ? 'プロフィール写真を追加しましょう' : 'Add a profile photo'}
+                  </div>
+                  <div className={styles.photoReminderSub}>
+                    {lang === 'ja' ? 'チームメンバーがあなたを見つけやすくなります' : 'Your teammates will recognize you more easily'}
+                  </div>
+                </div>
+              </div>
+              <button className={styles.photoReminderBtn} onClick={() => photoInputRef.current?.click()}>
+                {lang === 'ja' ? '写真を選ぶ' : 'Choose Photo'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className={styles.photoReminderLeft}>
+                <img src={photoPreview} alt="preview" className={styles.photoReminderPreview} />
+                <div>
+                  <div className={styles.photoReminderTitle}>
+                    {lang === 'ja' ? 'この写真でよろしいですか？' : 'Does this look good?'}
+                  </div>
+                  <div className={styles.photoReminderSub}>
+                    {lang === 'ja' ? '円形でこのように表示されます' : 'This is how it will appear in your circle'}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.photoReminderActions}>
+                <button className={styles.photoReminderCancel} onClick={cancelPhotoPreview} disabled={photoUploading}>
+                  {lang === 'ja' ? '変更' : 'Change'}
+                </button>
+                <button className={styles.photoReminderBtn} onClick={handlePhotoUpload} disabled={photoUploading}>
+                  {photoUploading ? '…' : (lang === 'ja' ? '保存' : 'Upload')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Welcome banner */}
       <div className={styles.welcome}>
