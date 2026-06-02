@@ -99,6 +99,33 @@
 }
 .photoReminderCancel:hover { background: #fef3c7; }
 
+/* Crop adjustment slider */
+.cropWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cropSliderWrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.cropSliderLabel {
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1;
+}
+
+.cropSlider {
+  flex: 1;
+  height: 4px;
+  accent-color: #f59e0b;
+  cursor: pointer;
+  min-width: 80px;
+}
+
 @media (max-width: 768px) {
   .photoReminder { padding: 10px 12px; gap: 10px; }
   .photoReminderCircle { width: 42px; height: 42px; font-size: 18px; }

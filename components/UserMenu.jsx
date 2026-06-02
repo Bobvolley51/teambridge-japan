@@ -108,10 +108,11 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
       const img = new Image();
       img.onerror = reject;
       img.onload = () => {
-        // Center-crop to square so portrait/landscape photos look good in circular avatars
         const size = Math.min(img.width, img.height);
         const sx   = (img.width  - size) / 2;
-        const sy   = (img.height - size) / 2;
+        // Portrait photos: crop near the top to capture the face instead of the body
+        const isPortrait = img.height > img.width * 1.2;
+        const sy = Math.round((img.height - size) * (isPortrait ? 0.1 : 0.5));
         const out  = Math.min(size, maxPx);
         const canvas = document.createElement('canvas');
         canvas.width  = out;
