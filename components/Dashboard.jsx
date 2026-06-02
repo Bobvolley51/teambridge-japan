@@ -819,12 +819,14 @@ export default function Dashboard({
             <>
               <div className={styles.photoReminderLeft}>
                 <div className={styles.cropWrap}>
-                  {/* Circle preview — objectPosition moves the crop window */}
-                  <img
-                    src={photoOriginalUrl}
-                    alt="preview"
+                  {/* background-position is reliable cross-browser for live crop preview */}
+                  <div
                     className={styles.photoReminderPreview}
-                    style={{ objectPosition: `center ${photoCropY * 100}%` }}
+                    style={{
+                      backgroundImage: `url(${photoOriginalUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: `center ${photoCropY * 100}%`,
+                    }}
                   />
                 </div>
                 <div>
