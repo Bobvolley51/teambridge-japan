@@ -70,11 +70,12 @@ function DateSeparator({ dateStr, uiLang }) {
 function renderContent(content) {
   if (!content.includes('@')) return content;
   const parts = content.split(/(@\S+)/g);
-  return parts.map((part, i) =>
-    /^@\S+$/.test(part)
-      ? <span key={i} className={styles.mention}>{part}</span>
-      : part
-  );
+  return parts.map((part, i) => {
+    if (!/^@\S+$/.test(part)) return part;
+    if (part.toLowerCase() === '@all')
+      return <span key={i} className={styles.mentionAll}>{part}</span>;
+    return <span key={i} className={styles.mention}>{part}</span>;
+  });
 }
 
 // ── Message ───────────────────────────────────────────────────────────────────
@@ -956,12 +957,21 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return publicUrl;
   }, [activeChannel]);
 
-  const mentionMatches = mentionQuery
-    ? profiles.filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase())).slice(0, 6)
-    : [];
+  const ALL_ENTRY = { id: '__all__', display_name: 'all', _isAll: true };
+  const mentionMatches = mentionQuery && !isActiveDM
+    ? [
+        // @all always at top when query matches "all" (or is blank/partial)
+        ...('all'.startsWith(mentionQuery.query.toLowerCase()) ? [ALL_ENTRY] : []),
+        ...profiles
+          .filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase()))
+          .slice(0, 6),
+      ]
+    : mentionQuery
+      ? profiles.filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase())).slice(0, 6)
+      : [];
 
   const insertMention = useCallback((p) => {
-    const name = p.display_name || p.email;
+    const name = p._isAll ? 'all' : (p.display_name || p.email);
     const cursor = inputRef.current?.selectionStart ?? inputValue.length;
     const before = inputValue.slice(0, mentionQuery?.start ?? cursor);
     const after  = inputValue.slice(cursor);
@@ -1041,7 +1051,34 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     // Channel @mention notifications
     if (!insertError && !isDM(activeChannel) && text.includes('@')) {
       const mentionTokens = (text.match(/@(\S+)/g) ?? []).map(m => m.slice(1).toLowerCase());
-      if (mentionTokens.length > 0) {
+
+      if (mentionTokens.includes('all')) {
+        // @all — notify every channel member (or all profiles for open channels)
+        const { data: members } = await supabase.from('channel_members')
+          .select('profile_id').eq('channel_id', activeChannel);
+        const recipientIds = (members?.length > 0
+          ? members.map(m => m.profile_id)
+          : profiles.map(p => p.id)
+        ).filter(id => id !== currentUser.id);
+
+        if (recipientIds.length > 0) {
+          recipientIds.forEach(uid => {
+            supabase.from('notifications').insert({
+              user_id: uid, type: 'mention', title: currentUser.name,
+              body: `@all in #${activeChannel}: ${text.slice(0, 80)}`,
+              nav_target: 'chat',
+            }).then();
+          });
+          sendPush(recipientIds, {
+            title:   `${currentUser.name} in #${activeChannel}`,
+            body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+            url:     '/?nav=chat',
+            tag:     `all-${activeChannel}`,
+            prefKey: 'chat_mention',
+          });
+        }
+      } else if (mentionTokens.length > 0) {
+        // Individual @mentions
         const mentionedProfiles = profiles.filter(p => {
           const name = (profileFullName(p) || p.display_name || '').toLowerCase();
           return mentionTokens.some(tok => name.includes(tok));
@@ -1266,10 +1303,19 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             <div className={styles.mentionDropdown}>
               {mentionMatches.map((p, i) => (
                 <button key={p.id}
-                  className={`${styles.mentionItem} ${i === mentionIdx ? styles.mentionItemActive : ''}`}
+                  className={`${styles.mentionItem} ${i === mentionIdx ? styles.mentionItemActive : ''} ${p._isAll ? styles.mentionItemAll : ''}`}
                   onMouseDown={e => { e.preventDefault(); insertMention(p); }}>
-                  <span className={styles.mentionName}>{p.display_name || p.email}</span>
-                  {p.display_name && <span className={styles.mentionEmail}>{p.email}</span>}
+                  {p._isAll ? (
+                    <>
+                      <span className={styles.mentionAllIcon}>@all</span>
+                      <span className={styles.mentionEmail}>{uiLang === 'ja' ? '全員に通知' : 'Notify everyone'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.mentionName}>{p.display_name || p.email}</span>
+                      {p.display_name && <span className={styles.mentionEmail}>{p.email}</span>}
+                    </>
+                  )}
                 </button>
               ))}
             </div>

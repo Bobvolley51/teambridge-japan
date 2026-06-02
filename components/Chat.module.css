@@ -476,6 +476,21 @@
 }
 .bubbleMe .mention { background: rgba(255,255,255,0.25); color: #ffffff; }
 
+/* @all — orange to stand out */
+.mentionAll {
+  display: inline; background: rgba(245,158,11,0.15); color: #92400e;
+  font-weight: 700; border-radius: 4px; padding: 0 3px;
+}
+.bubbleMe .mentionAll { background: rgba(255,255,255,0.3); color: #fef3c7; }
+
+/* @all row in dropdown */
+.mentionItemAll { background: #fffbea; }
+.mentionItemAll:hover { background: #fef3c7; }
+.mentionAllIcon {
+  font-size: 13px; font-weight: 700; color: #92400e;
+  background: #fde68a; border-radius: 4px; padding: 1px 6px;
+}
+
 /* ── Edit mode ─────────────────────────────────────────────────── */
 
 .editWrap { display: flex; flex-direction: column; gap: 4px; }
