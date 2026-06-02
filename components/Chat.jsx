@@ -600,7 +600,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
 
   // Load profiles for @-mentions and DM picker
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, first_name, last_name, email, role, position').order('display_name')
+    supabase.from('profiles').select('id, display_name, first_name, last_name, email, role, position, avatar_url').order('display_name')
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
 

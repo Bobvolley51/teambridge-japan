@@ -101,18 +101,22 @@ export default function UserMenu({ user, profile, lang, onProfileUpdate }) {
   };
 
   // ── Upload avatar ───────────────────────────────────────────────────────
-  const resizeImage = (file, maxPx = 800) => new Promise((resolve, reject) => {
+  const resizeImage = (file, maxPx = 400) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
     reader.onload = (ev) => {
       const img = new Image();
       img.onerror = reject;
       img.onload = () => {
-        const scale  = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        // Center-crop to square so portrait/landscape photos look good in circular avatars
+        const size = Math.min(img.width, img.height);
+        const sx   = (img.width  - size) / 2;
+        const sy   = (img.height - size) / 2;
+        const out  = Math.min(size, maxPx);
         const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.width  * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.width  = out;
+        canvas.height = out;
+        canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, out, out);
         canvas.toBlob(
           blob => blob ? resolve(blob) : reject(new Error('Image conversion failed')),
           'image/jpeg', 0.85
