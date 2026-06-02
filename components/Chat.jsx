@@ -617,6 +617,12 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const readSubRef       = useRef(null);
   const inputRef         = useRef(null);
   const typingStopRef    = useRef(null);
+  const isTouchRef       = useRef(false);
+
+  // Detect touch device once on mount
+  useEffect(() => {
+    isTouchRef.current = window.matchMedia('(hover: none)').matches;
+  }, []);
 
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
@@ -808,6 +814,14 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  // Auto-resize textarea as content grows/shrinks
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, [inputValue]);
 
   // Load history when active channel changes
   useEffect(() => {
@@ -1122,7 +1136,13 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       if (e.key === 'Escape')    { setMentionQuery(null); return; }
       if (e.key === 'Enter')     { e.preventDefault(); insertMention(mentionMatches[mentionIdx]); return; }
     }
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Mobile / touch: Return key inserts a line break (send via button)
+      // Desktop: Enter sends, Shift+Enter inserts a line break
+      if (isTouchRef.current) return;
+      e.preventDefault();
+      sendMessage();
+    }
   }, [mentionQuery, mentionMatches, mentionIdx, insertMention, sendMessage]);
 
   const handleSelectDMUser = (p) => {
@@ -1344,9 +1364,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               title={uiLang === 'ja' ? '画像を送信' : 'Send image'}>
               📎
             </button>
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
+              rows={1}
               className={styles.input}
               value={inputValue}
               onChange={e => {
