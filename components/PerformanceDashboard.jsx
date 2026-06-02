@@ -37,6 +37,42 @@ function daysAgo(n) {
   return d;
 }
 
+// EWMA-based ACWR per Gabbett 2016 / PDF spec
+// λ_acute = 2/(7+1) = 0.25   λ_chronic = 2/(28+1) ≈ 0.069
+// Initialized on first session day: Acute = Chronic = sRPE → ACWR = 1.0
+// Every calendar day (including rest days with sRPE=0) advances the EWMAs.
+function computeEWMA(sessions) {
+  // Aggregate load per calendar date (two sessions same day sum)
+  const loadByDate = {};
+  for (const s of sessions) {
+    if (s.load_au > 0) loadByDate[s.event_date] = (loadByDate[s.event_date] ?? 0) + s.load_au;
+  }
+  const sortedDates = Object.keys(loadByDate).sort();
+  if (!sortedDates.length) return { acute: 0, chronic: 0, acwr: null };
+
+  // Day 1 bootstrap: Acute = Chronic = first day's load → ACWR = 1.0
+  const firstLoad = loadByDate[sortedDates[0]];
+  let acute   = firstLoad;
+  let chronic = firstLoad;
+
+  // Advance one calendar day at a time from day 2 through today
+  const today = new Date().toISOString().slice(0, 10);
+  const cur   = new Date(sortedDates[0]);
+  cur.setDate(cur.getDate() + 1);
+  const end = new Date(today);
+
+  while (cur <= end) {
+    const d    = cur.toISOString().slice(0, 10);
+    const load = loadByDate[d] ?? 0;
+    acute   = load * 0.25  + acute   * 0.75;
+    chronic = load * 0.069 + chronic * 0.931;
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const acwr = chronic > 0 ? Math.round((acute / chronic) * 100) / 100 : null;
+  return { acute: Math.round(acute), chronic: Math.round(chronic), acwr };
+}
+
 export default function PerformanceDashboard({ lang, profile }) {
   const [tab,              setTab]              = useState('acwr');
   const [records,          setRecords]          = useState([]);
@@ -48,10 +84,12 @@ export default function PerformanceDashboard({ lang, profile }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const since = daysAgo(28).toISOString().slice(0, 10);
+    // 90 days: EWMA stabilises after ~28 days, extra history ensures accuracy
+    const since = daysAgo(90).toISOString().slice(0, 10);
+    const sessionsWindow = daysAgo(28).toISOString().slice(0, 10);
     const [rpeRes, vertRes] = await Promise.all([
-      supabase.from('session_rpe').select('*').gte('event_date', since).order('event_date', { ascending: false }),
-      supabase.from('vert_sessions').select('*').gte('session_date', since).order('session_date', { ascending: false }),
+      supabase.from('session_rpe').select('*').gte('event_date', since).order('event_date', { ascending: true }),
+      supabase.from('vert_sessions').select('*').gte('session_date', sessionsWindow).order('session_date', { ascending: false }),
     ]);
     setRecords(rpeRes.data ?? []);
     setVertRecords(vertRes.data ?? []);
@@ -60,38 +98,34 @@ export default function PerformanceDashboard({ lang, profile }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Build ACWR rows
-  const day7  = daysAgo(7);
-  const day28 = daysAgo(28);
-
+  // Build player map from all 90 days of data
   const playerMap = {};
   for (const r of records) {
-    if (!playerMap[r.user_id]) {
-      playerMap[r.user_id] = { name: r.user_name, all: [] };
-    }
+    if (!playerMap[r.user_id]) playerMap[r.user_id] = { name: r.user_name, all: [] };
     playerMap[r.user_id].all.push(r);
   }
 
   const acwrRows = Object.entries(playerMap).map(([uid, p]) => {
-    const acute = p.all
-      .filter(s => new Date(s.event_date) >= day7)
-      .reduce((sum, s) => sum + (s.load_au ?? 0), 0);
-    const chronic28sum = p.all
-      .filter(s => new Date(s.event_date) >= day28)
-      .reduce((sum, s) => sum + (s.load_au ?? 0), 0);
-    const chronic = Math.round(chronic28sum / 4);
-    const acwr = chronic > 0 ? Math.round((acute / chronic) * 100) / 100 : null;
+    // EWMA uses all 90 days loaded
+    const { acute, chronic, acwr } = computeEWMA(p.all);
+
+    // Recent 7 sessions for the dot display (last 28 days window)
+    const sessionsWindow = daysAgo(28).toISOString().slice(0, 10);
     const recent = [...p.all]
+      .filter(s => s.event_date >= sessionsWindow)
       .sort((a, b) => a.event_date.localeCompare(b.event_date))
       .slice(-7);
-    const ballPract   = p.all.filter(s => s.energy_level != null);
-    const withFocus   = ballPract.filter(s => s.focus_level != null);
-    const avgEnergy   = ballPract.length  ? Math.round(ballPract.reduce((sum, s) => sum + s.energy_level, 0) / ballPract.length) : null;
-    const avgFocus    = withFocus.length  ? Math.round(withFocus.reduce((sum, s) => sum + s.focus_level, 0)  / withFocus.length)  : null;
-    const mindfulYes  = ballPract.filter(s => s.mindfulness === true).length;
-    const mindfulTotal= ballPract.filter(s => s.mindfulness != null).length;
-    const goalYes     = ballPract.filter(s => s.practice_goal_reached === true).length;
-    const goalTotal   = ballPract.filter(s => s.practice_goal_reached != null).length;
+
+    // Ball-practice extras (28-day window for relevance)
+    const ballPract    = p.all.filter(s => s.event_date >= sessionsWindow && s.energy_level != null);
+    const withFocus    = ballPract.filter(s => s.focus_level != null);
+    const avgEnergy    = ballPract.length ? Math.round(ballPract.reduce((sum, s) => sum + s.energy_level, 0) / ballPract.length) : null;
+    const avgFocus     = withFocus.length ? Math.round(withFocus.reduce((sum, s) => sum + s.focus_level,  0) / withFocus.length)  : null;
+    const mindfulYes   = ballPract.filter(s => s.mindfulness === true).length;
+    const mindfulTotal = ballPract.filter(s => s.mindfulness != null).length;
+    const goalYes      = ballPract.filter(s => s.practice_goal_reached === true).length;
+    const goalTotal    = ballPract.filter(s => s.practice_goal_reached != null).length;
+
     return { uid, name: p.name, acute, chronic, acwr, recent, avgEnergy, avgFocus, mindfulYes, mindfulTotal, goalYes, goalTotal };
   });
 
@@ -192,8 +226,8 @@ export default function PerformanceDashboard({ lang, profile }) {
                   </div>
                   <p className={styles.legendPanelDesc}>
                     {lang === 'ja'
-                      ? 'ACWR = 直近7日間の負荷 ÷ 直近28日間の平均週負荷。選手の「今週の疲労」と「体の慣れ」のバランスを示します。負荷AU = RPE × 練習時間（分）。'
-                      : 'ACWR = last 7 days load ÷ average weekly load over 28 days. It measures how this week\'s strain compares to what the body is conditioned for. Load (AU) = RPE × session duration (min).'}
+                      ? 'EWMA方式：急性負荷 = 毎日 sRPE×0.25 + 前日×0.75（7日減衰）。慢性負荷 = 毎日 sRPE×0.069 + 前日×0.931（28日減衰）。休養日は sRPE=0 として計算。ACWR = 急性 ÷ 慢性。負荷AU = RPE × 練習時間（分）。'
+                      : 'EWMA method (Gabbett 2016): Acute = sRPE×0.25 + prev×0.75 (7-day decay). Chronic = sRPE×0.069 + prev×0.931 (28-day decay). Rest days count as sRPE=0. ACWR = Acute ÷ Chronic. Load (AU) = RPE × duration (min).'}
                   </p>
                   <table className={styles.legendTable}>
                     <thead>
@@ -241,8 +275,8 @@ export default function PerformanceDashboard({ lang, profile }) {
                   <thead>
                     <tr>
                       <th className={styles.thName}>{lang === 'ja' ? '選手' : 'Player'}</th>
-                      <th className={styles.th}>{lang === 'ja' ? '急性負荷\n(7日)' : 'Acute\n(7d)'}</th>
-                      <th className={styles.th}>{lang === 'ja' ? '慢性負荷\n(28d÷4)' : 'Chronic\n(28d÷4)'}</th>
+                      <th className={styles.th}>{lang === 'ja' ? '急性負荷\n(EWMA 7d)' : 'Acute\n(EWMA)'}</th>
+                      <th className={styles.th}>{lang === 'ja' ? '慢性負荷\n(EWMA 28d)' : 'Chronic\n(EWMA)'}</th>
                       <th className={styles.th}>ACWR</th>
                       <th className={styles.th}>{lang === 'ja' ? 'ステータス' : 'Status'}</th>
                       <th className={styles.th}>{lang === 'ja' ? '直近RPE' : 'Recent RPE'}</th>
