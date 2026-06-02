@@ -246,10 +246,10 @@ export default function PerformanceDashboard({ lang, profile }) {
                       <th className={styles.th}>ACWR</th>
                       <th className={styles.th}>{lang === 'ja' ? 'ステータス' : 'Status'}</th>
                       <th className={styles.th}>{lang === 'ja' ? '直近RPE' : 'Recent RPE'}</th>
-                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Energy' : 'Energy'}</th>}
-                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Focus' : 'Focus'}</th>}
-                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '集中' : 'Mindful'}</th>}
-                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '目標' : 'Goal'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Energy\n(直近)' : 'Energy\n(recent)'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? 'Focus\n(直近)' : 'Focus\n(recent)'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '集中\n(直近)' : 'Mindful\n(recent)'}</th>}
+                      {hasExtraData && <th className={styles.th}>{lang === 'ja' ? '目標\n(直近)' : 'Goal\n(recent)'}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -285,7 +285,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                                 : <span className={styles.noData}>—</span>}
                             </td>
                             <td className={styles.td}>
-                              {/* RPE dots */}
+                              {/* RPE dots — colored */}
                               <div className={styles.dotRow}>
                                 {row.recent.map((s, i) => (
                                   <span key={i} className={styles.rpeDot}
@@ -293,57 +293,65 @@ export default function PerformanceDashboard({ lang, profile }) {
                                     title={`${s.event_title} — RPE ${s.rpe} (${s.load_au} AU)`} />
                                 ))}
                               </div>
-                              {/* Energy dots (Ball Practice only) */}
-                              {row.recent.some(s => s.energy_level != null) && (
-                                <div className={styles.dotRow} style={{ marginTop: 3 }}>
-                                  {row.recent.map((s, i) => (
-                                    s.energy_level != null
-                                      ? <span key={i} className={styles.rpeDot}
-                                          style={{ background: energyColor(s.energy_level) }}
-                                          title={`Energy ${s.energy_level}`} />
-                                      : <span key={i} className={styles.rpeDotEmpty} />
-                                  ))}
-                                </div>
-                              )}
-                              {/* Focus dots (Ball Practice only) */}
-                              {row.recent.some(s => s.focus_level != null) && (
-                                <div className={styles.dotRow} style={{ marginTop: 3 }}>
-                                  {row.recent.map((s, i) => (
-                                    s.focus_level != null
-                                      ? <span key={i} className={styles.rpeDot}
-                                          style={{ background: energyColor(s.focus_level), borderRadius: 3 }}
-                                          title={`Focus ${s.focus_level}`} />
-                                      : <span key={i} className={styles.rpeDotEmpty} />
-                                  ))}
-                                </div>
-                              )}
                             </td>
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {row.avgEnergy != null
-                                  ? <span className={styles.extraStatVal} style={{ color: energyColor(row.avgEnergy) }}>{row.avgEnergy}</span>
-                                  : <span className={styles.noData}>—</span>}
+                                {/* Energy dots — neutral color */}
+                                {row.recent.some(s => s.energy_level != null) ? (
+                                  <div className={styles.dotRow}>
+                                    {row.recent.map((s, i) => (
+                                      s.energy_level != null
+                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                            title={`Energy ${s.energy_level}`} />
+                                        : <span key={i} className={styles.rpeDotEmpty} />
+                                    ))}
+                                  </div>
+                                ) : <span className={styles.noData}>—</span>}
                               </td>
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {row.avgFocus != null
-                                  ? <span className={styles.extraStatVal} style={{ color: energyColor(row.avgFocus) }}>{row.avgFocus}</span>
-                                  : <span className={styles.noData}>—</span>}
+                                {/* Focus dots — neutral color */}
+                                {row.recent.some(s => s.focus_level != null) ? (
+                                  <div className={styles.dotRow}>
+                                    {row.recent.map((s, i) => (
+                                      s.focus_level != null
+                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                            title={`Focus ${s.focus_level}`} />
+                                        : <span key={i} className={styles.rpeDotEmpty} />
+                                    ))}
+                                  </div>
+                                ) : <span className={styles.noData}>—</span>}
                               </td>
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {row.mindfulTotal > 0
-                                  ? <span className={styles.extraStatVal} style={{ color: '#6366f1' }}>{row.mindfulYes}/{row.mindfulTotal}</span>
-                                  : <span className={styles.noData}>—</span>}
+                                {/* Mindful dots — neutral color, circle */}
+                                {row.recent.some(s => s.mindfulness != null) ? (
+                                  <div className={styles.dotRow}>
+                                    {row.recent.map((s, i) => (
+                                      s.mindfulness != null
+                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                            title={s.mindfulness ? 'Mindful ✓' : 'Mindful ✗'} />
+                                        : <span key={i} className={styles.rpeDotEmpty} />
+                                    ))}
+                                  </div>
+                                ) : <span className={styles.noData}>—</span>}
                               </td>
                             )}
                             {hasExtraData && (
                               <td className={styles.td}>
-                                {row.goalTotal > 0
-                                  ? <span className={styles.extraStatVal} style={{ color: '#10b981' }}>{row.goalYes}/{row.goalTotal}</span>
-                                  : <span className={styles.noData}>—</span>}
+                                {/* Goal dots — neutral color */}
+                                {row.recent.some(s => s.practice_goal_reached != null) ? (
+                                  <div className={styles.dotRow}>
+                                    {row.recent.map((s, i) => (
+                                      s.practice_goal_reached != null
+                                        ? <span key={i} className={styles.rpeDot} style={{ background: '#6b7280' }}
+                                            title={s.practice_goal_reached ? 'Goal ✓' : 'Goal ✗'} />
+                                        : <span key={i} className={styles.rpeDotEmpty} />
+                                    ))}
+                                  </div>
+                                ) : <span className={styles.noData}>—</span>}
                               </td>
                             )}
                           </tr>
