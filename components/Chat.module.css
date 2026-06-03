@@ -667,6 +667,25 @@
 .modalTab:hover { color: #374151; }
 .modalTabActive { color: #7e0027; border-bottom-color: #7e0027; font-weight: 600; }
 
+/* ── Channel picker popup ───────────────────────────────────────── */
+.channelPickerItem {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 10px 12px;
+  background: none; border: none; border-radius: 8px;
+  cursor: pointer; text-align: left; font-family: inherit;
+  transition: background 0.1s;
+}
+.channelPickerItem:hover { background: #f3f4f6; }
+.channelPickerActive { background: #fdf2f4; }
+.channelPickerActive:hover { background: #fce8ed; }
+.channelPickerInfo { flex: 1; min-width: 0; }
+.channelPickerName { font-size: 13px; font-weight: 500; color: #111827; display: block; }
+.channelPickerActive .channelPickerName { color: #7e0027; }
+.channelPickerDesc {
+  font-size: 11px; color: #6b7280; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 .channelRow {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 14px; background: #f9fafb; border: 1px solid #e5e7eb;
@@ -778,7 +797,9 @@
 
   /* Mobile section labels */
   .mobileSectionLabel {
-    display: block;
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; background: none; border: none; cursor: pointer;
+    font-family: inherit; text-align: left;
     font-size: 11px;
     font-weight: 700;
     color: #9ca3af;
@@ -786,6 +807,7 @@
     text-transform: uppercase;
     padding: 12px 16px 6px;
   }
+  .mobileSectionLabel:hover { color: #6b7280; }
 
   /* Mobile channel items — larger touch targets, light theme */
   .channelItem {

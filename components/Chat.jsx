@@ -545,6 +545,8 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
 // ── Sidebar / Chat List ───────────────────────────────────────────────────────
 
 function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId, onlineUsers }) {
+  const [showChannelPicker, setShowChannelPicker] = useState(false);
+
   return (
     <aside className={styles.sidebar}>
       {/* Mobile-only colored header (hidden on desktop via CSS) */}
@@ -561,13 +563,18 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
       {/* Desktop channel header */}
       <div className={`${styles.sidebarHead} ${styles.desktopSidebarHead}`}>
         <span className={styles.sectionLabel}>{uiLang === 'ja' ? 'チャンネル' : 'Channels'}</span>
-        {canManage && (
-          <button className={styles.manageBtn} onClick={onManage} title={uiLang === 'ja' ? 'チャンネル管理' : 'Manage channels'}>⚙</button>
-        )}
+        <div style={{ display: 'flex', gap: 2 }}>
+          <button className={styles.manageBtn} onClick={() => setShowChannelPicker(true)} title={uiLang === 'ja' ? 'チャンネル一覧' : 'Browse channels'}>☰</button>
+          {canManage && (
+            <button className={styles.manageBtn} onClick={onManage} title={uiLang === 'ja' ? 'チャンネル管理' : 'Manage channels'}>⚙</button>
+          )}
+        </div>
       </div>
 
       {/* Mobile section label */}
-      <div className={styles.mobileSectionLabel}>{uiLang === 'ja' ? 'チャンネル' : 'CHANNELS'}</div>
+      <button className={styles.mobileSectionLabel} onClick={() => setShowChannelPicker(true)}>
+        {uiLang === 'ja' ? 'チャンネル ›' : 'CHANNELS ›'}
+      </button>
 
       {channels.map(ch => {
         const unread = unreadCounts?.[ch.id] ?? 0;
@@ -629,6 +636,36 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
       })}
       {dmConversations.length === 0 && (
         <p className={styles.dmEmpty}>{uiLang === 'ja' ? 'まだDMなし' : 'No DMs yet'}</p>
+      )}
+
+      {showChannelPicker && (
+        <div className={styles.modalOverlay} onClick={() => setShowChannelPicker(false)}>
+          <div className={styles.modalBox} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <span>{uiLang === 'ja' ? 'チャンネル一覧' : 'All Channels'}</span>
+              <button className={styles.modalClose} onClick={() => setShowChannelPicker(false)}>✕</button>
+            </div>
+            <div className={styles.modalBody}>
+              {channels.map(ch => {
+                const unread = unreadCounts?.[ch.id] ?? 0;
+                return (
+                  <button key={ch.id}
+                    className={`${styles.channelPickerItem} ${activeChannel === ch.id ? styles.channelPickerActive : ''}`}
+                    onClick={() => { onSelect(ch.id); setShowChannelPicker(false); }}>
+                    <span className={styles.hash}>#</span>
+                    <div className={styles.channelPickerInfo}>
+                      <span className={styles.channelPickerName}>{ch.name}</span>
+                      {ch.description && <span className={styles.channelPickerDesc}>{ch.description}</span>}
+                    </div>
+                    {unread > 0 && activeChannel !== ch.id && (
+                      <span className={styles.chanUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </aside>
   );
@@ -1277,7 +1314,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         channels={channels}
         dmConversations={dmConversationsWithNames}
         activeChannel={activeChannel}
-        onSelect={ch => { setActiveChannel(ch); setError(null); setMobileShowList(false); }}
+        onSelect={ch => { setActiveChannel(ch); setError(null); setMobileShowList(false); setMentionQuery(null); }}
         onNewDM={() => setShowNewDM(true)}
         canManage={canManage}
         onManage={() => setShowManage(true)}
@@ -1495,7 +1532,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
                   });
                 }, 3000);
                 // @mention detection
-                if (!isActiveDM) {
+                {
                   const cursor = e.target.selectionStart ?? val.length;
                   const before = val.slice(0, cursor);
                   const m = before.match(/@([^\s@]*)$/);
