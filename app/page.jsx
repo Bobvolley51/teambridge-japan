@@ -505,7 +505,7 @@ export default function Home() {
   useEffect(() => {
     if (!session?.user) { setProfile(null); return; }
     loadProfile(session.user.id);
-  }, [session]);
+  }, [session?.user?.id]);
 
   if (session === undefined) {
     return (
