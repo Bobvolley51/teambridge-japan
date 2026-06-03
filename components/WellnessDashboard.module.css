@@ -227,7 +227,17 @@
 .freqBadge      { background: rgba(0,0,0,0.12); border-radius: 10px; padding: 1px 6px; font-size: 11px; }
 
 @media (max-width: 768px) {
-  .topBar  { padding: 10px 12px 8px; }
-  .content { padding: 12px 12px 16px; }
+  /* Collapse top bar on mobile */
+  .topBar  { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; }
+  .heading { display: none; }
+  .tab     { padding: 5px 10px; font-size: 12px; }
+
+  /* Filter bar compact */
+  .filterBar  { padding: 5px 10px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  .filterLabel { display: none; }
+  .filterBtn  { padding: 3px 8px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  .content { padding: 8px 10px 12px; }
   .qGrid   { grid-template-columns: 1fr 1fr; }
+  .tableWrap { border-radius: 8px; }
 }

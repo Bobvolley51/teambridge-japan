@@ -532,6 +532,14 @@
 }
 .pinnedUnpin:hover { color: #374151; }
 
+/* Clickable URL links inside messages */
+.msgLink {
+  color: #2563eb;
+  text-decoration: underline;
+  word-break: break-all;
+}
+.bubbleMe .msgLink { color: #bfdbfe; }
+
 /* @mention highlight */
 .mention {
   display: inline; background: rgba(126,0,39,0.12); color: #6b001f;

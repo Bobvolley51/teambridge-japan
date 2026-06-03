@@ -68,13 +68,23 @@ function DateSeparator({ dateStr, uiLang }) {
 // ── Mention renderer ──────────────────────────────────────────────────────────
 
 function renderContent(content) {
-  if (!content.includes('@')) return content;
-  const parts = content.split(/(@\S+)/g);
+  const parts = content.split(/(https?:\/\/[^\s<>"]+|@\S+)/g);
+  if (parts.length === 1) return content;
   return parts.map((part, i) => {
-    if (!/^@\S+$/.test(part)) return part;
-    if (part.toLowerCase() === '@all')
-      return <span key={i} className={styles.mentionAll}>{part}</span>;
-    return <span key={i} className={styles.mention}>{part}</span>;
+    if (/^https?:\/\//.test(part)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+          className={styles.msgLink} onClick={e => e.stopPropagation()}>
+          {part}
+        </a>
+      );
+    }
+    if (/^@\S+$/.test(part)) {
+      if (part.toLowerCase() === '@all')
+        return <span key={i} className={styles.mentionAll}>{part}</span>;
+      return <span key={i} className={styles.mention}>{part}</span>;
+    }
+    return part;
   });
 }
 

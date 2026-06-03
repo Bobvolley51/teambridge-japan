@@ -296,9 +296,20 @@
 .sessTdDiv  { width: 1px; background: #e5e7eb; padding: 0; }
 
 @media (max-width: 768px) {
-  .topBar      { padding: 10px 12px 8px; }
-  .content     { padding: 12px 12px 16px; }
-  .sessionList { padding: 10px 12px 16px; gap: 6px; }
-  .sessionHeader { padding: 12px 14px; }
-  .sessDetail  { padding: 10px 14px 12px; }
+  /* Collapse top bar: hide heading, tighten padding */
+  .topBar   { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; }
+  .heading  { display: none; }
+  .tab      { padding: 5px 10px; font-size: 12px; }
+  .refreshBtn { padding: 4px 8px; font-size: 14px; }
+
+  /* Filter bar: single compact row */
+  .filterBar  { padding: 5px 10px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  .filterLabel { display: none; }
+  .filterBtn  { padding: 3px 8px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  .content     { padding: 8px 10px 12px; }
+  .sessionList { padding: 8px 10px 12px; gap: 6px; }
+  .sessionHeader { padding: 10px 12px; }
+  .sessDetail  { padding: 8px 12px 10px; }
+  .tableWrap   { border-radius: 8px; }
 }
