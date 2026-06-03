@@ -143,9 +143,27 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
     { weekday: 'short', month: 'short', day: 'numeric' }
   );
 
-  const handleAlreadyAnswered = () => {
+  const handleAlreadyAnswered = async () => {
     if (alreadyConfirm < 2) { setAlreadyConfirm(s => s + 1); return; }
-    handleSkip(); // reuse skip logic — saves attended:false so it won't reappear
+    setSaving(true);
+    try {
+      await supabase.from('session_rpe').upsert(
+        {
+          user_id:      userId,
+          user_name:    userName,
+          event_id:     event.id,
+          event_title:  event.title,
+          event_date:   dateToYmd(toJstDate(event.start_time)),
+          rpe:          null,
+          duration_min: 0,
+          load_au:      0,
+          attended:     false,
+        },
+        { onConflict: 'user_id,event_id', ignoreDuplicates: true }
+      );
+    } catch (_) {}
+    setSaving(false);
+    advanceEvent();
   };
 
   return (
