@@ -83,19 +83,41 @@ function renderContent(content) {
 const QUICK_EMOJIS = ['👍','❤️','😂','🔥','👏','😮'];
 
 function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, currentUserId,
-                   onReply, onReact, onEdit, onDelete, replyMsg, editingId, editText,
-                   onEditChange, onEditSave, onEditCancel, isFirst, isChannel }) {
+                   onReply, onReact, onEdit, onDelete, onPin, replyMsg, editingId, editText,
+                   onEditChange, onEditSave, onEditCancel, isFirst, isChannel,
+                   receiptStatus, isOnline, canPin }) {
   const [jaText, setJaText] = useState(null);
   const [enText, setEnText] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
   const longPressTimer = useRef(null);
+  const swipeStartX = useRef(0);
+  const swipeStartY = useRef(0);
+  const didSwipe = useRef(false);
 
-  const handleTouchStart = () => {
+  const handleTouchStart = (e) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+    didSwipe.current = false;
     longPressTimer.current = setTimeout(() => { setShowActions(true); setShowEmojiPicker(true); }, 450);
   };
-  const handleTouchEnd = () => { clearTimeout(longPressTimer.current); };
+  const handleTouchMove = (e) => {
+    const dx = e.touches[0].clientX - swipeStartX.current;
+    const dy = Math.abs(e.touches[0].clientY - swipeStartY.current);
+    if (dx > 8 && dx > dy * 1.3) {
+      clearTimeout(longPressTimer.current);
+      didSwipe.current = true;
+      setSwipeX(Math.min(dx * 0.55, 64));
+    }
+  };
+  const handleTouchEnd = () => {
+    clearTimeout(longPressTimer.current);
+    if (didSwipe.current && swipeX >= 40) onReply(msg);
+    setSwipeX(0);
+    didSwipe.current = false;
+  };
 
   useEffect(() => {
     if (!showTranslations) return;
@@ -122,13 +144,22 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => { setShowActions(false); setShowEmojiPicker(false); }}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onTouchMove={handleTouchEnd}
+      style={{ transform: swipeX > 0 ? `translateX(${isMe ? -swipeX : swipeX}px)` : undefined, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
     >
+      {/* Swipe-to-reply hint arrow */}
+      {swipeX > 10 && (
+        <div className={styles.swipeArrow} style={{ opacity: Math.min(swipeX / 40, 1), [isMe ? 'right' : 'left']: `${swipeX + 4}px` }}>↩</div>
+      )}
+
       {/* Avatar column — others only */}
       {!isMe && (
         isFirst
-          ? <AvatarPhoto url={avatarUrl} initials={msg.user_initials || nameInitials(senderName)} name={senderName ?? msg.user_name} size={32} />
+          ? <div className={styles.avatarWrap}>
+              <AvatarPhoto url={avatarUrl} initials={msg.user_initials || nameInitials(senderName)} name={senderName ?? msg.user_name} size={32} />
+              {isOnline && <span className={styles.onlineDot} />}
+            </div>
           : <div className={styles.avatarSpacer} />
       )}
 
@@ -174,11 +205,15 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
               </>
             )}
 
-            {/* Time inside bubble */}
+            {/* Time + delivery receipt inside bubble */}
             {!isDeleted && (
               <span className={styles.timeInBubble}>
                 {msg.edited_at && <span className={styles.editedTag}>{uiLang === 'ja' ? '編集済 ' : 'edited '}</span>}
                 {time}
+                {isMe && receiptStatus === 'sending'   && <span className={styles.tick}>⌛</span>}
+                {isMe && receiptStatus === 'sent'      && <span className={styles.tick}>✓</span>}
+                {isMe && receiptStatus === 'delivered' && <span className={styles.tick}>✓✓</span>}
+                {isMe && receiptStatus === 'read'      && <span className={`${styles.tick} ${styles.tickRead}`}>✓✓</span>}
               </span>
             )}
           </div>
@@ -227,6 +262,8 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
             )}
           </div>
           <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '返信' : 'Reply'} onClick={() => onReply(msg)}>↩</button>
+          {canPin && !isChannel && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? 'ピン留め' : 'Pin'} onClick={() => onPin(msg)}>📌</button>}
+          {canPin && isChannel && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? 'ピン留め' : 'Pin'} onClick={() => onPin(msg)}>📌</button>}
           {isMe && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '編集' : 'Edit'} onClick={() => onEdit(msg)}>✏️</button>}
           {isMe && <button className={styles.msgActionBtn} title={uiLang === 'ja' ? '削除' : 'Delete'} onClick={() => onDelete(msg.id)}>🗑️</button>}
         </div>
@@ -497,7 +534,7 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
 
 // ── Sidebar / Chat List ───────────────────────────────────────────────────────
 
-function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId }) {
+function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId, onlineUsers }) {
   return (
     <aside className={styles.sidebar}>
       {/* Mobile-only colored header (hidden on desktop via CSS) */}
@@ -559,7 +596,10 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
           <button key={dm.channelId}
             className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
             onClick={() => onSelect(dm.channelId)} title={dm.name}>
-            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={40} />
+            <div className={styles.avatarWrap}>
+              <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={40} />
+              {onlineUsers?.has(dm.otherId) && <span className={styles.onlineDot} />}
+            </div>
             <div className={styles.dmItemInfo}>
               <div className={styles.dmItemHeader}>
                 <span className={styles.dmItemName}>{dm.name}</span>
@@ -610,6 +650,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [typingUsers,   setTypingUsers]   = useState([]);
   const [editingId,     setEditingId]     = useState(null);
   const [editText,      setEditText]      = useState('');
+  const [onlineUsers,   setOnlineUsers]   = useState(new Set());
+  const [pinnedMsg,     setPinnedMsg]     = useState(null); // { id, content, user_name }
 
   const fileInputRef     = useRef(null);
   const endRef           = useRef(null);
@@ -623,6 +665,34 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   useEffect(() => {
     isTouchRef.current = window.matchMedia('(hover: none)').matches;
   }, []);
+
+  // Online presence — track who's active right now
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const ch = supabase.channel('tb-presence', {
+      config: { presence: { key: currentUser.id } },
+    })
+      .on('presence', { event: 'sync' }, () => {
+        setOnlineUsers(new Set(Object.keys(ch.presenceState())));
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await ch.track({ user_id: currentUser.id });
+        }
+      });
+    return () => { ch.unsubscribe(); };
+  }, [currentUser?.id]);
+
+  // Load pinned message for active channel
+  useEffect(() => {
+    if (!activeChannel) { setPinnedMsg(null); return; }
+    supabase.from('pinned_messages')
+      .select('id, content, user_name, message_id')
+      .eq('channel_id', activeChannel)
+      .order('pinned_at', { ascending: false })
+      .limit(1)
+      .then(({ data }) => setPinnedMsg(data?.[0] ?? null));
+  }, [activeChannel]);
 
   const canManage = profile?.role && profile.role !== 'Player';
   const messages  = messagesByChannel[activeChannel] ?? [];
@@ -955,6 +1025,26 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     await supabase.from('messages').update({ is_deleted: true, content: '' }).eq('id', msgId);
   }, []);
 
+  const togglePin = useCallback(async (msg) => {
+    if (!activeChannel) return;
+    if (pinnedMsg?.message_id === msg.id) {
+      // Unpin
+      await supabase.from('pinned_messages').delete().eq('id', pinnedMsg.id);
+      setPinnedMsg(null);
+    } else {
+      // Replace any existing pin for this channel
+      await supabase.from('pinned_messages').delete().eq('channel_id', activeChannel);
+      const { data } = await supabase.from('pinned_messages').insert({
+        channel_id: activeChannel,
+        message_id: msg.id,
+        content:    msg.content?.slice(0, 100) ?? (msg.image_url ? '📷 Photo' : ''),
+        user_name:  msg.user_name,
+        pinned_by:  currentUser?.id,
+      }).select().single();
+      setPinnedMsg(data ?? null);
+    }
+  }, [activeChannel, pinnedMsg, currentUser]);
+
   const saveEdit = useCallback(async () => {
     if (!editingId || !editText.trim()) return;
     await supabase.from('messages').update({ content: editText.trim(), edited_at: new Date().toISOString() }).eq('id', editingId);
@@ -1183,6 +1273,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         uiLang={uiLang}
         unreadCounts={unreadCounts}
         currentUserId={currentUser?.id}
+        onlineUsers={onlineUsers}
       />
 
       <div className={styles.chatArea}>
@@ -1213,6 +1304,20 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
           </div>
         )}
 
+        {/* Pinned message banner */}
+        {pinnedMsg && (
+          <div className={styles.pinnedBanner}>
+            <span className={styles.pinnedIcon}>📌</span>
+            <div className={styles.pinnedContent}>
+              <span className={styles.pinnedName}>{pinnedMsg.user_name}</span>
+              <span className={styles.pinnedText}>{pinnedMsg.content || '📷'}</span>
+            </div>
+            {canManage && (
+              <button className={styles.pinnedUnpin} onClick={() => togglePin({ id: pinnedMsg.message_id })} title="Unpin">✕</button>
+            )}
+          </div>
+        )}
+
         <div className={styles.messageList}>
           {loading && <div style={{ padding: '16px 8px' }}><SkeletonList rows={5} /></div>}
           {!loading && messages.length === 0 && (
@@ -1223,16 +1328,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
             </p>
           )}
           {(() => {
-            const lastReadId = isActiveDM && partnerReadAt
-              ? [...messages].reverse().find(m =>
-                  (m.sender_id === currentUser.id || (!m.sender_id && m.user_name === currentUser.name)) &&
-                  !m._optimistic && m.created_at <= partnerReadAt
-                )?.id
-              : null;
-            const readTime = partnerReadAt
-              ? new Date(partnerReadAt).toLocaleTimeString(uiLang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
-              : null;
-
             const items = [];
             for (let i = 0; i < messages.length; i++) {
               const msg  = messages[i];
@@ -1241,12 +1336,10 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               const msgDay  = new Date(msg.created_at).toDateString();
               const prevDay = prev ? new Date(prev.created_at).toDateString() : null;
 
-              // Date separator
               if (!prev || msgDay !== prevDay) {
                 items.push(<DateSeparator key={`date-${i}-${msg.id}`} dateStr={msg.created_at} uiLang={uiLang} />);
               }
 
-              // Grouping: isFirst = new sender OR new day
               const msgSenderId  = msg.sender_id || msg.user_name;
               const prevSenderId = prev ? (prev.sender_id || prev.user_name) : null;
               const isFirst = !prev || prevSenderId !== msgSenderId || msgDay !== prevDay;
@@ -1256,35 +1349,44 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
               const url    = isMe ? currentUser.avatarUrl : (sender?.avatar_url ?? null);
               const name   = isMe ? currentUser.name : (sender ? profileFullName(sender) : msg.user_name);
 
+              // Delivery receipt status (shown inside bubble for my messages)
+              let receiptStatus = null;
+              if (isMe) {
+                if (msg._optimistic) receiptStatus = 'sending';
+                else if (isActiveDM) {
+                  receiptStatus = (partnerReadAt && msg.created_at <= partnerReadAt) ? 'read' : 'delivered';
+                } else {
+                  receiptStatus = 'sent';
+                }
+              }
+
               items.push(
-                <div key={msg.id}>
-                  <Message
-                    msg={msg}
-                    isMe={isMe}
-                    uiLang={uiLang}
-                    avatarUrl={url}
-                    senderName={name}
-                    currentUserId={currentUser.id}
-                    msgReactions={reactions[msg.id] ?? []}
-                    onReact={toggleReaction}
-                    onReply={setReplyTo}
-                    onEdit={(m) => { setEditingId(m.id); setEditText(m.content); }}
-                    onDelete={deleteMessage}
-                    editingId={editingId}
-                    editText={editText}
-                    onEditChange={setEditText}
-                    onEditSave={saveEdit}
-                    onEditCancel={() => { setEditingId(null); setEditText(''); }}
-                    replyMsg={msg.reply_to_id ? (messagesByChannel[activeChannel] ?? []).find(m => m.id === msg.reply_to_id) : null}
-                    isFirst={isFirst}
-                    isChannel={!isActiveDM}
-                  />
-                  {msg.id === lastReadId && (
-                    <div className={`${styles.readReceipt} ${isActiveDM ? styles.readReceiptDM : ''}`}>
-                      ✓✓ {uiLang === 'ja' ? `既読 ${readTime}` : `Read ${readTime}`}
-                    </div>
-                  )}
-                </div>
+                <Message
+                  key={msg.id}
+                  msg={msg}
+                  isMe={isMe}
+                  uiLang={uiLang}
+                  avatarUrl={url}
+                  senderName={name}
+                  currentUserId={currentUser.id}
+                  msgReactions={reactions[msg.id] ?? []}
+                  onReact={toggleReaction}
+                  onReply={setReplyTo}
+                  onEdit={(m) => { setEditingId(m.id); setEditText(m.content); }}
+                  onDelete={deleteMessage}
+                  onPin={togglePin}
+                  editingId={editingId}
+                  editText={editText}
+                  onEditChange={setEditText}
+                  onEditSave={saveEdit}
+                  onEditCancel={() => { setEditingId(null); setEditText(''); }}
+                  replyMsg={msg.reply_to_id ? (messagesByChannel[activeChannel] ?? []).find(m => m.id === msg.reply_to_id) : null}
+                  isFirst={isFirst}
+                  isChannel={!isActiveDM}
+                  receiptStatus={receiptStatus}
+                  isOnline={!isMe && msg.sender_id ? onlineUsers.has(msg.sender_id) : false}
+                  canPin={canManage}
+                />
               );
             }
             return items;
