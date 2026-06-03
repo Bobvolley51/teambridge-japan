@@ -88,11 +88,13 @@
 .filterBtn:hover    { background: #fdf2f4; color: #7e0027; border-color: #7e0027; }
 .filterBtnActive    { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
 
-.alertsBlock { display: flex; flex-direction: column; gap: 6px; }
+.alertsBlock {
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff5f5; border: 1px solid #fecaca; border-left: 4px solid #7e0027;
+  border-radius: 10px; padding: 12px 16px;
+}
 
 .alarm {
-  background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #7e0027;
-  border-radius: 8px; padding: 10px 14px;
   font-size: 13px; font-weight: 600; color: #7e0027; flex-shrink: 0;
 }
 
@@ -204,7 +206,7 @@
 }
 .hmTeamRow td { border-top: 2px solid #e5e7eb; font-style: italic; border-bottom: none; }
 
-.painSection { border: 1px solid #fecaca; border-left: 4px solid #7e0027; border-radius: 10px; padding: 12px 16px; background: #fff5f5; display: flex; flex-direction: column; gap: 8px; }
+.painSection { display: flex; flex-direction: column; gap: 8px; }
 .painTitle   { font-size: 12px; font-weight: 800; color: #7e0027; text-transform: uppercase; letter-spacing: 0.04em; }
 .painRow     { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .painName    { font-size: 13px; font-weight: 700; color: #111827; min-width: 100px; flex-shrink: 0; }

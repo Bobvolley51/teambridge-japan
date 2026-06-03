@@ -405,7 +405,7 @@ export default function WellnessDashboard({ lang }) {
                 </div>
               )}
               {todayPain.length > 0 && (
-                <div className={styles.painSection}>
+                <div className={styles.painSection} style={alarmedToday.length > 0 ? { borderTop: '1px solid #fecaca', paddingTop: 10 } : {}}>
                   <div className={styles.painTitle}>
                     🩹 {lang === 'ja' ? '報告された痛み・張り' : 'Reported Pain / Tightness'}
                   </div>
