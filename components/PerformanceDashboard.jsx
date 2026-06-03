@@ -324,71 +324,6 @@ export default function PerformanceDashboard({ lang, profile }) {
             </div>
           ) : (
             <>
-              <div className={styles.legendRow}>
-                <div className={styles.legendChips}>
-                  {ZONES.map((z, i) => (
-                    <span key={z.id} className={styles.legendChip}
-                      style={{ color: z.color, background: z.bg, borderColor: z.color }}>
-                      {z[lang]} {ZONE_RANGE[i]}
-                    </span>
-                  ))}
-                </div>
-                <button className={styles.legendToggle} onClick={() => setShowLegend(v => !v)}>
-                  {showLegend ? (lang === 'ja' ? '閉じる ▲' : 'Hide legend ▲') : (lang === 'ja' ? '凡例を表示 ▼' : 'Show legend ▼')}
-                </button>
-              </div>
-
-              {showLegend && (
-                <div className={styles.legendPanel}>
-                  <div className={styles.legendPanelTitle}>
-                    {lang === 'ja' ? 'ACWR（急性慢性負荷比）とは？' : 'What is ACWR (Acute:Chronic Workload Ratio)?'}
-                  </div>
-                  <p className={styles.legendPanelDesc}>
-                    {lang === 'ja'
-                      ? 'EWMA方式：急性負荷 = 毎日 sRPE×0.25 + 前日×0.75（7日減衰）。慢性負荷 = 毎日 sRPE×0.069 + 前日×0.931（28日減衰）。休養日は sRPE=0 として計算。ACWR = 急性 ÷ 慢性。負荷AU = RPE × 練習時間（分）。'
-                      : 'EWMA method (Gabbett 2016): Acute = sRPE×0.25 + prev×0.75 (7-day decay). Chronic = sRPE×0.069 + prev×0.931 (28-day decay). Rest days count as sRPE=0. ACWR = Acute ÷ Chronic. Load (AU) = RPE × duration (min).'}
-                  </p>
-                  <table className={styles.legendTable}>
-                    <thead>
-                      <tr>
-                        <th>{lang === 'ja' ? 'ゾーン' : 'Zone'}</th>
-                        <th>ACWR</th>
-                        <th>{lang === 'ja' ? '意味' : 'Meaning'}</th>
-                        <th>{lang === 'ja' ? '対応' : 'Action'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { zone: ZONES[0], meaning: lang === 'ja' ? '負荷不足 — パフォーマンス低下リスク' : 'Under-trained — risk of deconditioning', action: lang === 'ja' ? '負荷を増やす' : 'Increase load gradually' },
-                        { zone: ZONES[1], meaning: lang === 'ja' ? '最適ゾーン — 負傷リスク最小' : 'Sweet spot — lowest injury risk',        action: lang === 'ja' ? '維持する'   : 'Maintain current load' },
-                        { zone: ZONES[2], meaning: lang === 'ja' ? '注意 — 負傷リスク上昇'         : 'Caution — elevated injury risk',         action: lang === 'ja' ? '負荷を調整' : 'Monitor & reduce if needed' },
-                        { zone: ZONES[3], meaning: lang === 'ja' ? '危険 — 負傷リスク大幅上昇'     : 'Danger — significantly elevated injury risk', action: lang === 'ja' ? '負荷を下げる' : 'Reduce load immediately' },
-                      ].map(({ zone, meaning, action }) => (
-                        <tr key={zone.id}>
-                          <td>
-                            <span className={styles.legendChip} style={{ color: zone.color, background: zone.bg, borderColor: zone.color }}>
-                              {zone[lang]}
-                            </span>
-                          </td>
-                          <td className={styles.legendRange}>{ZONE_RANGE[ZONES.indexOf(zone)]}</td>
-                          <td>{meaning}</td>
-                          <td className={styles.legendAction}>{action}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className={styles.legendRpeDots}>
-                    <span className={styles.legendRpeTitle}>{lang === 'ja' ? '直近RPEドット:' : 'Recent RPE dots:'}</span>
-                    {[['#10b981', lang === 'ja' ? '低 (1–3)' : 'Low (1–3)'], ['#f59e0b', lang === 'ja' ? '中 (4–6)' : 'Moderate (4–6)'], ['#ef4444', lang === 'ja' ? '高 (7–10)' : 'High (7–10)']].map(([color, label]) => (
-                      <span key={color} className={styles.legendRpeItem}>
-                        <span className={styles.rpeDotSample} style={{ background: color }} />
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
@@ -578,6 +513,67 @@ export default function PerformanceDashboard({ lang, profile }) {
                   </tbody>
                 </table>
               </div>
+
+              <div className={styles.legendRow}>
+                <div className={styles.legendChips}>
+                  {ZONES.map((z, i) => (
+                    <span key={z.id} className={styles.legendChip}
+                      style={{ color: z.color, background: z.bg, borderColor: z.color }}>
+                      {z[lang]} {ZONE_RANGE[i]}
+                    </span>
+                  ))}
+                </div>
+                <button className={styles.legendToggle} onClick={() => setShowLegend(v => !v)}>
+                  {showLegend ? (lang === 'ja' ? '閉じる ▲' : 'Hide legend ▲') : (lang === 'ja' ? '凡例を表示 ▼' : 'Show legend ▼')}
+                </button>
+              </div>
+
+              {showLegend && (
+                <div className={styles.legendPanel}>
+                  <div className={styles.legendPanelTitle}>
+                    {lang === 'ja' ? 'ACWR（急性慢性負荷比）とは？' : 'What is ACWR (Acute:Chronic Workload Ratio)?'}
+                  </div>
+                  <p className={styles.legendPanelDesc}>
+                    {lang === 'ja'
+                      ? 'EWMA方式：急性負荷 = 毎日 sRPE×0.25 + 前日×0.75（7日減衰）。慢性負荷 = 毎日 sRPE×0.069 + 前日×0.931（28日減衰）。休養日は sRPE=0 として計算。ACWR = 急性 ÷ 慢性。負荷AU = RPE × 練習時間（分）。'
+                      : 'EWMA method (Gabbett 2016): Acute = sRPE×0.25 + prev×0.75 (7-day decay). Chronic = sRPE×0.069 + prev×0.931 (28-day decay). Rest days count as sRPE=0. ACWR = Acute ÷ Chronic. Load (AU) = RPE × duration (min).'}
+                  </p>
+                  <table className={styles.legendTable}>
+                    <thead>
+                      <tr>
+                        <th>{lang === 'ja' ? 'ゾーン' : 'Zone'}</th>
+                        <th>ACWR</th>
+                        <th>{lang === 'ja' ? '意味' : 'Meaning'}</th>
+                        <th>{lang === 'ja' ? '対応' : 'Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { zone: ZONES[0], meaning: lang === 'ja' ? '負荷不足 — パフォーマンス低下リスク' : 'Under-trained — risk of deconditioning', action: lang === 'ja' ? '負荷を増やす' : 'Increase load gradually' },
+                        { zone: ZONES[1], meaning: lang === 'ja' ? '最適ゾーン — 負傷リスク最小' : 'Sweet spot — lowest injury risk',        action: lang === 'ja' ? '維持する'   : 'Maintain current load' },
+                        { zone: ZONES[2], meaning: lang === 'ja' ? '注意 — 負傷リスク上昇'         : 'Caution — elevated injury risk',         action: lang === 'ja' ? '負荷を調整' : 'Monitor & reduce if needed' },
+                        { zone: ZONES[3], meaning: lang === 'ja' ? '危険 — 負傷リスク大幅上昇'     : 'Danger — significantly elevated injury risk', action: lang === 'ja' ? '負荷を下げる' : 'Reduce load immediately' },
+                      ].map(({ zone, meaning, action }) => (
+                        <tr key={zone.id}>
+                          <td><span className={styles.legendChip} style={{ color: zone.color, background: zone.bg, borderColor: zone.color }}>{zone[lang]}</span></td>
+                          <td className={styles.legendRange}>{ZONE_RANGE[ZONES.indexOf(zone)]}</td>
+                          <td>{meaning}</td>
+                          <td className={styles.legendAction}>{action}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className={styles.legendRpeDots}>
+                    <span className={styles.legendRpeTitle}>{lang === 'ja' ? '直近RPEドット:' : 'Recent RPE dots:'}</span>
+                    {[['#10b981', lang === 'ja' ? '低 (1–3)' : 'Low (1–3)'], ['#f59e0b', lang === 'ja' ? '中 (4–6)' : 'Moderate (4–6)'], ['#ef4444', lang === 'ja' ? '高 (7–10)' : 'High (7–10)']].map(([color, label]) => (
+                      <span key={color} className={styles.legendRpeItem}>
+                        <span className={styles.rpeDotSample} style={{ background: color }} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )
 

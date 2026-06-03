@@ -1184,7 +1184,7 @@ export default function Dashboard({
                         </div>
                       </div>
                     );
-                  })
+                  }
 
                   {wellnessAlerts.length === 0 && acwrAlerts.length === 0 ? (
                     <EmptyState>{lang === 'ja' ? '✓ アラートはありません。' : '✓ No alerts.'}</EmptyState>
