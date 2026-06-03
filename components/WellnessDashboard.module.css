@@ -108,6 +108,7 @@
   color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em;
   border-bottom: 2px solid #7e0027; white-space: nowrap;
   position: sticky; left: 0; background: #fdf2f4; z-index: 2;
+  box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08);
 }
 .th {
   font-family: var(--tb-font-display);
@@ -119,7 +120,8 @@
 .tr:hover { background: #fdf2f4; }
 .tr + .tr { border-top: 1px solid #f3f4f6; }
 
-.tdName { padding: 10px 14px; font-weight: 600; color: #111827; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 1; }
+.tdName { padding: 10px 14px; font-weight: 600; color: #111827; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 1; box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08); }
+.tr:hover .tdName { background: #fdf2f4; }
 .td     { padding: 7px 6px; text-align: center; }
 
 .lowCell { background: #fef2f2; }
