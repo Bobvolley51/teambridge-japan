@@ -612,13 +612,28 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
             <span>{lang === 'ja' ? '操作' : 'Actions'}</span>
           </div>
 
-          {[...profiles].sort((a, b) => {
-            const ri = ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
-            if (ri !== 0) return ri;
-            return (a.display_name || a.email || '').localeCompare(b.display_name || b.email || '');
-          }).map(profile => {
-            const displayName = profile.display_name || profile.email;
-            return (
+          {(() => {
+            const sorted = [...profiles].sort((a, b) => {
+              const ri = ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
+              if (ri !== 0) return ri;
+              return (a.display_name || a.email || '').localeCompare(b.display_name || b.email || '');
+            });
+            const rows = [];
+            let lastRole = null;
+            for (const profile of sorted) {
+              if (profile.role !== lastRole) {
+                lastRole = profile.role;
+                rows.push(
+                  <div key={`group-${profile.role}`} className={styles.roleGroupHeader}>
+                    <span className={`${styles.roleBadge} ${ROLE_COLORS[profile.role] ?? ''}`}>{profile.role}</span>
+                    <span className={styles.roleGroupCount}>
+                      {sorted.filter(p => p.role === profile.role).length}
+                    </span>
+                  </div>
+                );
+              }
+              const displayName = profile.display_name || profile.email;
+              rows.push(
               <div key={profile.id} className={styles.row}>
                 {/* User info */}
                 <div className={styles.userCell}>
@@ -704,7 +719,9 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
                 </div>
               </div>
             );
-          })}
+            }
+            return rows;
+          })()}
 
           {profiles.length === 0 && (
             <p className={styles.empty}>{lang === 'ja' ? 'ユーザーが見つかりません。' : 'No users found.'}</p>

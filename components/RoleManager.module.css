@@ -112,6 +112,19 @@
   border-color: #e5e7eb;
 }
 
+.roleGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px 4px;
+}
+
+.roleGroupCount {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
 .userCell {
   display: flex;
   align-items: center;
