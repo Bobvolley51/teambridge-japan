@@ -179,7 +179,7 @@
   justify-content: center;
   gap: 3px;
   padding: 9px 4px 8px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
   color: #a1a1aa;
   background: none;
@@ -210,7 +210,7 @@
   justify-content: center;
   gap: 3px;
   padding: 7px 4px 6px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
   color: #71717a;
   background: none;
@@ -354,7 +354,7 @@
   transition: color 0.1s;
   position: relative;
 }
-.mobileNavItem:active { background: rgba(255,255,255,0.08); }
+.mobileNavItem:active { background: rgba(255,255,255,0.08); transform: scale(0.94); }
 .mobileNavActive { color: #ffffff; font-weight: 700; }
 .mobileNavActive .mobileNavIconWrap { background: rgba(255,255,255,0.12); border-radius: 10px; }
 
@@ -374,11 +374,11 @@
   right: -7px;
   background: var(--tb-accent);
   color: #fff;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
-  min-width: 14px;
-  height: 14px;
-  border-radius: 7px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
