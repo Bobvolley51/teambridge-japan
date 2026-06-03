@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { computeEWMA } from '@/lib/acwr';
 import { supabase } from '@/lib/supabase';
-import { timeAgo, toJstDateStart, toJstDate, dateToYmd } from '@/lib/date';
+import { timeAgo, toJstDateStart, toJstDate, dateToYmd, toJstDateStr } from '@/lib/date';
 import { useTranslated, translate } from '@/lib/translate';
 import { SkeletonCardBlock, SkeletonList } from './Skeleton';
 import styles from './Dashboard.module.css';
@@ -282,6 +282,7 @@ export default function Dashboard({
   const [wellnessAlerts,    setWellnessAlerts]    = useState([]);
   const [wellnessProgress,  setWellnessProgress]  = useState(null); // { submitted, total }
   const [nutritionProgress, setNutritionProgress] = useState(null); // { submitted, total }
+  const [rpeCounter,        setRpeCounter]        = useState([]);   // [{id,title,category,startTime,expected,submitted}]
   const [acwrAlerts,        setAcwrAlerts]        = useState([]);
   const [overlapAlerts,     setOverlapAlerts]     = useState([]);
   const [calChanges,        setCalChanges]        = useState([]);
@@ -303,6 +304,46 @@ export default function Dashboard({
   const photoInputRef = useRef(null);
 
   useEffect(() => { load(); }, [currentUserId, profile?.role]);
+
+  // RPE submission counter — only for coach/staff roles
+  useEffect(() => {
+    if (!WELLNESS_ALERT_ROLES.includes(profile?.role)) return;
+    const fetchRpe = async () => {
+      const todayJst    = toJstDateStr(new Date());
+      const dayStartUtc = new Date(todayJst + 'T00:00:00Z').getTime() - 9 * 3600 * 1000;
+      const dayEndUtc   = dayStartUtc + 24 * 3600 * 1000;
+
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, title, start_time, category')
+        .in('category', ['Ball-Practice', 'Game'])
+        .gte('start_time', new Date(dayStartUtc).toISOString())
+        .lt('start_time',  new Date(dayEndUtc).toISOString())
+        .order('start_time');
+
+      if (!events?.length) { setRpeCounter([]); return; }
+
+      const eventIds = events.map(e => e.id);
+      const [{ data: participants }, { data: submitted }] = await Promise.all([
+        supabase.from('event_participants').select('event_id').in('event_id', eventIds).or('status.eq.in,status.is.null'),
+        supabase.from('session_rpe').select('event_id, attended').in('event_id', eventIds),
+      ]);
+
+      const expectedMap = {};
+      for (const p of (participants ?? [])) expectedMap[p.event_id] = (expectedMap[p.event_id] ?? 0) + 1;
+      const submittedMap = {};
+      for (const s of (submitted ?? [])) {
+        if (s.attended !== false) submittedMap[s.event_id] = (submittedMap[s.event_id] ?? 0) + 1;
+      }
+
+      setRpeCounter(events.map(e => ({
+        id: e.id, title: e.title, category: e.category, startTime: e.start_time,
+        expected:  expectedMap[e.id]  ?? 0,
+        submitted: submittedMap[e.id] ?? 0,
+      })));
+    };
+    fetchRpe();
+  }, [profile?.role]);
 
   // Translate event titles whenever events or language changes
   useEffect(() => {
@@ -1114,6 +1155,42 @@ export default function Dashboard({
                         <div className={styles.wellnessProgressFill}
                           style={{ width: nutritionProgress.total > 0 ? `${Math.round(nutritionProgress.submitted / nutritionProgress.total * 100)}%` : '0%', background: '#d97706' }} />
                       </div>
+                    </div>
+                  )}
+
+                  {/* RPE submission counter — today's practices/games */}
+                  {rpeCounter.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div className={styles.wellnessProgressLabel} style={{ marginBottom: 6 }}>
+                        <span>📋 {lang === 'ja' ? '本日 RPE 提出' : "Today's RPE submissions"}</span>
+                      </div>
+                      {rpeCounter.map(ev => {
+                        const pct      = ev.expected > 0 ? ev.submitted / ev.expected : 0;
+                        const complete = ev.submitted >= ev.expected && ev.expected > 0;
+                        const missing  = Math.max(0, ev.expected - ev.submitted);
+                        const timeStr  = new Date(ev.startTime).toLocaleTimeString(
+                          lang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' }
+                        );
+                        return (
+                          <div key={ev.id} style={{ marginBottom: 8 }} onClick={() => onNavigate('performance')} className={styles.rpeCounterRow}>
+                            <div className={styles.wellnessProgressLabel}>
+                              <span style={{ fontSize: 12 }}>
+                                {ev.category === 'Game' ? '🏐' : '🏋️'} {ev.title}
+                                <span style={{ color: '#9ca3af', marginLeft: 4 }}>{timeStr}</span>
+                              </span>
+                              <span style={{ fontWeight: 700, color: complete ? '#10b981' : missing > 0 ? '#b45309' : '#374151' }}>
+                                {ev.submitted}/{ev.expected}
+                                {missing > 0 && <span style={{ fontSize: 11, color: '#b45309', marginLeft: 4 }}>{lang === 'ja' ? `残${missing}` : `${missing} missing`}</span>}
+                                {complete && <span style={{ color: '#10b981', marginLeft: 4 }}>✓</span>}
+                              </span>
+                            </div>
+                            <div className={styles.wellnessProgressBar}>
+                              <div className={styles.wellnessProgressFill}
+                                style={{ width: `${Math.min(pct * 100, 100)}%`, background: complete ? '#10b981' : '#f59e0b' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

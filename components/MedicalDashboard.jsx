@@ -30,6 +30,12 @@ const INJURY_TYPES = [
   'Overuse', 'Post-surgery', 'Illness', 'Fatigue', 'Other',
 ];
 
+// Auto-translates any text field using the translate API
+function TranslatedText({ text, lang }) {
+  const t = useTranslated(text, lang);
+  return <>{t}</>;
+}
+
 // Body regions: maps wellness_body_pain keys + medical_records body_part strings to display
 const BODY_REGIONS = [
   { id: 'shoulder_l', side: 'left',   en: 'L Shoulder', ja: '左肩',         medPart: 'Shoulder L', wellnessKey: 'shoulder_l' },
@@ -541,9 +547,9 @@ function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTh
                         </div>
                       )}
                     </div>
-                    {r.treatment && <div className={styles.painRecordTreatment}>{r.treatment}</div>}
+                    {r.treatment && <div className={styles.painRecordTreatment}><TranslatedText text={r.treatment} lang={lang} /></div>}
                     {isTherapist && r.private_notes && (
-                      <div className={styles.painRecordPrivate}>🔒 {r.private_notes}</div>
+                      <div className={styles.painRecordPrivate}>🔒 <TranslatedText text={r.private_notes} lang={lang} /></div>
                     )}
                   </div>
                 );
@@ -802,6 +808,18 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     setCommForm(true);
   };
 
+  // Component-level name lookup: display_name (Japanese) → Latin name + jersey
+  const infoByDisplayName = {};
+  for (const p of players) {
+    const latin = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name;
+    if (p.display_name) infoByDisplayName[p.display_name] = { latin, jersey: p.jersey_number };
+  }
+  const normPlayerName = (raw) => {
+    const info = infoByDisplayName[raw];
+    if (!info) return raw ?? '—';
+    return info.jersey != null ? `#${info.jersey} ${info.latin}` : info.latin;
+  };
+
   const tabs = [
     { id: 'availability', en: 'Availability',    ja: '出場可否'          },
     { id: 'pain',         en: 'Pain & Medical',  ja: '痛み・メディカル'  },
@@ -910,15 +928,21 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
           ) : tab === 'pain' ? (() => {
             // Build per-player data
             const avMap = Object.fromEntries(availability.map(a => [a.player_name, a]));
+
+            const normName = (raw) => infoByDisplayName[raw]?.latin ?? raw;
+            const infoByDisplay = infoByDisplayName;
+
             const painByPlayer = {};
             for (const r of painData) {
-              if (!painByPlayer[r.user_name]) painByPlayer[r.user_name] = [];
-              painByPlayer[r.user_name].push(r);
+              const key = normName(r.user_name);
+              if (!painByPlayer[key]) painByPlayer[key] = [];
+              painByPlayer[key].push(r);
             }
             const recsByPlayer = {};
             for (const r of records) {
-              if (!recsByPlayer[r.player_name]) recsByPlayer[r.player_name] = [];
-              recsByPlayer[r.player_name].push(r);
+              const key = normName(r.player_name);
+              if (!recsByPlayer[key]) recsByPlayer[key] = [];
+              recsByPlayer[key].push(r);
             }
 
             // All unique player names across availability, pain data, records
@@ -974,19 +998,23 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                   </div>
                 ) : (
                   <div className={styles.painList}>
-                    {concerned.map(name => (
-                      <PlayerPainCard
-                        key={name}
-                        player={{ player_name: name }}
-                        painRows={painByPlayer[name] ?? []}
-                        medRecords={recsByPlayer[name] ?? []}
-                        availability={avMap[name]}
-                        lang={lang}
-                        isTherapist={isTherapist}
-                        onEditRecord={setRecForm}
-                        onPushRecord={pushRecordToCoaches}
-                      />
-                    ))}
+                    {concerned.map(name => {
+                      const jersey = avMap[name]?.jersey_number ?? infoByDisplay[name]?.jersey;
+                      const label  = jersey != null ? `#${jersey} ${name}` : name;
+                      return (
+                        <PlayerPainCard
+                          key={name}
+                          player={{ player_name: label, jersey_number: jersey }}
+                          painRows={painByPlayer[name] ?? []}
+                          medRecords={recsByPlayer[name] ?? []}
+                          availability={avMap[name]}
+                          lang={lang}
+                          isTherapist={isTherapist}
+                          onEditRecord={setRecForm}
+                          onPushRecord={pushRecordToCoaches}
+                        />
+                      );
+                    })}
                   </div>
                 )}
                 {recForm && (
@@ -1084,10 +1112,10 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                           return (
                             <tr key={r.id} className={styles.tr}>
                               <td className={styles.td}>{r.record_date}</td>
-                              <td className={styles.td}><strong>{r.player_name}</strong></td>
+                              <td className={styles.td}><strong>{normPlayerName(r.player_name)}</strong></td>
                               <td className={styles.td}>{Array.isArray(r.body_part) ? r.body_part.join(' · ') : (r.body_part || '—')}</td>
                               <td className={styles.td}>{r.injury_type || '—'}</td>
-                              <td className={styles.tdWide}>{r.treatment || '—'}</td>
+                              <td className={styles.tdWide}>{r.treatment ? <TranslatedText text={r.treatment} lang={lang} /> : '—'}</td>
                               <td className={styles.td}>
                                 <span className={styles.recStatusBadge} style={{ color: cfg.color }}>
                                   {lang === 'ja' ? cfg.ja : cfg.en}

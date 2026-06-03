@@ -380,6 +380,9 @@
   transition: width 0.4s ease;
 }
 
+.rpeCounterRow { cursor: pointer; }
+.rpeCounterRow:hover .wellnessProgressBar { opacity: 0.8; }
+
 /* #3 — Player summary card */
 .playerStatRow {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
