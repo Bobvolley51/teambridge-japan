@@ -278,6 +278,7 @@ export default function Dashboard({
   const [messages,          setMessages]          = useState([]);
   const [announcements,     setAnnouncements]     = useState([]);
   const [readAnnIds,        setReadAnnIds]        = useState(new Set());
+  const [dismissedTaskIds,  setDismissedTaskIds]  = useState(new Set());
   const [tasks,             setTasks]             = useState([]);
   const [wellnessAlerts,    setWellnessAlerts]    = useState([]);
   const [wellnessProgress,  setWellnessProgress]  = useState(null); // { submitted, total }
@@ -387,6 +388,7 @@ export default function Dashboard({
       { data: annData },
       { data: annReadsData },
       { data: taskData },
+      { data: taskDismissalsData },
       { data: wellData },
       { data: wellSubmittedData },
       { data: playerCountData },
@@ -437,6 +439,10 @@ export default function Dashboard({
             .eq('assigned_to', currentUserId)
             .neq('status', 'done')
             .limit(50)
+        : Promise.resolve({ data: [] }),
+      // Task dismissals from DB
+      currentUserId
+        ? supabase.from('task_dismissals').select('task_id').eq('user_id', currentUserId)
         : Promise.resolve({ data: [] }),
       // Wellness low-score alerts (score < 40 on 0-100 scale = red zone)
       canSeeWellness
@@ -581,6 +587,7 @@ export default function Dashboard({
     // #4: DB-backed read IDs
     setReadAnnIds(new Set((annReadsData ?? []).map(r => r.announcement_id)));
     setTasks(taskData ?? []);
+    setDismissedTaskIds(new Set((taskDismissalsData ?? []).map(r => r.task_id)));
     setCalChanges(calChangeData ?? []);
 
     // Wellness alerts
@@ -651,11 +658,13 @@ export default function Dashboard({
     }
   };
 
-  const dismissTask = (id) => {
-    const key = `task_dismissed_${currentUserId}`;
-    const prev = JSON.parse(localStorage.getItem(key) || '[]');
-    localStorage.setItem(key, JSON.stringify([...prev, id]));
+  const dismissTask = async (id) => {
+    setDismissedTaskIds(prev => new Set([...prev, id]));
     setTasks(prev => prev.filter(t => t.id !== id));
+    if (currentUserId) {
+      await supabase.from('task_dismissals')
+        .upsert({ user_id: currentUserId, task_id: id }, { onConflict: 'user_id,task_id' });
+    }
   };
 
   // ── #5: Inline RSVP ──────────────────────────────────────────────────────────
@@ -703,9 +712,6 @@ export default function Dashboard({
     out:   { en: 'Out',   ja: '欠席',  cls: 'rsvpOut' },
   };
 
-  const dismissedTaskIds = typeof window !== 'undefined'
-    ? new Set(JSON.parse(localStorage.getItem(`task_dismissed_${currentUserId}`) || '[]'))
-    : new Set();
   const TASK_PRI_ORDER = { high: 0, medium: 1, low: 2 };
   const visibleDashTasks = tasks
     .filter(t => !dismissedTaskIds.has(t.id))

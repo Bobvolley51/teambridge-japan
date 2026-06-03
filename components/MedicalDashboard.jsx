@@ -694,16 +694,13 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   const [commForm,       setCommForm]       = useState(false);
   const [commPrefill,    setCommPrefill]    = useState(null);
 
-  const lsKey = `medical_noticed_${profile?.id ?? 'anon'}`;
-  const [noticedIds, setNoticedIds] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(lsKey) ?? '[]')); } catch { return new Set(); }
-  });
-  const markNoticed = (id) => {
-    setNoticedIds(prev => {
-      const next = new Set(prev); next.add(id);
-      try { localStorage.setItem(lsKey, JSON.stringify([...next])); } catch {}
-      return next;
-    });
+  const [noticedIds, setNoticedIds] = useState(new Set());
+  const markNoticed = async (id) => {
+    setNoticedIds(prev => new Set([...prev, id]));
+    if (profile?.id) {
+      await supabase.from('medical_noticed')
+        .upsert({ user_id: profile.id, alert_id: id }, { onConflict: 'user_id,alert_id' });
+    }
   };
 
   const [recFilter,      setRecFilter]      = useState('all'); // 'all' | 'active' | 'monitoring' | 'cleared'
@@ -714,14 +711,18 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
     const d30 = new Date(); d30.setDate(d30.getDate() - 30);
     const thirtyAgoStr = `${d30.getFullYear()}-${pad(d30.getMonth()+1)}-${pad(d30.getDate())}`;
 
-    const [{ data: profData }, { data: avData }, { data: commData }, { data: painRows }] = await Promise.all([
+    const [{ data: profData }, { data: avData }, { data: commData }, { data: painRows }, { data: noticedData }] = await Promise.all([
       supabase.from('profiles').select('id, first_name, last_name, display_name, role, avatar_url, jersey_number, position').eq('role', 'Player').order('jersey_number', { ascending: true, nullsFirst: false }),
       supabase.from('player_availability').select('*').order('player_name'),
       supabase.from('medical_comms').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('wellness_body_pain').select('user_name, body_part, response_date').gte('response_date', thirtyAgoStr),
+      profile?.id
+        ? supabase.from('medical_noticed').select('alert_id').eq('user_id', profile.id)
+        : Promise.resolve({ data: [] }),
     ]);
     setPlayers(profData ?? []);
     setPainData(painRows ?? []);
+    setNoticedIds(new Set((noticedData ?? []).map(r => r.alert_id)));
 
     // Merge players with availability — show every player even if no row yet
     const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
