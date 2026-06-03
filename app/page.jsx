@@ -41,7 +41,7 @@ import ProfileSetup          from '@/components/ProfileSetup';
 import WellnessDashboard     from '@/components/WellnessDashboard';
 import SessionRPE            from '@/components/SessionRPE';
 import BodyWeightCheck       from '@/components/BodyWeightCheck';
-import { toJstDateStr }      from '@/lib/date';
+import { toJstDateStr, toJstDate, dateToYmd } from '@/lib/date';
 import PerformanceDashboard  from '@/components/PerformanceDashboard';
 import MedicalDashboard      from '@/components/MedicalDashboard';
 import NotificationBell      from '@/components/NotificationBell';
@@ -398,17 +398,17 @@ export default function Home() {
   };
 
   const checkPendingBodyWeight = async (userId) => {
-    // Monday of current ISO week
-    const now = new Date();
-    const dow = (now.getDay() + 6) % 7;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - dow);
-    monday.setHours(0, 0, 0, 0);
-    const weekStart = monday.toISOString().slice(0, 10);
+    // Monday of current ISO week in JST
+    const nowJst = toJstDate(new Date());
+    const dow    = (nowJst.getDay() + 6) % 7;
+    nowJst.setDate(nowJst.getDate() - dow);
+    nowJst.setHours(0, 0, 0, 0);
+    const weekStart  = dateToYmd(nowJst);
+    // Convert JST Monday back to UTC for event start_time range
+    const mondayUtc  = new Date(nowJst.getTime() - 9 * 60 * 60 * 1000).toISOString();
+    const nowUtc     = new Date().toISOString();
 
-    if (localStorage.getItem(`bw_done_${userId}_${weekStart}`)) return;
-
-    // Check already submitted to DB
+    // DB-only check — works across all devices
     const { data: existing } = await supabase
       .from('player_bodyweight')
       .select('id')
@@ -417,11 +417,12 @@ export default function Home() {
       .limit(1);
     if (existing?.length) return;
 
-    // Check for any Weightlifting event this week the player was part of
+    // Only confirmed attendees of Weightlifting events this week
     const { data: participation } = await supabase
       .from('event_participants')
       .select('event_id')
-      .eq('profile_id', userId);
+      .eq('profile_id', userId)
+      .or('status.eq.in,status.is.null');
     if (!participation?.length) return;
 
     const { data: events } = await supabase
@@ -429,8 +430,8 @@ export default function Home() {
       .select('id')
       .in('id', participation.map(p => p.event_id))
       .eq('category', 'Weightlifting')
-      .gte('start_time', monday.toISOString())
-      .lte('start_time', now.toISOString());
+      .gte('start_time', mondayUtc)
+      .lte('start_time', nowUtc);
     if (!events?.length) return;
 
     setBwWeekStart(weekStart);
@@ -463,10 +464,21 @@ export default function Home() {
 
     if (checkWellness && prof?.role === 'Player') {
       const today = toJstDateStr(new Date());
-      // last_wellness_date on the profile is the single source of truth across all devices
       if (prof.last_wellness_date !== today) {
-        setShowWellness(true);
-        return; // show wellness first; RPE will be checked after
+        // Fallback DB check: covers existing users (null last_wellness_date) and failed profile updates
+        const { data: existing } = await supabase
+          .from('wellness_responses')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('response_date', today)
+          .limit(1);
+        if (existing?.length) {
+          // Already answered today — sync the profile date so future logins skip this query
+          supabase.from('profiles').update({ last_wellness_date: today }).eq('id', userId).then();
+        } else {
+          setShowWellness(true);
+          return; // show wellness first; RPE will be checked after
+        }
       }
       // Wellness already done today — check for pending RPE then body weight
       await checkPendingRPE(userId);
@@ -495,7 +507,6 @@ export default function Home() {
   };
 
   const handleBodyWeightDone = () => {
-    localStorage.setItem(`bw_done_${session?.user?.id}_${bwWeekStart}`, '1');
     setShowBodyWeight(false);
   };
 
