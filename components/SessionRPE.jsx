@@ -50,6 +50,7 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
   const [mindfulness,      setMindfulness]      = useState(null);
   const [practiceGoal,     setPracticeGoal]     = useState(null);
   const [saving,           setSaving]           = useState(false);
+  const [alreadyConfirm,   setAlreadyConfirm]   = useState(0);
 
   const event          = pendingEvents[idx];
   const dur            = parseInt(durMin) || 0;
@@ -162,6 +163,11 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
     { weekday: 'short', month: 'short', day: 'numeric' }
   );
 
+  const handleAlreadyAnswered = () => {
+    if (alreadyConfirm < 2) { setAlreadyConfirm(s => s + 1); return; }
+    handleSkip(); // reuse skip logic — saves attended:false so it won't reappear
+  };
+
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
@@ -169,8 +175,11 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         {/* ── Page 1: RPE + duration ── */}
         {page === 1 && (
           <>
+            <div className={styles.contextBanner}>
+              {event.category === 'Game' ? '🏐' : '🏋️'} {event.title} · {dateStr}
+            </div>
             <div className={styles.header}>
-              <span className={styles.headerEmoji}>🏋️</span>
+              <span className={styles.headerEmoji}>📊</span>
               <div>
                 <div className={styles.title}>
                   {lang === 'ja' ? 'セッション RPE' : 'Session RPE'}
@@ -181,7 +190,7 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
                     <span className={styles.progressPill}>1/2</span>
                   )}
                 </div>
-                <div className={styles.sub}>{event.title} · {dateStr}</div>
+                <div className={styles.sub}>{lang === 'ja' ? 'セッション全体の評価' : 'Rate your overall session'}</div>
               </div>
             </div>
 
@@ -242,6 +251,27 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
                   : (saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit'))}
               </button>
+            </div>
+            <div className={styles.skipArea}>
+              {alreadyConfirm === 0 && (
+                <button className={styles.alreadyBtn} onClick={() => setAlreadyConfirm(1)}>
+                  {lang === 'ja' ? '既に回答済み' : 'Already answered this'}
+                </button>
+              )}
+              {alreadyConfirm === 1 && (
+                <div className={styles.skipConfirm}>
+                  <span>{lang === 'ja' ? '本当にもう回答しましたか？' : 'Are you sure you already rated this?'}</span>
+                  <button className={styles.skipConfirmBtn} onClick={() => setAlreadyConfirm(2)}>{lang === 'ja' ? 'はい' : 'Yes'}</button>
+                  <button className={styles.skipCancelBtn} onClick={() => setAlreadyConfirm(0)}>{lang === 'ja' ? 'いいえ' : 'No'}</button>
+                </div>
+              )}
+              {alreadyConfirm === 2 && (
+                <div className={styles.skipConfirm}>
+                  <span>{lang === 'ja' ? '閉じますか？' : 'Dismiss this session?'}</span>
+                  <button className={styles.skipConfirmBtn} onClick={handleAlreadyAnswered} disabled={saving}>{lang === 'ja' ? '確認して閉じる' : 'Confirm & close'}</button>
+                  <button className={styles.skipCancelBtn} onClick={() => setAlreadyConfirm(0)}>{lang === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+                </div>
+              )}
             </div>
             <p className={styles.privacyNote}>
               🔒 {lang === 'ja'

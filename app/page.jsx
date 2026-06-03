@@ -398,15 +398,15 @@ export default function Home() {
   };
 
   const checkPendingBodyWeight = async (userId) => {
-    // Monday of current ISO week in JST
-    const nowJst = toJstDate(new Date());
-    const dow    = (nowJst.getDay() + 6) % 7;
-    nowJst.setDate(nowJst.getDate() - dow);
-    nowJst.setHours(0, 0, 0, 0);
-    const weekStart  = dateToYmd(nowJst);
-    // Convert JST Monday back to UTC for event start_time range
-    const mondayUtc  = new Date(nowJst.getTime() - 9 * 60 * 60 * 1000).toISOString();
-    const nowUtc     = new Date().toISOString();
+    // Monday of current ISO week in JST — use Intl-safe string arithmetic
+    const todayStr  = toJstDateStr(new Date()); // 'YYYY-MM-DD', always correct JST
+    const todayUtc  = new Date(todayStr + 'T12:00:00Z'); // noon UTC, safe for day arithmetic
+    const dow       = (todayUtc.getUTCDay() + 6) % 7;   // 0=Mon
+    const weekStart = new Date(todayUtc.getTime() - dow * 86400000).toISOString().slice(0, 10);
+    // Monday 00:00 JST = Monday date T15:00:00Z (UTC-9h)
+    const mondayUtc = new Date(weekStart + 'T00:00:00Z').getTime() - 9 * 3600 * 1000;
+    const mondayUtcStr = new Date(mondayUtc).toISOString();
+    const nowUtc    = new Date().toISOString();
 
     // DB-only check — works across all devices
     const { data: existing } = await supabase
@@ -430,7 +430,7 @@ export default function Home() {
       .select('id')
       .in('id', participation.map(p => p.event_id))
       .eq('category', 'Weightlifting')
-      .gte('start_time', mondayUtc)
+      .gte('start_time', mondayUtcStr)
       .lte('start_time', nowUtc);
     if (!events?.length) return;
 

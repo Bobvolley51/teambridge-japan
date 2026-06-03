@@ -222,6 +222,36 @@
 .submitBtn:hover:not(:disabled) { background: #6b001f; }
 .submitBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+.contextBanner {
+  background: #fdf2f4; border-bottom: 1px solid #fce7eb;
+  padding: 8px 24px; font-size: 12px; font-weight: 700; color: #7e0027;
+  letter-spacing: 0.02em; flex-shrink: 0;
+}
+
+.skipArea {
+  padding: 6px 24px 10px; display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+}
+.alreadyBtn {
+  font-size: 12px; color: #9ca3af; background: none; border: none;
+  cursor: pointer; font-family: inherit; text-decoration: underline; padding: 2px 0;
+}
+.alreadyBtn:hover { color: #6b7280; }
+.skipConfirm {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  justify-content: center; font-size: 12px; color: #374151;
+}
+.skipConfirmBtn {
+  padding: 4px 12px; font-size: 12px; font-weight: 600;
+  background: #7e0027; color: #fff; border: none; border-radius: 6px;
+  cursor: pointer; font-family: inherit;
+}
+.skipConfirmBtn:disabled { opacity: 0.5; }
+.skipCancelBtn {
+  padding: 4px 10px; font-size: 12px; background: none;
+  border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+
 .privacyNote {
   font-size: 11px;
   color: #9ca3af;

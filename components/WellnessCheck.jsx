@@ -90,6 +90,16 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [otherMessage,    setOtherMessage]    = useState('');
   const [saving,          setSaving]          = useState(false);
   const [submitError,     setSubmitError]     = useState('');
+  const [skipConfirm,     setSkipConfirm]     = useState(0); // 0=hidden, 1=first, 2=second
+
+  const today = toJstDateStr(new Date());
+
+  const handleSkip = async () => {
+    if (skipConfirm < 2) { setSkipConfirm(s => s + 1); return; }
+    // Mark today as done on the profile so the form won't re-appear
+    await supabase.from('profiles').update({ last_wellness_date: today }).eq('id', userId);
+    onComplete();
+  };
 
   const allAnswered = QUESTIONS.every(q => scores[q.key] != null)
     && sleepHours   != null
@@ -265,6 +275,9 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
         {/* ── Step 1 ── */}
         {step === 1 && (
           <>
+            <div className={styles.contextBanner}>
+              📅 {lang === 'ja' ? `${today} のチェックイン` : `Check-in for ${today}`}
+            </div>
             <div className={styles.header}>
               <span className={styles.headerEmoji}>💪</span>
               <div>
@@ -407,6 +420,35 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
                   : (lang === 'ja' ? '送信する' : 'Submit')}
               </button>
+            </div>
+            <div className={styles.skipArea}>
+              {skipConfirm === 0 && (
+                <button className={styles.skipBtn} onClick={() => setSkipConfirm(1)}>
+                  {lang === 'ja' ? '既に回答済み' : 'Already answered today'}
+                </button>
+              )}
+              {skipConfirm === 1 && (
+                <div className={styles.skipConfirm}>
+                  <span>{lang === 'ja' ? '本当に今日はもう回答しましたか？' : 'Are you sure you already answered today?'}</span>
+                  <button className={styles.skipConfirmBtn} onClick={() => setSkipConfirm(2)}>
+                    {lang === 'ja' ? 'はい' : 'Yes'}
+                  </button>
+                  <button className={styles.skipCancelBtn} onClick={() => setSkipConfirm(0)}>
+                    {lang === 'ja' ? 'いいえ' : 'No'}
+                  </button>
+                </div>
+              )}
+              {skipConfirm === 2 && (
+                <div className={styles.skipConfirm}>
+                  <span>{lang === 'ja' ? '今日のフォームを閉じますか？' : 'Dismiss this form for today?'}</span>
+                  <button className={styles.skipConfirmBtn} onClick={handleSkip} disabled={saving}>
+                    {lang === 'ja' ? '確認して閉じる' : 'Confirm & close'}
+                  </button>
+                  <button className={styles.skipCancelBtn} onClick={() => setSkipConfirm(0)}>
+                    {lang === 'ja' ? 'キャンセル' : 'Cancel'}
+                  </button>
+                </div>
+              )}
             </div>
             {submitError && (
               <div style={{ color: '#b91c1c', marginTop: 10, fontSize: 13 }}>
