@@ -368,8 +368,9 @@ export default function WellnessDashboard({ lang }) {
     ? weekPlayerListAll.filter(p => profileByNickname[p.name]?.position === positionFilter)
     : weekPlayerListAll;
 
-  const alarmedWeek = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
-  const weekLabel   = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
+  const alarmedWeek   = [...new Set(weekRows.filter(r => MAIN_KEYS.has(r.question_key) && r.score < 40).map(r => r.user_name))];
+  const weekLabel     = `${weekDates[0]} – ${weekDates[weekDates.length - 1]}`;
+  const teamAvgWeek   = avg(weekRows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score));
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -467,6 +468,7 @@ export default function WellnessDashboard({ lang }) {
               ? <p className={styles.hint}>{lang === 'ja' ? 'この日のデータはありません。' : 'No check-ins for this date.'}</p>
               : (() => {
                   const hasAnyFever = todayList.some(([, qs]) => tempColor(qs['temperature']) != null);
+                  const teamAvgToday = avg(rows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score));
                   return (
                     <div className={styles.tableWrap}>
                     <table className={styles.table}>
@@ -541,7 +543,7 @@ export default function WellnessDashboard({ lang }) {
                           <td className={styles.tdName}>
                             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                               <strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong>
-                              {(() => { const ta = avg(rows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score)); return <span className={styles.avgText} style={{ color: colorOf(ta), fontSize: 11 }}>{ta ?? '—'}</span>; })()}
+                              <span className={styles.avgText} style={{ color: colorOf(teamAvgToday), fontSize: 11 }}>{teamAvgToday ?? '—'}</span>
                             </div>
                           </td>
                           {QUESTIONS.map(q => {
@@ -709,7 +711,7 @@ export default function WellnessDashboard({ lang }) {
                             <td className={styles.tdName}>
                               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                                 <strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong>
-                                {(() => { const ta = avg(weekRows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score)); return <span className={styles.avgText} style={{ color: colorOf(ta), fontSize: 11 }}>{ta ?? '—'}</span>; })()}
+                                <span className={styles.avgText} style={{ color: colorOf(teamAvgWeek), fontSize: 11 }}>{teamAvgWeek ?? '—'}</span>
                               </div>
                             </td>
                             {QUESTIONS.map(q => {
