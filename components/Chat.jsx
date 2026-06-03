@@ -634,6 +634,8 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
   );
 }
 
+const ALL_ENTRY = { id: '__all__', display_name: 'all', _isAll: true };
+
 // ── Main Chat Component ───────────────────────────────────────────────────────
 
 export default function Chat({ currentUser, uiLang = 'en', profile }) {
@@ -1071,7 +1073,6 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return publicUrl;
   }, [activeChannel]);
 
-  const ALL_ENTRY = { id: '__all__', display_name: 'all', _isAll: true };
   const mentionMatches = mentionQuery && !isActiveDM
     ? [
         // @all always at top when query matches "all" (or is blank/partial)
