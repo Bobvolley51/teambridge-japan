@@ -101,6 +101,7 @@ export default function PerformanceDashboard({ lang, profile }) {
     playerMap[r.user_id].all.push(r);
   }
 
+  const since = daysAgo(90).toISOString().slice(0, 10);
   const acwrRows = Object.entries(playerMap).map(([uid, p]) => {
     // EWMA uses all 90 days loaded
     const { acute, chronic, acwr } = computeEWMA(p.all, since);
