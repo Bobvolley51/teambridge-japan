@@ -100,14 +100,14 @@
 
 .tableWrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table thead { position: sticky; top: 0; background: #fdf2f4; z-index: 1; }
+.table thead { background: #fdf2f4; }
 
 .thName {
   font-family: var(--tb-font-display);
   text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700;
   color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em;
   border-bottom: 2px solid #7e0027; white-space: nowrap;
-  position: sticky; left: 0; background: #fdf2f4; z-index: 2;
+  position: sticky; left: 0; top: 0; background: #fdf2f4; z-index: 3;
   box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08);
 }
 .th {
@@ -115,6 +115,7 @@
   text-align: center; padding: 10px 8px; font-size: 11px; font-weight: 700;
   color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em;
   border-bottom: 2px solid #7e0027; white-space: nowrap;
+  position: sticky; top: 0; background: #fdf2f4; z-index: 2;
 }
 
 .tr:hover { background: #fdf2f4; }
