@@ -1,7 +1,7 @@
 // public/sw.js — TeamBridge Service Worker
 // Handles push notifications and basic offline caching
 
-const CACHE = 'tb-v2';
+const CACHE = 'tb-v3';
 
 // ── Install: cache the app shell so iOS PWA never shows "This page couldn't load" ──
 self.addEventListener('install', (e) => {
