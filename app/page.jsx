@@ -463,18 +463,10 @@ export default function Home() {
 
     if (checkWellness && prof?.role === 'Player') {
       const today = toJstDateStr(new Date());
-      // localStorage prevents re-showing after skip or submit within the same day
-      if (!localStorage.getItem(`wellness_done_${userId}_${today}`)) {
-        const { data: existing } = await supabase
-          .from('wellness_responses')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('response_date', today)
-          .limit(1);
-        if (!existing || existing.length === 0) {
-          setShowWellness(true);
-          return; // show wellness first; RPE will be checked after
-        }
+      // last_wellness_date on the profile is the single source of truth across all devices
+      if (prof.last_wellness_date !== today) {
+        setShowWellness(true);
+        return; // show wellness first; RPE will be checked after
       }
       // Wellness already done today — check for pending RPE then body weight
       await checkPendingRPE(userId);
@@ -490,7 +482,9 @@ export default function Home() {
   const handleWellnessDone = () => {
     const today = toJstDateStr(new Date());
     if (session?.user) {
-      localStorage.setItem(`wellness_done_${session.user.id}_${today}`, '1');
+      // Write to profile so all devices know wellness is done today
+      supabase.from('profiles').update({ last_wellness_date: today }).eq('id', session.user.id).then();
+      setProfile(prev => prev ? { ...prev, last_wellness_date: today } : prev);
     }
     setShowWellness(false);
     // After wellness, check for pending session RPE then body weight
