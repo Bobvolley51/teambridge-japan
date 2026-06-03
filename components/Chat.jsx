@@ -544,11 +544,74 @@ function NewDMModal({ profiles, currentUserId, onSelect, onClose, uiLang }) {
 
 // ── Sidebar / Chat List ───────────────────────────────────────────────────────
 
-function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId, onlineUsers }) {
+function Sidebar({ channels, dmConversations, archivedDMs = [], activeChannel, onSelect, onNewDM, canManage, onManage, uiLang, unreadCounts, currentUserId, onlineUsers, onArchiveDM, onDeleteDM, onUnarchiveDM }) {
   const [showChannelPicker, setShowChannelPicker] = useState(false);
+  const [dmMenu, setDmMenu] = useState(null); // channelId of open context menu
+  const [showArchived, setShowArchived] = useState(false);
+
+  function renderDMItem(dm, isArchived = false) {
+    const unread = unreadCounts?.[dm.channelId] ?? 0;
+    const lastTime = dm.lastMsg?.created_at
+      ? new Date(dm.lastMsg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    const lastContent = dm.lastMsg
+      ? (dm.lastMsg.image_url && !dm.lastMsg.content ? '📷 Photo' : dm.lastMsg.content?.slice(0, 32) ?? '')
+      : '';
+    const isMyLast = dm.lastMsg?.sender_id === currentUserId;
+    const isMenuOpen = dmMenu === dm.channelId;
+
+    return (
+      <div key={dm.channelId} className={styles.dmWrapper}>
+        <button
+          className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
+          onClick={() => { setDmMenu(null); onSelect(dm.channelId); }} title={dm.name}>
+          <div className={styles.avatarWrap}>
+            <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={40} />
+            {onlineUsers?.has(dm.otherId) && <span className={styles.onlineDot} />}
+          </div>
+          <div className={styles.dmItemInfo}>
+            <div className={styles.dmItemHeader}>
+              <span className={styles.dmItemName}>{dm.name}</span>
+              {lastTime && <span className={styles.dmItemTime}>{lastTime}</span>}
+            </div>
+            {lastContent && (
+              <span className={styles.dmItemLastMsg}>
+                {isMyLast ? (uiLang === 'ja' ? 'あなた: ' : 'You: ') : ''}{lastContent}
+              </span>
+            )}
+          </div>
+          {unread > 0 && activeChannel !== dm.channelId && (
+            <span className={styles.dmUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
+          )}
+        </button>
+        <button
+          className={styles.dmMenuBtn}
+          title={uiLang === 'ja' ? 'オプション' : 'Options'}
+          onClick={e => { e.stopPropagation(); setDmMenu(isMenuOpen ? null : dm.channelId); }}>
+          ⋯
+        </button>
+        {isMenuOpen && (
+          <div className={styles.dmMenu} onClick={e => e.stopPropagation()}>
+            {isArchived ? (
+              <button onClick={() => { onUnarchiveDM(dm.channelId); setDmMenu(null); }}>
+                {uiLang === 'ja' ? '受信トレイへ戻す' : 'Move to inbox'}
+              </button>
+            ) : (
+              <button onClick={() => { onArchiveDM(dm.channelId); setDmMenu(null); }}>
+                {uiLang === 'ja' ? 'アーカイブ' : 'Archive'}
+              </button>
+            )}
+            <button className={styles.dmMenuDelete} onClick={() => { onDeleteDM(dm.channelId); setDmMenu(null); }}>
+              {uiLang === 'ja' ? '削除' : 'Delete'}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={styles.sidebar} onClick={() => setDmMenu(null)}>
       {/* Mobile-only colored header (hidden on desktop via CSS) */}
       <div className={styles.mobileListHeader}>
         <span className={styles.mobileListTitle}>{uiLang === 'ja' ? 'チャット' : 'Chat'}</span>
@@ -599,43 +662,21 @@ function Sidebar({ channels, dmConversations, activeChannel, onSelect, onNewDM, 
         <button className={styles.manageBtn} onClick={onNewDM} title={uiLang === 'ja' ? '新規DM' : 'New DM'}>+</button>
       </div>
 
-      {dmConversations.map(dm => {
-        const unread = unreadCounts?.[dm.channelId] ?? 0;
-        const lastTime = dm.lastMsg?.created_at
-          ? new Date(dm.lastMsg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
-          : null;
-        const lastContent = dm.lastMsg
-          ? (dm.lastMsg.image_url && !dm.lastMsg.content ? '📷 Photo' : dm.lastMsg.content?.slice(0, 32) ?? '')
-          : '';
-        const isMyLast = dm.lastMsg?.sender_id === currentUserId;
-
-        return (
-          <button key={dm.channelId}
-            className={`${styles.channelItem} ${styles.dmItem} ${activeChannel === dm.channelId ? styles.channelActive : ''}`}
-            onClick={() => onSelect(dm.channelId)} title={dm.name}>
-            <div className={styles.avatarWrap}>
-              <AvatarPhoto url={dm.avatarUrl} initials={dm.initials ?? dm.name?.slice(0, 2)?.toUpperCase()} name={dm.name} size={40} />
-              {onlineUsers?.has(dm.otherId) && <span className={styles.onlineDot} />}
-            </div>
-            <div className={styles.dmItemInfo}>
-              <div className={styles.dmItemHeader}>
-                <span className={styles.dmItemName}>{dm.name}</span>
-                {lastTime && <span className={styles.dmItemTime}>{lastTime}</span>}
-              </div>
-              {lastContent && (
-                <span className={styles.dmItemLastMsg}>
-                  {isMyLast ? (uiLang === 'ja' ? 'あなた: ' : 'You: ') : ''}{lastContent}
-                </span>
-              )}
-            </div>
-            {unread > 0 && activeChannel !== dm.channelId && (
-              <span className={styles.dmUnreadBadge}>{unread > 99 ? '99+' : unread}</span>
-            )}
-          </button>
-        );
-      })}
+      {dmConversations.map(dm => renderDMItem(dm, false))}
       {dmConversations.length === 0 && (
         <p className={styles.dmEmpty}>{uiLang === 'ja' ? 'まだDMなし' : 'No DMs yet'}</p>
+      )}
+
+      {/* Archived DMs section */}
+      {archivedDMs.length > 0 && (
+        <>
+          <button className={styles.archivedToggle} onClick={e => { e.stopPropagation(); setShowArchived(v => !v); }}>
+            <span>{uiLang === 'ja' ? 'アーカイブ済み' : 'Archived'}</span>
+            <span className={styles.archivedCount}>{archivedDMs.length}</span>
+            <span className={styles.archivedChevron}>{showArchived ? '▾' : '▸'}</span>
+          </button>
+          {showArchived && archivedDMs.map(dm => renderDMItem(dm, true))}
+        </>
       )}
 
       {showChannelPicker && (
@@ -701,6 +742,7 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
   const [editText,      setEditText]      = useState('');
   const [onlineUsers,   setOnlineUsers]   = useState(new Set());
   const [pinnedMsg,     setPinnedMsg]     = useState(null); // { id, content, user_name }
+  const [dmStates,      setDmStates]      = useState({}); // { channelId: 'archived' | 'deleted' }
 
   const fileInputRef     = useRef(null);
   const endRef           = useRef(null);
@@ -811,6 +853,51 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       }
     }
     loadDMs();
+  }, [currentUser?.id]);
+
+  // ── DM conversation states (archived / deleted) ───────────────
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    supabase.from('dm_conversation_states')
+      .select('channel_id, status')
+      .eq('user_id', currentUser.id)
+      .then(({ data }) => {
+        if (data) {
+          const map = {};
+          for (const r of data) map[r.channel_id] = r.status;
+          setDmStates(map);
+        }
+      });
+  }, [currentUser?.id]);
+
+  const archiveDM = useCallback(async (channelId) => {
+    if (!currentUser?.id) return;
+    await supabase.from('dm_conversation_states').upsert(
+      { user_id: currentUser.id, channel_id: channelId, status: 'archived', updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,channel_id' }
+    );
+    setDmStates(prev => ({ ...prev, [channelId]: 'archived' }));
+    if (activeChannel === channelId) setActiveChannel(null);
+  }, [currentUser?.id, activeChannel]);
+
+  const deleteDM = useCallback(async (channelId) => {
+    if (!currentUser?.id) return;
+    await supabase.from('dm_conversation_states').upsert(
+      { user_id: currentUser.id, channel_id: channelId, status: 'deleted', updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,channel_id' }
+    );
+    setDmStates(prev => ({ ...prev, [channelId]: 'deleted' }));
+    if (activeChannel === channelId) setActiveChannel(null);
+  }, [currentUser?.id, activeChannel]);
+
+  const unarchiveDM = useCallback(async (channelId) => {
+    if (!currentUser?.id) return;
+    await supabase.from('dm_conversation_states').upsert(
+      { user_id: currentUser.id, channel_id: channelId, status: 'active', updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,channel_id' }
+    );
+    setDmStates(prev => ({ ...prev, [channelId]: 'active' }));
   }, [currentUser?.id]);
 
   // ── Read receipts ─────────────────────────────────────────────
@@ -928,6 +1015,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     const avatarUrl = other?.avatar_url ?? null;
     return { ...dm, name, subtitle, initials, avatarUrl };
   });
+
+  const activeDMsWithNames   = dmConversationsWithNames.filter(dm => !dmStates[dm.channelId] || dmStates[dm.channelId] === 'active');
+  const archivedDMsWithNames = dmConversationsWithNames.filter(dm => dmStates[dm.channelId] === 'archived');
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -1312,7 +1402,8 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     <div className={`${styles.wrapper} ${mobileShowList ? styles.mobilePanelList : styles.mobilePanelChat}`}>
       <Sidebar
         channels={channels}
-        dmConversations={dmConversationsWithNames}
+        dmConversations={activeDMsWithNames}
+        archivedDMs={archivedDMsWithNames}
         activeChannel={activeChannel}
         onSelect={ch => { setActiveChannel(ch); setError(null); setMobileShowList(false); setMentionQuery(null); }}
         onNewDM={() => setShowNewDM(true)}
@@ -1322,6 +1413,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
         unreadCounts={unreadCounts}
         currentUserId={currentUser?.id}
         onlineUsers={onlineUsers}
+        onArchiveDM={archiveDM}
+        onDeleteDM={deleteDM}
+        onUnarchiveDM={unarchiveDM}
       />
 
       <div className={styles.chatArea}>
