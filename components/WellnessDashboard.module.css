@@ -88,13 +88,15 @@
 .filterBtn:hover    { background: #fdf2f4; color: #7e0027; border-color: #7e0027; }
 .filterBtnActive    { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
 
+.alertsBlock { display: flex; flex-direction: column; gap: 6px; }
+
 .alarm {
   background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #7e0027;
   border-radius: 8px; padding: 10px 14px;
   font-size: 13px; font-weight: 600; color: #7e0027; flex-shrink: 0;
 }
 
-.tableWrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow: auto; }
+.tableWrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table thead { position: sticky; top: 0; background: #fdf2f4; z-index: 1; }
 
@@ -103,6 +105,7 @@
   text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700;
   color: #7e0027; text-transform: uppercase; letter-spacing: 0.05em;
   border-bottom: 2px solid #7e0027; white-space: nowrap;
+  position: sticky; left: 0; background: #fdf2f4; z-index: 2;
 }
 .th {
   font-family: var(--tb-font-display);
@@ -114,7 +117,7 @@
 .tr:hover { background: #fdf2f4; }
 .tr + .tr { border-top: 1px solid #f3f4f6; }
 
-.tdName { padding: 10px 14px; font-weight: 600; color: #111827; white-space: nowrap; }
+.tdName { padding: 10px 14px; font-weight: 600; color: #111827; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 1; }
 .td     { padding: 7px 6px; text-align: center; }
 
 .lowCell { background: #fef2f2; }
@@ -232,12 +235,18 @@
   .heading { display: none; }
   .tab     { padding: 5px 10px; font-size: 12px; }
 
-  /* Filter bar compact */
-  .filterBar  { padding: 5px 10px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  /* Filter bar: single scrollable row, no label */
+  .filterBar   { padding: 5px 10px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
   .filterLabel { display: none; }
-  .filterBtn  { padding: 3px 8px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+  .filterBtns  { flex-wrap: nowrap; }
+  .filterBtn   { padding: 3px 8px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
 
-  .content { padding: 8px 10px 12px; }
+  .content { padding: 8px 8px 12px; }
   .qGrid   { grid-template-columns: 1fr 1fr; }
+
+  /* Table: compact cells, horizontal scroll */
   .tableWrap { border-radius: 8px; }
+  .thName, .th { padding: 7px 8px; font-size: 10px; }
+  .tdName { padding: 8px 8px; font-size: 12px; }
+  .td     { padding: 6px 5px; font-size: 12px; }
 }

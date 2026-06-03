@@ -385,9 +385,54 @@ export default function WellnessDashboard({ lang }) {
             <input type="date" className={styles.datePicker} value={date} onChange={e => setDate(e.target.value)} />
           </div>
 
-          {alarmedToday.length > 0 && (
-            <div className={styles.alarm}>
-              ⚠️&nbsp;{lang === 'ja' ? `低スコア検出 — ${alarmedToday.map(n => nameLabel(n)).join('、')}` : `Low score alert — ${alarmedToday.map(n => nameLabel(n)).join(', ')}`}
+          {/* Alerts block — low scores + pain together at the top */}
+          {(alarmedToday.length > 0 || todayPain.length > 0) && (
+            <div className={styles.alertsBlock}>
+              {alarmedToday.length > 0 && (
+                <div className={styles.alarm}>
+                  ⚠️&nbsp;{lang === 'ja' ? `低スコア検出 — ${alarmedToday.map(n => nameLabel(n)).join('、')}` : `Low score alert — ${alarmedToday.map(n => nameLabel(n)).join(', ')}`}
+                </div>
+              )}
+              {todayPain.length > 0 && (
+                <div className={styles.painSection}>
+                  <div className={styles.painTitle}>
+                    🩹 {lang === 'ja' ? '報告された痛み・張り' : 'Reported Pain / Tightness'}
+                  </div>
+                  {Object.entries(
+                    todayPain.reduce((acc, r) => {
+                      if (!acc[r.user_name]) acc[r.user_name] = [];
+                      acc[r.user_name].push(r);
+                      return acc;
+                    }, {})
+                  ).map(([name, entries]) => (
+                    <div key={name} className={styles.painRow}>
+                      <span className={styles.painName}>{nameLabel(name)}</span>
+                      <div className={styles.painParts}>
+                        {entries.map(r => {
+                          const label     = BODY_PARTS.find(b => b.key === r.body_part);
+                          const chipLabel = label ? (lang === 'ja' ? label.ja : label.en) : r.body_part;
+                          const isIllness = r.body_part?.startsWith('illness_');
+                          const sym = ILLNESS_SYMPTOMS.find(s => s.key === r.body_part);
+                          const illnessLabel = sym ? (lang === 'ja' ? sym.ja : sym.en) : r.body_part;
+                          const displayLabel = isIllness ? `🤒 ${illnessLabel}` : chipLabel;
+                          const lvl = r.pain_level;
+                          const chipColor = isIllness ? '#f97316'
+                            : lvl == null ? '#9ca3af'
+                            : lvl >= 60 ? '#ef4444'
+                            : lvl >= 30 ? '#f59e0b'
+                            : '#10b981';
+                          return (
+                            <span key={r.body_part} className={styles.painChip}
+                              style={{ background: chipColor + '20', color: chipColor, borderColor: chipColor }}>
+                              {displayLabel}{lvl != null && !isIllness ? ` ${lvl}/100` : ''}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -514,41 +559,6 @@ export default function WellnessDashboard({ lang }) {
             </div>
           )}
 
-          {todayPain.length > 0 && (
-            <div className={styles.painSection}>
-              <div className={styles.painTitle}>
-                🩹 {lang === 'ja' ? '報告された痛み・張り' : 'Reported Pain / Tightness'}
-              </div>
-              {Object.entries(
-                todayPain.reduce((acc, r) => {
-                  if (!acc[r.user_name]) acc[r.user_name] = [];
-                  acc[r.user_name].push(r);
-                  return acc;
-                }, {})
-              ).map(([name, entries]) => (
-                <div key={name} className={styles.painRow}>
-                  <span className={styles.painName}>{nameLabel(name)}</span>
-                  <div className={styles.painParts}>
-                    {entries.map(r => {
-                      const label     = BODY_PARTS.find(b => b.key === r.body_part);
-                      const chipLabel = label ? (lang === 'ja' ? label.ja : label.en) : r.body_part;
-                      const level     = r.pain_level;
-                      const chipColor = level == null ? undefined
-                        : level >= 70 ? '#ef4444'
-                        : level >= 40 ? '#f59e0b'
-                        : '#10b981';
-                      return (
-                        <span key={r.body_part} className={styles.painChip}
-                          style={chipColor ? { background: chipColor, color: '#fff', borderColor: chipColor } : undefined}>
-                          {chipLabel}{level != null ? ` ${level}/100` : ''}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
