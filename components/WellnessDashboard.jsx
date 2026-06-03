@@ -564,14 +564,6 @@ export default function WellnessDashboard({ lang }) {
                 })()
           }
 
-          {todayList.length > 0 && (
-            <div className={styles.chartLegend} style={{ marginTop: 8 }}>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 60–100' : 'Good 60–100'}</span>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 40–59' : 'Moderate 40–59'}</span>
-              <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <40 ⚠️' : 'Alert <40 ⚠️'}</span>
-              <span className={styles.legendScale}>{lang === 'ja' ? 'スケール：0（低）→ 100（高）' : 'Scale: 0 (low) → 100 (high)'}</span>
-            </div>
-          )}
 
         </div>
       )}
@@ -652,13 +644,6 @@ export default function WellnessDashboard({ lang }) {
                         weekRows={weekRows}
                         lang={lang}
                       />
-                      <div className={styles.chartLegend}>
-                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} />{lang === 'ja' ? '良好 60–100' : 'Good 60–100'}</span>
-                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} />{lang === 'ja' ? '注意 40–59' : 'Moderate 40–59'}</span>
-                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#ef4444' }} />{lang === 'ja' ? '警告 <40 ⚠️' : 'Alert <40 ⚠️'}</span>
-                        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#d1d5db' }} />{lang === 'ja' ? '未回答' : 'No data'}</span>
-                        <span className={styles.legendScale}>{lang === 'ja' ? '最悪スコアの選手が上位' : 'Lowest avg shown first'}</span>
-                      </div>
                     </div>
                   )}
 
@@ -672,7 +657,6 @@ export default function WellnessDashboard({ lang }) {
                             <th className={styles.th}>{lang === 'ja' ? '睡眠' : 'Sleep'}</th>
                             <th className={styles.th}>{lang === 'ja' ? '参加' : 'Avail'}</th>
                             <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
-                            <th className={styles.th}>{lang === 'ja' ? '週平均' : 'Wk avg'}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -686,7 +670,10 @@ export default function WellnessDashboard({ lang }) {
                                 <td className={styles.tdName}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <AvatarPhoto url={avatarByName[name]} initials={name.slice(0, 2)} name={name} size={28} />
-                                    <span>{nameLabel(name)}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                      <span>{nameLabel(name)}</span>
+                                      <span className={styles.avgText} style={{ color: colorOf(overall), fontSize: 11 }}>{overall ?? '—'}</span>
+                                    </div>
                                   </div>
                                 </td>
                                 {QUESTIONS.map(q => (
@@ -713,16 +700,18 @@ export default function WellnessDashboard({ lang }) {
                                     : <span className={styles.noData}>—</span>
                                   }
                                 </td>
-                                <td className={styles.td}>
-                                  <span className={styles.avgText} style={{ color: colorOf(overall) }}>{overall ?? '—'}</span>
-                                </td>
                               </tr>
                             );
                           })}
                         </tbody>
                         <tfoot>
                           <tr className={styles.footRow}>
-                            <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
+                            <td className={styles.tdName}>
+                              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                <strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong>
+                                {(() => { const ta = avg(weekRows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score)); return <span className={styles.avgText} style={{ color: colorOf(ta), fontSize: 11 }}>{ta ?? '—'}</span>; })()}
+                              </div>
+                            </td>
                             {QUESTIONS.map(q => {
                               const a = avg(weekRows.filter(r => r.question_key === q.key).map(r => r.score));
                               return (
@@ -731,7 +720,6 @@ export default function WellnessDashboard({ lang }) {
                                 </td>
                               );
                             })}
-                            <td className={styles.td} />
                             <td className={styles.td} />
                             <td className={styles.td} />
                             <td className={styles.td} />
