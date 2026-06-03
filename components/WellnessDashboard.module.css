@@ -168,7 +168,9 @@
   font-size: 11px; font-weight: 600; color: #9ca3af;
   white-space: nowrap;
   border-bottom: 2px solid #e5e7eb;
-  min-width: 100px;
+  min-width: 120px;
+  position: sticky; left: 0; top: 0; background: #fff; z-index: 3;
+  box-shadow: 2px 0 4px -1px rgba(0,0,0,0.06);
 }
 .hmDateHead {
   text-align: center;
@@ -193,6 +195,8 @@
   font-size: 12px; font-weight: 600; color: #111827;
   white-space: nowrap;
   border-bottom: 1px solid #f3f4f6;
+  position: sticky; left: 0; background: #fff; z-index: 1;
+  box-shadow: 2px 0 4px -1px rgba(0,0,0,0.06);
 }
 .hmCell {
   text-align: center;

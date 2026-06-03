@@ -115,7 +115,7 @@ function availLabel(v, lang) {
 
 // ── Player Heatmap ────────────────────────────────────────────
 
-function PlayerHeatmap({ players, dates, playerDayMap, weekRows, lang }) {
+function PlayerHeatmap({ players, dates, playerDayMap, weekRows, lang, nameLabel }) {
   return (
     <div className={styles.hmWrap}>
       <table className={styles.hmTable}>
@@ -144,7 +144,7 @@ function PlayerHeatmap({ players, dates, playerDayMap, weekRows, lang }) {
             const playerAvg = avg(dayScores.filter(s => s != null));
             return (
               <tr key={name} className={styles.hmRow}>
-                <td className={styles.hmNameCell}>{name}</td>
+                <td className={styles.hmNameCell}>{nameLabel(name)}</td>
                 {dayScores.map((score, i) => (
                   <td key={dates[i]} className={styles.hmCell}
                     style={{ background: score != null ? colorOf(score) : '#f3f4f6', color: score != null ? '#fff' : '#d1d5db' }}>
@@ -645,6 +645,7 @@ export default function WellnessDashboard({ lang }) {
                         playerDayMap={playerDayMap}
                         weekRows={weekRows}
                         lang={lang}
+                        nameLabel={nameLabel}
                       />
                     </div>
                   )}
