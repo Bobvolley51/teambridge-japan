@@ -360,19 +360,22 @@ export default function Home() {
     const cutoff = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
     const now    = new Date().toISOString();
 
+    // Only confirmed attendees (status 'in' or null = default accepted)
     const { data: participation } = await supabase
       .from('event_participants')
       .select('event_id')
-      .eq('profile_id', userId);
+      .eq('profile_id', userId)
+      .or('status.eq.in,status.is.null');
 
     if (!participation || participation.length === 0) return;
     const eventIds = participation.map(p => p.event_id);
 
+    // Ball-Practice only — not Games
     const { data: events } = await supabase
       .from('events')
       .select('id, title, start_time, end_time, category')
       .in('id', eventIds)
-      .in('category', ['Ball-Practice', 'Game'])
+      .eq('category', 'Ball-Practice')
       .gte('start_time', cutoff)
       .lte('start_time', now);
 
