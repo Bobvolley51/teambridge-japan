@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { computeEWMA } from '@/lib/acwr';
+import { toJstDateStr } from '@/lib/date';
 import styles from './PerformanceDashboard.module.css';
 import VertDashboard from './VertDashboard';
 
@@ -50,6 +51,7 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [expandedAcwr,     setExpandedAcwr]     = useState(null);
   const [playerProfiles,   setPlayerProfiles]   = useState({});  // user_id → profile
   const [positionFilter,   setPositionFilter]   = useState('');
+  const [rpeCounter,       setRpeCounter]       = useState([]); // [{event, expected, submitted}]
 
   const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
 
@@ -92,6 +94,63 @@ export default function PerformanceDashboard({ lang, profile }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // RPE submission counter — today's Ball-Practice + Game events
+  useEffect(() => {
+    const fetchRpeCounter = async () => {
+      const todayJst = toJstDateStr(new Date());
+      // Today's events in JST: start_time between midnight JST (=prev-day 15:00 UTC) and next midnight JST
+      const dayStartUtc = new Date(todayJst + 'T00:00:00Z').getTime() - 9 * 3600 * 1000;
+      const dayEndUtc   = dayStartUtc + 24 * 3600 * 1000;
+
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, title, start_time, category')
+        .in('category', ['Ball-Practice', 'Game'])
+        .gte('start_time', new Date(dayStartUtc).toISOString())
+        .lt('start_time',  new Date(dayEndUtc).toISOString())
+        .order('start_time');
+
+      if (!events?.length) { setRpeCounter([]); return; }
+
+      const eventIds = events.map(e => e.id);
+
+      // Expected: confirmed attendees (status='in' or null)
+      const { data: participants } = await supabase
+        .from('event_participants')
+        .select('event_id, profile_id')
+        .in('event_id', eventIds)
+        .or('status.eq.in,status.is.null');
+
+      // Submitted: RPE records for today's events
+      const { data: submitted } = await supabase
+        .from('session_rpe')
+        .select('event_id, user_id, attended')
+        .in('event_id', eventIds);
+
+      const participantsByEvent = {};
+      for (const p of (participants ?? [])) {
+        participantsByEvent[p.event_id] = (participantsByEvent[p.event_id] ?? 0) + 1;
+      }
+      const submittedByEvent = {};
+      for (const s of (submitted ?? [])) {
+        // Only count actual submissions (attended=true or null means they rated it)
+        if (s.attended !== false) {
+          submittedByEvent[s.event_id] = (submittedByEvent[s.event_id] ?? 0) + 1;
+        }
+      }
+
+      setRpeCounter(events.map(e => ({
+        id:        e.id,
+        title:     e.title,
+        category:  e.category,
+        startTime: e.start_time,
+        expected:  participantsByEvent[e.id] ?? 0,
+        submitted: submittedByEvent[e.id]    ?? 0,
+      })));
+    };
+    fetchRpeCounter();
+  }, []);
 
   // Build player map from all 90 days of data
   const playerMap = {};
@@ -167,6 +226,50 @@ export default function PerformanceDashboard({ lang, profile }) {
                 {pos}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* RPE Submission Counter — today's events */}
+      {rpeCounter.length > 0 && (
+        <div className={styles.rpeCounterCard}>
+          <div className={styles.rpeCounterTitle}>
+            📋 {lang === 'ja' ? '本日の RPE 提出状況' : "Today's RPE Submissions"}
+          </div>
+          <div className={styles.rpeCounterRow}>
+            {rpeCounter.map(ev => {
+              const pct      = ev.expected > 0 ? ev.submitted / ev.expected : 0;
+              const complete  = ev.submitted >= ev.expected && ev.expected > 0;
+              const missing   = Math.max(0, ev.expected - ev.submitted);
+              const timeStr   = new Date(ev.startTime).toLocaleTimeString(
+                lang === 'ja' ? 'ja-JP' : 'en-GB',
+                { hour: '2-digit', minute: '2-digit' }
+              );
+              return (
+                <div key={ev.id} className={`${styles.rpeEventChip} ${complete ? styles.rpeEventChipDone : missing > 0 ? styles.rpeEventChipMissing : styles.rpeEventChipPending}`}>
+                  <div className={styles.rpeEventName}>
+                    {ev.category === 'Game' ? '🏐' : '🏋️'} {ev.title}
+                    <span className={styles.rpeEventTime}>{timeStr}</span>
+                  </div>
+                  <div className={styles.rpeEventCount}>
+                    <span className={styles.rpeSubmitted}>{ev.submitted}</span>
+                    <span className={styles.rpeSlash}>/</span>
+                    <span className={styles.rpeExpected}>{ev.expected}</span>
+                    {missing > 0 && (
+                      <span className={styles.rpeMissing}>
+                        {lang === 'ja' ? `残${missing}名` : `${missing} missing`}
+                      </span>
+                    )}
+                    {complete && <span className={styles.rpeDone}>✓</span>}
+                  </div>
+                  {ev.expected > 0 && (
+                    <div className={styles.rpeBar}>
+                      <div className={styles.rpeBarFill} style={{ width: `${Math.min(pct * 100, 100)}%`, background: complete ? '#10b981' : '#f59e0b' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

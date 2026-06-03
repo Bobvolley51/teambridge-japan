@@ -109,6 +109,11 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChang
         {entry.photos.map(p => (
           <div key={p.id} className={styles.photoThumb}>
             <img src={p.url} className={styles.thumbImg} onClick={() => onPhotoClick(p.url)} alt="" />
+            {p.createdAt && (
+              <div className={styles.photoTimestamp}>
+                {new Date(p.createdAt).toLocaleTimeString(lang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
             {isOwn && !isTrainer && (
               <button className={styles.thumbDel} onClick={() => onPhotoDelete(p.id, p.path)}>✕</button>
             )}
@@ -312,7 +317,7 @@ export default function NutritionDashboard({ lang, profile }) {
     setLoading(true);
     const { data } = await supabase
       .from('nutrition_entries')
-      .select('id, meal_type, notes, coach_review_requested, player_rating, nutrition_photos(id, storage_path), nutrition_comments(id, author_id, author_name, comment, rating)')
+      .select('id, meal_type, notes, coach_review_requested, player_rating, nutrition_photos(id, storage_path, created_at), nutrition_comments(id, author_id, author_name, comment, rating)')
       .eq('user_id', viewUserId)
       .eq('meal_date', selectedDay);
 
@@ -330,6 +335,7 @@ export default function NutritionDashboard({ lang, profile }) {
           id: p.id,
           url: supabase.storage.from('nutrition-photos').getPublicUrl(p.storage_path).data.publicUrl,
           path: p.storage_path,
+          createdAt: p.created_at,
         })),
         rating: myComment?.rating ?? null,
         comment: myComment?.comment ?? '',

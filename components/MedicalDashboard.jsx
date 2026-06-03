@@ -558,10 +558,17 @@ function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTh
 
 // ── Alert Panel ───────────────────────────────────────────────────────────────
 
-function buildAlerts({ records, painData, availability }) {
+function buildAlerts({ records, painData, availability, players = [] }) {
   const now = Date.now();
   const CUTOFF_MS = 48 * 60 * 60 * 1000;
   const alerts = [];
+  // Map display_name (Japanese nickname) → Latin first+last name
+  const nameByDisplay = {};
+  for (const p of players) {
+    const latin = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name;
+    if (p.display_name) nameByDisplay[p.display_name] = latin;
+  }
+  const latinName = (userName) => nameByDisplay[userName] ?? userName;
 
   // New / recently-created medical records (last 48h)
   for (const r of records) {
@@ -592,7 +599,7 @@ function buildAlerts({ records, painData, availability }) {
         alerts.push({
           id:         `pain_${r.user_name}_${r.response_date}`,
           type:       'pain',
-          playerName: r.user_name,
+          playerName: latinName(r.user_name),
           detail:     [...new Set(dayParts)].join(', '),
           date:       r.response_date,
           severity:   3,
@@ -621,8 +628,8 @@ function buildAlerts({ records, painData, availability }) {
   return alerts.sort((a, b) => a.severity - b.severity || a.playerName.localeCompare(b.playerName));
 }
 
-function AlertPanel({ records, painData, availability, noticedIds, onNotice, lang }) {
-  const alerts = buildAlerts({ records, painData, availability });
+function AlertPanel({ records, painData, availability, players, noticedIds, onNotice, lang }) {
+  const alerts = buildAlerts({ records, painData, availability, players });
   const unnoticed = alerts.filter(a => !noticedIds.has(a.id));
   if (unnoticed.length === 0) return null;
 
@@ -949,6 +956,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                   records={records}
                   painData={painData}
                   availability={availability}
+                  players={players}
                   noticedIds={noticedIds}
                   onNotice={markNoticed}
                   lang={lang}

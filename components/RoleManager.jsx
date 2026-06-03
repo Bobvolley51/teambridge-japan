@@ -8,7 +8,7 @@ import { toJstDate, dateToYmd } from '@/lib/date';
 import AvatarPhoto from './AvatarPhoto';
 import styles from './RoleManager.module.css';
 
-const ROLES = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
+const ROLES = ['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player'];
 const POSITIONS = ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero'];
 
 const ROLE_COLORS = {
@@ -612,7 +612,11 @@ export default function RoleManager({ lang = 'en', currentUserId, currentUserRol
             <span>{lang === 'ja' ? '操作' : 'Actions'}</span>
           </div>
 
-          {profiles.map(profile => {
+          {[...profiles].sort((a, b) => {
+            const ri = ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
+            if (ri !== 0) return ri;
+            return (a.display_name || a.email || '').localeCompare(b.display_name || b.email || '');
+          }).map(profile => {
             const displayName = profile.display_name || profile.email;
             return (
               <div key={profile.id} className={styles.row}>

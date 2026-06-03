@@ -403,6 +403,16 @@
   object-fit: cover;
   cursor: pointer;
 }
+.photoTimestamp {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.52);
+  color: #fff; font-size: 9px; font-weight: 600;
+  text-align: center; padding: 2px 0;
+  border-radius: 0 0 6px 6px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
 .thumbDel {
   position: absolute;
   top: 3px;
