@@ -46,6 +46,7 @@ export default function PerformanceDashboard({ lang, profile }) {
   const [vertRecords,      setVertRecords]      = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [showLegend,       setShowLegend]       = useState(false);
+  const [showAlarmPopup,   setShowAlarmPopup]   = useState(false);
   const [expandedSession,  setExpandedSession]  = useState(null);
   const [expandedAcwr,     setExpandedAcwr]     = useState(null);
   const [playerProfiles,   setPlayerProfiles]   = useState({});  // user_id → profile
@@ -151,7 +152,70 @@ export default function PerformanceDashboard({ lang, profile }) {
           ))}
         </div>
         <button className={styles.refreshBtn} onClick={load} title="Refresh">↻</button>
+        {/* ACWR alert badge — compact, opens popup on click */}
+        {!loading && (() => {
+          const highRisk = acwrRows.filter(r => r.acwr != null && r.acwr > 1.5);
+          const caution  = acwrRows.filter(r => r.acwr != null && r.acwr > 1.3 && r.acwr <= 1.5);
+          if (highRisk.length === 0 && caution.length === 0) return null;
+          return (
+            <button className={styles.alarmBadge} onClick={() => setShowAlarmPopup(true)}>
+              ⚠️
+              {highRisk.length > 0 && (
+                <span className={styles.alarmBadgeCount} style={{ background: '#ef4444' }}>
+                  {highRisk.length}
+                </span>
+              )}
+              {caution.length > 0 && (
+                <span className={styles.alarmBadgeCount} style={{ background: '#f59e0b' }}>
+                  {caution.length}
+                </span>
+              )}
+            </button>
+          );
+        })()}
       </div>
+
+      {/* ACWR alert popup */}
+      {showAlarmPopup && (() => {
+        const highRisk = acwrRows.filter(r => r.acwr != null && r.acwr > 1.5);
+        const caution  = acwrRows.filter(r => r.acwr != null && r.acwr > 1.3 && r.acwr <= 1.5);
+        return (
+          <div className={styles.alarmOverlay} onClick={() => setShowAlarmPopup(false)}>
+            <div className={styles.alarmPopup} onClick={e => e.stopPropagation()}>
+              <div className={styles.alarmPopupHeader}>
+                <span>⚠️ {lang === 'ja' ? 'ACWR アラート' : 'ACWR Alert'}</span>
+                <button className={styles.alarmPopupClose} onClick={() => setShowAlarmPopup(false)}>✕</button>
+              </div>
+              {highRisk.length > 0 && (
+                <div className={styles.alarmPopupGroup}>
+                  <div className={styles.alarmPopupZone} style={{ color: '#ef4444' }}>
+                    🔴 {lang === 'ja' ? 'リスク高 (>1.5)' : 'High Risk (>1.5)'}
+                  </div>
+                  {highRisk.map(r => (
+                    <div key={r.uid} className={styles.alarmPopupRow}>
+                      <span className={styles.alarmPopupName}>{playerLabel(r.uid, r.name)}</span>
+                      <span className={styles.alarmPopupVal} style={{ color: '#ef4444' }}>ACWR {r.acwr?.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {caution.length > 0 && (
+                <div className={styles.alarmPopupGroup}>
+                  <div className={styles.alarmPopupZone} style={{ color: '#f59e0b' }}>
+                    🟡 {lang === 'ja' ? '注意 (1.3–1.5)' : 'Caution (1.3–1.5)'}
+                  </div>
+                  {caution.map(r => (
+                    <div key={r.uid} className={styles.alarmPopupRow}>
+                      <span className={styles.alarmPopupName}>{playerLabel(r.uid, r.name)}</span>
+                      <span className={styles.alarmPopupVal} style={{ color: '#f59e0b' }}>ACWR {r.acwr?.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Position filter — shown on ACWR and Sessions tabs */}
       {(tab === 'acwr' || tab === 'sessions') && (
@@ -172,45 +236,6 @@ export default function PerformanceDashboard({ lang, profile }) {
           </div>
         </div>
       )}
-
-      {/* ACWR alert banner — shown whenever at-risk players exist */}
-      {!loading && (() => {
-        const highRisk = acwrRows.filter(r => r.acwr != null && r.acwr > 1.5);
-        const caution  = acwrRows.filter(r => r.acwr != null && r.acwr > 1.3 && r.acwr <= 1.5);
-        const lowLoad  = acwrRows.filter(r => r.acwr != null && r.acwr < 0.8 && r.acwr > 0);
-        if (highRisk.length === 0 && caution.length === 0) return null;
-        return (
-          <div className={styles.alarmBanner}>
-            <div className={styles.alarmTitle}>
-              ⚠️ {lang === 'ja' ? 'ACWR アラート' : 'ACWR Alert'}
-            </div>
-            {highRisk.length > 0 && (
-              <div className={styles.alarmGroup}>
-                <span className={styles.alarmZone} style={{ color: '#ef4444' }}>
-                  🔴 {lang === 'ja' ? 'リスク高 (>1.5)' : 'High Risk (>1.5)'}
-                </span>
-                {highRisk.map(r => (
-                  <span key={r.uid} className={styles.alarmPlayer}>
-                    {playerLabel(r.uid, r.name)} — ACWR {r.acwr?.toFixed(2)}
-                  </span>
-                ))}
-              </div>
-            )}
-            {caution.length > 0 && (
-              <div className={styles.alarmGroup}>
-                <span className={styles.alarmZone} style={{ color: '#f59e0b' }}>
-                  🟡 {lang === 'ja' ? '注意 (1.3–1.5)' : 'Caution (1.3–1.5)'}
-                </span>
-                {caution.map(r => (
-                  <span key={r.uid} className={styles.alarmPlayer}>
-                    {playerLabel(r.uid, r.name)} — ACWR {r.acwr?.toFixed(2)}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       {tab !== 'vert' && tab !== 'sessions' && <div className={styles.content}>
         {loading ? (
