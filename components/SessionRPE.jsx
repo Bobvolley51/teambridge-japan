@@ -117,6 +117,7 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
           user_name:             userName,
           event_id:              event.id,
           event_title:           event.title,
+          event_category:        event.category,
           event_date:            dateToYmd(toJstDate(event.start_time)),
           rpe,
           duration_min:          dur,

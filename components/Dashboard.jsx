@@ -1159,40 +1159,32 @@ export default function Dashboard({
                   )}
 
                   {/* RPE submission counter — today's practices/games */}
-                  {rpeCounter.length > 0 && (
-                    <div style={{ marginBottom: 8 }}>
-                      <div className={styles.wellnessProgressLabel} style={{ marginBottom: 6 }}>
-                        <span>📋 {lang === 'ja' ? '本日 RPE 提出' : "Today's RPE submissions"}</span>
+                  {rpeCounter.map(ev => {
+                    const pct      = ev.expected > 0 ? ev.submitted / ev.expected : 0;
+                    const complete = ev.submitted >= ev.expected && ev.expected > 0;
+                    const timeStr  = new Date(ev.startTime).toLocaleTimeString(
+                      lang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' }
+                    );
+                    return (
+                      <div key={ev.id} className={styles.wellnessProgressWrap} onClick={() => onNavigate('performance')} style={{ cursor: 'pointer' }}>
+                        <div className={styles.wellnessProgressLabel}>
+                          <span>
+                            {lang === 'ja' ? 'RPE 提出' : 'RPE submitted'}
+                            <span style={{ color: '#9ca3af', marginLeft: 6, fontSize: 11 }}>
+                              · {ev.title} {timeStr}
+                            </span>
+                          </span>
+                          <strong style={{ color: complete ? '#10b981' : undefined }}>
+                            {ev.submitted} / {ev.expected}
+                          </strong>
+                        </div>
+                        <div className={styles.wellnessProgressBar}>
+                          <div className={styles.wellnessProgressFill}
+                            style={{ width: `${Math.min(pct * 100, 100)}%`, background: complete ? '#10b981' : '#f59e0b' }} />
+                        </div>
                       </div>
-                      {rpeCounter.map(ev => {
-                        const pct      = ev.expected > 0 ? ev.submitted / ev.expected : 0;
-                        const complete = ev.submitted >= ev.expected && ev.expected > 0;
-                        const missing  = Math.max(0, ev.expected - ev.submitted);
-                        const timeStr  = new Date(ev.startTime).toLocaleTimeString(
-                          lang === 'ja' ? 'ja-JP' : 'en-GB', { hour: '2-digit', minute: '2-digit' }
-                        );
-                        return (
-                          <div key={ev.id} style={{ marginBottom: 8 }} onClick={() => onNavigate('performance')} className={styles.rpeCounterRow}>
-                            <div className={styles.wellnessProgressLabel}>
-                              <span style={{ fontSize: 12 }}>
-                                {ev.category === 'Game' ? '🏐' : '🏋️'} {ev.title}
-                                <span style={{ color: '#9ca3af', marginLeft: 4 }}>{timeStr}</span>
-                              </span>
-                              <span style={{ fontWeight: 700, color: complete ? '#10b981' : missing > 0 ? '#b45309' : '#374151' }}>
-                                {ev.submitted}/{ev.expected}
-                                {missing > 0 && <span style={{ fontSize: 11, color: '#b45309', marginLeft: 4 }}>{lang === 'ja' ? `残${missing}` : `${missing} missing`}</span>}
-                                {complete && <span style={{ color: '#10b981', marginLeft: 4 }}>✓</span>}
-                              </span>
-                            </div>
-                            <div className={styles.wellnessProgressBar}>
-                              <div className={styles.wellnessProgressFill}
-                                style={{ width: `${Math.min(pct * 100, 100)}%`, background: complete ? '#10b981' : '#f59e0b' }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                    );
+                  })
 
                   {wellnessAlerts.length === 0 && acwrAlerts.length === 0 ? (
                     <EmptyState>{lang === 'ja' ? '✓ アラートはありません。' : '✓ No alerts.'}</EmptyState>

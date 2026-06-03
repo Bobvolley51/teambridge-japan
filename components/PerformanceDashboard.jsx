@@ -85,7 +85,7 @@ export default function PerformanceDashboard({ lang, profile }) {
     const since = daysAgo(90).toISOString().slice(0, 10);
     const sessionsWindow = daysAgo(28).toISOString().slice(0, 10);
     const [rpeRes, vertRes] = await Promise.all([
-      supabase.from('session_rpe').select('*').gte('event_date', since).order('event_date', { ascending: true }),
+      supabase.from('session_rpe').select('*').gte('event_date', since).in('event_category', ['Ball-Practice', 'Game']).order('event_date', { ascending: true }),
       supabase.from('vert_sessions').select('*').gte('session_date', sessionsWindow).order('session_date', { ascending: false }),
     ]);
     setRecords(rpeRes.data ?? []);
