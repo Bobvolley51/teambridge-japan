@@ -34,6 +34,17 @@ const BODY_PARTS = [
   { key: 'hamstring_r', en: 'Right Hamstring', ja: '右ハムストリングス' },
 ];
 
+const ILLNESS_SYMPTOMS = [
+  { key: 'illness_headache',   en: 'Headache',          ja: '頭痛' },
+  { key: 'illness_fever',      en: 'Fever',             ja: '発熱' },
+  { key: 'illness_sorethroat', en: 'Sore throat',       ja: '喉の痛み' },
+  { key: 'illness_cough',      en: 'Cough',             ja: '咳' },
+  { key: 'illness_runnynose',  en: 'Runny nose',        ja: '鼻水' },
+  { key: 'illness_nausea',     en: 'Nausea',            ja: '吐き気' },
+  { key: 'illness_malaise',    en: 'Fatigue / Malaise', ja: '倦怠感' },
+  { key: 'illness_other',      en: 'Other',             ja: 'その他' },
+];
+
 const DAY_LABELS = {
   en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   ja: ['月', '火', '水', '木', '金', '土', '日'],
