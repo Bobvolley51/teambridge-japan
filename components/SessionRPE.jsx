@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDate, dateToYmd } from '@/lib/date';
-import { sendAlertDM } from '@/lib/alertDM';
-import { computeEWMA } from '@/lib/acwr';
 import styles from './SessionRPE.module.css';
 
 function rpeBtnStyle(n, selected) {
@@ -131,26 +129,7 @@ export default function SessionRPE({ pendingEvents, userId, userName, lang, onCo
         { onConflict: 'user_id,event_id' }
       );
 
-      // ACWR alert check — EWMA method, 90-day window so values are stable
-      const since90 = dateToYmd(toJstDate(new Date(Date.now() - 90 * 86400000)));
-      const { data: rpeData } = await supabase
-        .from('session_rpe')
-        .select('event_date, load_au')
-        .eq('user_id', userId)
-        .gte('event_date', since90)
-        .order('event_date', { ascending: true });
-
-      if (rpeData?.length) {
-        const { acute, chronic, acwr } = computeEWMA(rpeData);
-        if (acwr != null && acwr > 1.3) {
-          sendAlertDM(userId, userName, [
-            `📊 High training load — ${userName}`,
-            `⚠️ ACWR: ${acwr.toFixed(2)} (above 1.3 threshold)`,
-            `   Acute load (EWMA): ${acute} AU`,
-            `   Chronic load (EWMA): ${chronic} AU`,
-          ]).catch(() => {});
-        }
-      }
+      // ACWR is visible in the Performance / Load Management dashboard — no DM alert
     } catch (_) {}
     setSaving(false);
     advanceEvent();
