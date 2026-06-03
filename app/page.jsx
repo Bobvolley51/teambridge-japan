@@ -370,12 +370,12 @@ export default function Home() {
     if (!participation || participation.length === 0) return;
     const eventIds = participation.map(p => p.event_id);
 
-    // Ball-Practice only — not Games
+    // Ball-Practice and Games only
     const { data: events } = await supabase
       .from('events')
       .select('id, title, start_time, end_time, category')
       .in('id', eventIds)
-      .eq('category', 'Ball-Practice')
+      .in('category', ['Ball-Practice', 'Game'])
       .gte('start_time', cutoff)
       .lte('start_time', now);
 
