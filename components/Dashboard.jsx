@@ -603,6 +603,7 @@ export default function Dashboard({
     // ACWR — EWMA method
     const rpeRows = rpeData ?? [];
     if (rpeRows.length > 0) {
+      const acwrWindowStart = (() => { const d = toJstDate(new Date()); d.setDate(d.getDate() - 90); return dateToYmd(d); })();
       const pMap = {};
       for (const r of rpeRows) {
         if (!pMap[r.user_id]) pMap[r.user_id] = { name: r.user_name, sessions: [] };
@@ -610,7 +611,7 @@ export default function Dashboard({
       }
       const alerts = [];
       for (const p of Object.values(pMap)) {
-        const { acwr } = computeEWMA(p.sessions);
+        const { acwr } = computeEWMA(p.sessions, acwrWindowStart);
         if (acwr != null && acwr > 1.3) {
           alerts.push({ name: p.name, acwr, zone: acwr > 1.5 ? 'highrisk' : 'caution' });
         }

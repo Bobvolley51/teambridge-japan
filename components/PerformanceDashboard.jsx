@@ -103,7 +103,7 @@ export default function PerformanceDashboard({ lang, profile }) {
 
   const acwrRows = Object.entries(playerMap).map(([uid, p]) => {
     // EWMA uses all 90 days loaded
-    const { acute, chronic, acwr } = computeEWMA(p.all);
+    const { acute, chronic, acwr } = computeEWMA(p.all, since);
 
     // Recent 7 sessions for the dot display (last 28 days window)
     const sessionsWindow = daysAgo(28).toISOString().slice(0, 10);
