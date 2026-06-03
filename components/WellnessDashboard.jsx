@@ -386,15 +386,15 @@ export default function WellnessDashboard({ lang }) {
           <button className={`${styles.tab} ${tab === 'week' ? styles.tabActive : ''}`} onClick={() => setTab('week')}>
             {lang === 'ja' ? '直近7日' : 'Last 7 Days'}
           </button>
+          {tab === 'today' && (
+            <input type="date" className={styles.datePicker} value={date} onChange={e => setDate(e.target.value)} />
+          )}
         </div>
       </div>
 
       {/* ════ TODAY ════ */}
       {tab === 'today' && (
         <div className={styles.content}>
-          <div className={styles.controls}>
-            <input type="date" className={styles.datePicker} value={date} onChange={e => setDate(e.target.value)} />
-          </div>
 
           {/* Alerts block — low scores + pain together at the top */}
           {(alarmedToday.length > 0 || todayPain.length > 0) && (
