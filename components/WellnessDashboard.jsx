@@ -478,7 +478,6 @@ export default function WellnessDashboard({ lang }) {
                           <th className={styles.th}>{lang === 'ja' ? '参加' : 'Avail'}</th>
                           {hasAnyFever && <th className={styles.th}>🌡</th>}
                           <th className={styles.th}>{lang === 'ja' ? '体重' : 'Weight'}</th>
-                          <th className={styles.th}>{lang === 'ja' ? '平均' : 'Avg'}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -498,7 +497,10 @@ export default function WellnessDashboard({ lang }) {
                                     name={name}
                                     size={28}
                                   />
-                                  <span>{nameLabel(name)}</span>
+                                  <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                    <span>{nameLabel(name)}</span>
+                                    <span className={styles.avgText} style={{ color: colorOf(a), fontSize: 11 }}>{a ?? '—'}</span>
+                                  </div>
                                 </div>
                               </td>
                               {QUESTIONS.map(q => (
@@ -530,16 +532,18 @@ export default function WellnessDashboard({ lang }) {
                                   : <span className={styles.noData}>—</span>
                                 }
                               </td>
-                              <td className={styles.td}>
-                                <span className={styles.avgText} style={{ color: colorOf(a) }}>{a ?? '—'}</span>
-                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                       <tfoot>
                         <tr className={styles.footRow}>
-                          <td className={styles.tdName}><strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong></td>
+                          <td className={styles.tdName}>
+                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                              <strong>{lang === 'ja' ? 'チーム平均' : 'Team avg'}</strong>
+                              {(() => { const ta = avg(rows.filter(r => MAIN_KEYS.has(r.question_key)).map(r => r.score)); return <span className={styles.avgText} style={{ color: colorOf(ta), fontSize: 11 }}>{ta ?? '—'}</span>; })()}
+                            </div>
+                          </td>
                           {QUESTIONS.map(q => {
                             const a = avg(rows.filter(r => r.question_key === q.key).map(r => r.score));
                             return (
@@ -551,7 +555,6 @@ export default function WellnessDashboard({ lang }) {
                           <td className={styles.td} />
                           <td className={styles.td} />
                           {hasAnyFever && <td className={styles.td} />}
-                          <td className={styles.td} />
                           <td className={styles.td} />
                         </tr>
                       </tfoot>
