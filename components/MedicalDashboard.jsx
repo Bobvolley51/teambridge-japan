@@ -631,7 +631,7 @@ function buildAlerts({ records, painData, availability, players = [] }) {
     }
   }
 
-  return alerts.sort((a, b) => a.severity - b.severity || a.playerName.localeCompare(b.playerName));
+  return alerts.sort((a, b) => a.severity - b.severity || (a.playerName ?? '').localeCompare(b.playerName ?? ''));
 }
 
 function AlertPanel({ records, painData, availability, players, noticedIds, onNotice, lang }) {

@@ -111,7 +111,7 @@ export default function PerformanceDashboard({ lang, profile }) {
     const sessionsWindow = daysAgo(28).toISOString().slice(0, 10);
     const recent = [...p.all]
       .filter(s => s.event_date >= sessionsWindow)
-      .sort((a, b) => a.event_date.localeCompare(b.event_date))
+      .sort((a, b) => (a.event_date ?? '').localeCompare(b.event_date ?? ''))
       .slice(-7);
 
     // Ball-practice extras (28-day window for relevance)
@@ -269,7 +269,7 @@ export default function PerformanceDashboard({ lang, profile }) {
                       const zone    = row.acwr != null ? getZone(row.acwr) : null;
                       const open    = expandedAcwr === row.uid;
                       const allSess = [...(playerMap[row.uid]?.all ?? [])]
-                        .sort((a, b) => b.event_date.localeCompare(a.event_date));
+                        .sort((a, b) => (b.event_date ?? '').localeCompare(a.event_date ?? ''));
                       return (
                         <>
                           <tr key={row.uid}
@@ -525,7 +525,7 @@ export default function PerformanceDashboard({ lang, profile }) {
               vert: vertByKey[`${r.user_id}|${r.event_date}`] ?? null,
             });
           }
-          const sessions = Object.values(sessionMap).sort((a, b) => b.date.localeCompare(a.date));
+          const sessions = Object.values(sessionMap).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
           const hasVert = sessions.some(s => s.players.some(p => p.vert));
 
           return sessions.length === 0 ? (

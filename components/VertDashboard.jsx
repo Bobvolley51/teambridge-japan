@@ -545,7 +545,7 @@ export default function VertDashboard({ lang, profile }) {
 
         // Shared: per-player sessions oldest→newest
         const trendMap = {};
-        for (const s of [...filtered].sort((a, b) => a.session_date.localeCompare(b.session_date))) {
+        for (const s of [...filtered].sort((a, b) => (a.session_date ?? '').localeCompare(b.session_date ?? ''))) {
           const key = s.user_id || s.vert_name;
           if (!trendMap[key]) {
             const pl = players.find(p => p.id === s.user_id);
