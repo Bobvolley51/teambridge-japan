@@ -119,7 +119,8 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const totalSteps = needsPage2 ? (needsPage3 ? 3 : 2) : 1;
 
   const ratedParts    = painParts.filter(k => k !== 'other');
-  const allPartsRated = hasPain !== 'yes' || (ratedParts.length > 0 && ratedParts.every(k => painLevels[k] != null));
+  const allPartsRated = (hasPain !== 'yes' || (ratedParts.length > 0 && ratedParts.every(k => painLevels[k] != null)))
+    && (illness !== 'yes' || bodyTemp !== '');
 
   const toggleIllnessSymptom = key =>
     setIllnessSymptoms(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -151,9 +152,8 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       { user_id: userId, user_name: userName, question_key: 'availability', score: availability, response_date: today },
     ];
 
-    const hasFever = illnessSymptoms.includes('illness_fever');
-    const tempVal  = hasFever && bodyTemp !== '' ? parseFloat(bodyTemp) : null;
-    if (tempVal != null && !isNaN(tempVal) && tempVal > 37.0) {
+    const tempVal = illness === 'yes' && bodyTemp !== '' ? parseFloat(bodyTemp) : null;
+    if (tempVal != null && !isNaN(tempVal)) {
       wellnessRows.push({
         user_id: userId, user_name: userName,
         question_key: 'temperature', score: tempVal, response_date: today,
@@ -500,18 +500,16 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                       );
                     })}
                   </div>
-                  {illnessSymptoms.includes('illness_fever') && (
-                    <div className={styles.tempRow}>
-                      <label className={styles.tempLabel}>
-                        🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
-                      </label>
-                      <input
-                        className={styles.tempInput} type="number" step="0.1" min="37" max="42"
-                        value={bodyTemp} onChange={e => setBodyTemp(e.target.value)}
-                        placeholder="e.g. 38.5" autoFocus
-                      />
-                    </div>
-                  )}
+                  <div className={styles.tempRow}>
+                    <label className={styles.tempLabel}>
+                      🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
+                    </label>
+                    <input
+                      className={styles.tempInput} type="number" step="0.1" min="35" max="42"
+                      value={bodyTemp} onChange={e => setBodyTemp(e.target.value)}
+                      placeholder="e.g. 36.5"
+                    />
+                  </div>
                 </div>
               )}
 
