@@ -790,7 +790,7 @@ export default function VertDashboard({ lang, profile }) {
                                 );
                               })}
                             </tr>
-                            {[...members].sort((a, b) => a.name.localeCompare(b.name)).map(player => (
+                            {[...members].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')).map(player => (
                               <tr key={player.name} className={styles.benchTr}>
                                 <td className={styles.benchTdPlayer}>{player.name}</td>
                                 {BENCH_COLS.map(col => {

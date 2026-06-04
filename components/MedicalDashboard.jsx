@@ -967,7 +967,7 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
               if (aMon !== bMon) return aMon ? -1 : 1;
               const aPain = (painByPlayer[a] ?? []).length;
               const bPain = (painByPlayer[b] ?? []).length;
-              return bPain - aPain || a.localeCompare(b);
+              return bPain - aPain || (a ?? '').localeCompare(b ?? '');
             });
 
             const concerned = sorted.filter(name =>
