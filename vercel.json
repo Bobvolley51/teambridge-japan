@@ -7,10 +7,6 @@
     {
       "path": "/api/reminders",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/special-event-notify",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
