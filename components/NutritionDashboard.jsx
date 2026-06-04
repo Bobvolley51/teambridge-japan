@@ -676,7 +676,7 @@ export default function NutritionDashboard({ lang, profile }) {
         <>
           {/* 14-day strip */}
           <div className={styles.dayStrip}>
-            {DAYS.map(d => {
+            {[...DAYS].reverse().map(d => {
               const date = new Date(d + 'T00:00:00');
               const isToday = d === DAYS[DAYS.length - 1];
               return (
