@@ -253,12 +253,13 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       const tempStr = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
       alerts.push(`🤒 Illness${symptomList ? `: ${symptomList}` : ''}${tempStr}`);
     }
-    const highPainParts = ratedParts.filter(k => (painLevels[k] ?? 0) >= 40);
-    if (highPainParts.length > 0) {
-      const partList = highPainParts.map(k => `${BODY_PART_LABELS[k] ?? k} (${painLevels[k]}/100)`).join(', ');
+    if (ratedParts.length > 0) {
+      const partList = ratedParts.map(k => `${BODY_PART_LABELS[k] ?? k} (${painLevels[k]}/100)`).join(', ');
       alerts.push(`🩹 Pain: ${partList}`);
+    } else if (hasPain === 'yes') {
+      alerts.push(`🩹 Pain reported`);
     }
-    if (alerts.length > 0) {
+    if (alerts.length > 0 || illness === 'yes' || hasPain === 'yes') {
       sendAlertDM(userId, userName, [`📋 Wellness — ${userName}`, ...alerts]).catch(() => {});
     }
 
