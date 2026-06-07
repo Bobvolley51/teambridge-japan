@@ -293,9 +293,11 @@ export default function NutritionDashboard({ lang, profile }) {
 
   const MAX_MEALS = DAYS.length * MEALS.length; // 14 days × 4 meals = 56
 
-  // Real-time listener: notify Athletic Trainer when a player requests feedback
+  // Real-time listener: keep reviewRequestPlayerIds in sync while the app is open.
+  // Push notifications (via service worker) handle out-of-band delivery.
   useEffect(() => {
     if (!isTrainer) return;
+    // Ask for notification permission now so syncPushSubscription can subscribe silently.
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
@@ -308,20 +310,11 @@ export default function NutritionDashboard({ lang, profile }) {
         filter: 'coach_review_requested=eq.true',
       }, (payload) => {
         const playerId = payload.new?.user_id;
-        if (!playerId) return;
-        setReviewRequestPlayerIds(prev => new Set([...prev, playerId]));
-        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-          const player = players.find(p => p.id === playerId);
-          const name = player ? playerFullLabel(player) : (lang === 'ja' ? '選手' : 'A player');
-          new Notification(lang === 'ja' ? '栄養フィードバック依頼' : 'Nutrition Feedback Requested', {
-            body: lang === 'ja' ? `${name} がフィードバックを依頼しました` : `${name} is asking for nutrition feedback`,
-            tag: `review-request-${playerId}`,
-          });
-        }
+        if (playerId) setReviewRequestPlayerIds(prev => new Set([...prev, playerId]));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [isTrainer, players, lang]);
+  }, [isTrainer]);
 
   const toggleFeedbackWatch = useCallback((id) => {
     setFeedbackWatchIds(prev => {
@@ -492,16 +485,31 @@ export default function NutritionDashboard({ lang, profile }) {
       const { data: trainers } = await supabase.from('profiles').select('id').in('role', ['Athletic Trainer', 'Therapist']);
       if (trainers?.length) {
         const meal = MEALS.find(m => m.id === mealType);
+        const title = lang === 'ja' ? '栄養フィードバック依頼' : 'Nutrition Feedback Request';
+        const body  = `${viewUserName} — ${lang === 'ja' ? meal?.ja : meal?.en}`;
         await supabase.from('notifications').insert(
           trainers.map(t => ({
             user_id:    t.id,
             type:       'nutrition',
-            title:      lang === 'ja' ? '栄養フィードバック依頼' : 'Nutrition Feedback Request',
-            body:       `${viewUserName} — ${lang === 'ja' ? meal?.ja : meal?.en}`,
+            title,
+            body,
             nav_target: 'nutrition',
             ref_id:     id,
           }))
         );
+        // Fire-and-forget push to trainers — works even when the app tab is closed
+        fetch('/api/push', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            userIds: trainers.map(t => t.id),
+            title,
+            body,
+            url:    '/?nav=nutrition',
+            tag:    `nutrition-feedback-${id}`,
+            prefKey: 'nutrition',
+          }),
+        }).catch(() => {});
       }
     }
     setEntries(e => ({ ...e, [mealType]: { ...(e[mealType] ?? emptyEntry()), id, coach_review_requested: next } }));
