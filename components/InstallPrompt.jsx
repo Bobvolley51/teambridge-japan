@@ -12,6 +12,7 @@ const PREFS = [
   { key: 'tasks',         en: 'Task assignments',        ja: 'タスクの割り当て' },
   { key: 'announcements', en: 'Announcements',           ja: 'お知らせ' },
   { key: 'birthday',      en: 'Birthdays',               ja: '誕生日' },
+  { key: 'nutrition',     en: 'Nutrition feedback requests', ja: '栄養フィードバック依頼' },
 ];
 
 export default function InstallPrompt({ userId, lang }) {
@@ -201,10 +202,10 @@ export default function InstallPrompt({ userId, lang }) {
           {PREFS.map(p => {
             const enabled = prefs[p.key] ?? true;
             return (
-              <button key={p.key} className={styles.prefRow} onClick={() => togglePref(p.key)}>
+              <button key={p.key} className={styles.prefRow} type="button" onClick={() => togglePref(p.key)}>
                 <span className={styles.prefLabel}>{lang === 'ja' ? p.ja : p.en}</span>
                 <span className={`${styles.toggle} ${enabled ? styles.toggleOn : styles.toggleOff}`}>
-                  <span className={styles.toggleKnob} />
+                  <span className={styles.toggleKnob} style={{ left: enabled ? 18 : 2 }} />
                 </span>
               </button>
             );
