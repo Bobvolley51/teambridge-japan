@@ -256,6 +256,11 @@ export default function NutritionDashboard({ lang, profile }) {
   const [positionFilter,   setPositionFilter]   = useState('');
   const [unratedPlayerIds, setUnratedPlayerIds] = useState(new Set());
   const [unratedDays,      setUnratedDays]      = useState(new Set());
+  const [feedbackWatchIds, setFeedbackWatchIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('nutrition_feedback_watch') ?? '[]')); }
+    catch { return new Set(); }
+  });
+  const [pendingFilter,    setPendingFilter]    = useState(false);
 
   // Load player list + unrated-player set for trainer dropdown
   useEffect(() => {
@@ -285,6 +290,15 @@ export default function NutritionDashboard({ lang, profile }) {
 
   const MAX_MEALS = DAYS.length * MEALS.length; // 14 days × 4 meals = 56
 
+  const toggleFeedbackWatch = useCallback((id) => {
+    setFeedbackWatchIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem('nutrition_feedback_watch', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
+
   // Load stats overview (trainers: all players; players: own summary)
   const loadStats = useCallback(async () => {
     const since = DAYS[0];
@@ -297,7 +311,7 @@ export default function NutritionDashboard({ lang, profile }) {
       const sortedPlayers = allPlayers.slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
       const map = {};
       for (const p of sortedPlayers) {
-        map[p.id] = { name: playerFullLabel(p), position: p.position ?? '', total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
+        map[p.id] = { id: p.id, name: playerFullLabel(p), position: p.position ?? '', total: 0, green: 0, yellow: 0, red: 0, unrated: 0 };
       }
       for (const e of (entries ?? [])) {
         if (!map[e.user_id]) continue;
@@ -572,7 +586,7 @@ export default function NutritionDashboard({ lang, profile }) {
             <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
             <div className={styles.playerSelectWrap}>
               <select
-                className={`${styles.playerSelect} ${unratedPlayerIds.has(viewUserId) ? styles.playerSelectUnrated : ''}`}
+                className={`${styles.playerSelect} ${feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId) ? styles.playerSelectUnrated : ''}`}
                 value={viewUserId}
                 onChange={ev => {
                   const p = players.find(p => p.id === ev.target.value);
@@ -581,11 +595,17 @@ export default function NutritionDashboard({ lang, profile }) {
                 }}>
                 {players.map(p => (
                   <option key={p.id} value={p.id}>
-                    {unratedPlayerIds.has(p.id) ? '⚠ ' : ''}{playerFullLabel(p)}
+                    {feedbackWatchIds.has(p.id) && unratedPlayerIds.has(p.id) ? '⚠ ' : ''}{playerFullLabel(p)}
                   </option>
                 ))}
               </select>
-              {unratedPlayerIds.has(viewUserId) && (
+              <button
+                className={`${styles.watchBtn} ${feedbackWatchIds.has(viewUserId) ? styles.watchBtnOn : ''}`}
+                onClick={() => toggleFeedbackWatch(viewUserId)}
+                title={feedbackWatchIds.has(viewUserId) ? (lang === 'ja' ? '監視解除' : 'Unwatch') : (lang === 'ja' ? '確認待ちに追加' : 'Watch for pending feedback')}>
+                {feedbackWatchIds.has(viewUserId) ? '★' : '☆'}
+              </button>
+              {feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId) && (
                 <span className={styles.unratedBadge}>
                   {lang === 'ja' ? '未評価あり' : 'Unrated'}
                 </span>
@@ -624,16 +644,27 @@ export default function NutritionDashboard({ lang, profile }) {
                 </button>
               ))}
             </div>
+            <span className={styles.filterSep} />
+            <button
+              className={`${styles.filterBtn} ${pendingFilter ? styles.filterBtnPending : ''}`}
+              onClick={() => setPendingFilter(p => !p)}>
+              ★ {lang === 'ja' ? '確認待ち' : 'Pending'}
+            </button>
           </div>
           {!statsRows ? (
             <div className={styles.empty}>{lang === 'ja' ? '読み込み中…' : 'Loading…'}</div>
-          ) : statsRows.length === 0 ? (
-            <div className={styles.empty}>{lang === 'ja' ? 'データなし' : 'No data yet'}</div>
-          ) : (
+          ) : (() => {
+            const visible = statsRows
+              .filter(r => !positionFilter || r.position === positionFilter)
+              .filter(r => !pendingFilter || (feedbackWatchIds.has(r.id) && r.unrated > 0));
+            return visible.length === 0 ? (
+              <div className={styles.empty}>{lang === 'ja' ? 'データなし' : 'No data yet'}</div>
+            ) : (
             <div className={styles.statsTableWrap}>
               <table className={styles.statsTable}>
                 <thead>
                   <tr>
+                    <th className={styles.statsTh} title={lang === 'ja' ? 'フィードバック監視' : 'Watch for feedback'}>★</th>
                     <th className={styles.statsThName}>{lang === 'ja' ? '選手' : 'Player'}</th>
                     <th className={styles.statsTh}>{lang === 'ja' ? `提出 / ${MAX_MEALS}` : `Logged / ${MAX_MEALS}`}</th>
                     <th className={styles.statsThBar}>{lang === 'ja' ? '評価の内訳' : 'Rating breakdown'}</th>
@@ -644,14 +675,22 @@ export default function NutritionDashboard({ lang, profile }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(positionFilter ? statsRows.filter(r => r.position === positionFilter) : statsRows).map((r, i) => {
+                  {visible.map((r, i) => {
                     const rated = r.green + r.yellow + r.red;
                     const ratedPct = r.total > 0 ? Math.round(rated / r.total * 100) : 0;
                     const gPct = rated > 0 ? r.green / rated * 100 : 0;
                     const yPct = rated > 0 ? r.yellow / rated * 100 : 0;
                     const rPct = rated > 0 ? r.red / rated * 100 : 0;
                     return (
-                      <tr key={i} className={styles.statsTr}>
+                      <tr key={i} className={`${styles.statsTr} ${feedbackWatchIds.has(r.id) && r.unrated > 0 ? styles.statsTrPending : ''}`}>
+                        <td className={styles.statsTd}>
+                          <button
+                            className={`${styles.watchBtn} ${feedbackWatchIds.has(r.id) ? styles.watchBtnOn : ''}`}
+                            onClick={() => toggleFeedbackWatch(r.id)}
+                            title={feedbackWatchIds.has(r.id) ? (lang === 'ja' ? '監視解除' : 'Unwatch') : (lang === 'ja' ? '確認待ちに追加' : 'Watch for pending feedback')}>
+                            {feedbackWatchIds.has(r.id) ? '★' : '☆'}
+                          </button>
+                        </td>
                         <td className={styles.statsTdName}>{r.name}</td>
                         <td className={styles.statsTd}>
                           <span className={`${styles.totalCell} ${r.total === 0 ? styles.totalZero : ''}`}>
@@ -697,7 +736,8 @@ export default function NutritionDashboard({ lang, profile }) {
                 </tbody>
               </table>
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

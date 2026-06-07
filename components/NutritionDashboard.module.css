@@ -175,6 +175,25 @@
 }
 .filterBtn:hover  { background: #f3f4f6; color: #111827; }
 .filterBtnActive  { background: #111827 !important; color: #fff !important; border-color: #111827 !important; }
+.filterBtnPending { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+.filterSep { flex: 1; min-width: 8px; }
+
+.watchBtn {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: #d1d5db;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.watchBtn:hover { background: #f3f4f6; color: #9ca3af; border-color: #9ca3af; }
+.watchBtnOn { color: #7e0027 !important; border-color: #7e0027 !important; background: #fdf2f4 !important; }
+.watchBtnOn:hover { background: #fee2e2 !important; }
 .statsTableWrap {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -248,6 +267,8 @@
 }
 .statsTr { border-top: 1px solid #f3f4f6; }
 .statsTr:hover { background: #fdf2f4; }
+.statsTrPending { background: #fffbeb !important; }
+.statsTrPending:hover { background: #fef9c3 !important; }
 .statsTdName {
   padding: 10px 14px;
   font-weight: 600;
