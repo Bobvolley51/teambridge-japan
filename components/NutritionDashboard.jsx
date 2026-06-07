@@ -260,18 +260,21 @@ export default function NutritionDashboard({ lang, profile }) {
     try { return new Set(JSON.parse(localStorage.getItem('nutrition_feedback_watch') ?? '[]')); }
     catch { return new Set(); }
   });
-  const [pendingFilter,    setPendingFilter]    = useState(false);
+  const [pendingFilter,          setPendingFilter]          = useState(false);
+  const [reviewRequestPlayerIds, setReviewRequestPlayerIds] = useState(new Set());
 
-  // Load player list + unrated-player set for trainer dropdown
+  // Load player list + unrated-player set + review-request set for trainer dropdown
   useEffect(() => {
     if (!isTrainer) return;
     Promise.all([
       supabase.from('profiles').select('id, first_name, last_name, display_name, jersey_number, position').eq('role', 'Player'),
       supabase.from('nutrition_entries').select('user_id').is('player_rating', null).gte('meal_date', DAYS[0]),
-    ]).then(([{ data: playerData }, { data: unratedData }]) => {
+      supabase.from('nutrition_entries').select('user_id').eq('coach_review_requested', true).gte('meal_date', DAYS[0]),
+    ]).then(([{ data: playerData }, { data: unratedData }, { data: reviewData }]) => {
       const sorted = (playerData ?? []).slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
       setPlayers(sorted);
       setUnratedPlayerIds(new Set((unratedData ?? []).map(e => e.user_id)));
+      setReviewRequestPlayerIds(new Set((reviewData ?? []).map(e => e.user_id)));
     });
   }, [isTrainer]);
 
@@ -289,6 +292,36 @@ export default function NutritionDashboard({ lang, profile }) {
   }, [viewUserId, isTrainer]);
 
   const MAX_MEALS = DAYS.length * MEALS.length; // 14 days × 4 meals = 56
+
+  // Real-time listener: notify Athletic Trainer when a player requests feedback
+  useEffect(() => {
+    if (!isTrainer) return;
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    const channel = supabase
+      .channel('nutrition-review-requests')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'nutrition_entries',
+        filter: 'coach_review_requested=eq.true',
+      }, (payload) => {
+        const playerId = payload.new?.user_id;
+        if (!playerId) return;
+        setReviewRequestPlayerIds(prev => new Set([...prev, playerId]));
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          const player = players.find(p => p.id === playerId);
+          const name = player ? playerFullLabel(player) : (lang === 'ja' ? '選手' : 'A player');
+          new Notification(lang === 'ja' ? '栄養フィードバック依頼' : 'Nutrition Feedback Requested', {
+            body: lang === 'ja' ? `${name} がフィードバックを依頼しました` : `${name} is asking for nutrition feedback`,
+            tag: `review-request-${playerId}`,
+          });
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isTrainer, players, lang]);
 
   const toggleFeedbackWatch = useCallback((id) => {
     setFeedbackWatchIds(prev => {
@@ -586,7 +619,7 @@ export default function NutritionDashboard({ lang, profile }) {
             <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
             <div className={styles.playerSelectWrap}>
               <select
-                className={`${styles.playerSelect} ${feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId) ? styles.playerSelectUnrated : ''}`}
+                className={`${styles.playerSelect} ${reviewRequestPlayerIds.has(viewUserId) || (feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId)) ? styles.playerSelectUnrated : ''}`}
                 value={viewUserId}
                 onChange={ev => {
                   const p = players.find(p => p.id === ev.target.value);
@@ -595,7 +628,7 @@ export default function NutritionDashboard({ lang, profile }) {
                 }}>
                 {players.map(p => (
                   <option key={p.id} value={p.id}>
-                    {feedbackWatchIds.has(p.id) && unratedPlayerIds.has(p.id) ? '⚠ ' : ''}{playerFullLabel(p)}
+                    {reviewRequestPlayerIds.has(p.id) ? '❗ ' : feedbackWatchIds.has(p.id) && unratedPlayerIds.has(p.id) ? '⚠ ' : ''}{playerFullLabel(p)}
                   </option>
                 ))}
               </select>
@@ -605,11 +638,15 @@ export default function NutritionDashboard({ lang, profile }) {
                 title={feedbackWatchIds.has(viewUserId) ? (lang === 'ja' ? '監視解除' : 'Unwatch') : (lang === 'ja' ? '確認待ちに追加' : 'Watch for pending feedback')}>
                 {feedbackWatchIds.has(viewUserId) ? '★' : '☆'}
               </button>
-              {feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId) && (
+              {reviewRequestPlayerIds.has(viewUserId) ? (
+                <span className={styles.reviewRequestBadge}>
+                  ❗ {lang === 'ja' ? 'フィードバック依頼中' : 'Feedback requested'}
+                </span>
+              ) : feedbackWatchIds.has(viewUserId) && unratedPlayerIds.has(viewUserId) ? (
                 <span className={styles.unratedBadge}>
                   {lang === 'ja' ? '未評価あり' : 'Unrated'}
                 </span>
-              )}
+              ) : null}
             </div>
             {reviewRequests > 0 && (
               <span className={styles.reviewBanner}>
@@ -656,7 +693,7 @@ export default function NutritionDashboard({ lang, profile }) {
           ) : (() => {
             const visible = statsRows
               .filter(r => !positionFilter || r.position === positionFilter)
-              .filter(r => !pendingFilter || (feedbackWatchIds.has(r.id) && r.unrated > 0));
+              .filter(r => !pendingFilter || reviewRequestPlayerIds.has(r.id) || (feedbackWatchIds.has(r.id) && r.unrated > 0));
             return visible.length === 0 ? (
               <div className={styles.empty}>{lang === 'ja' ? 'データなし' : 'No data yet'}</div>
             ) : (
@@ -682,13 +719,13 @@ export default function NutritionDashboard({ lang, profile }) {
                     const yPct = rated > 0 ? r.yellow / rated * 100 : 0;
                     const rPct = rated > 0 ? r.red / rated * 100 : 0;
                     return (
-                      <tr key={i} className={`${styles.statsTr} ${feedbackWatchIds.has(r.id) && r.unrated > 0 ? styles.statsTrPending : ''}`}>
+                      <tr key={i} className={`${styles.statsTr} ${reviewRequestPlayerIds.has(r.id) ? styles.statsTrRequested : feedbackWatchIds.has(r.id) && r.unrated > 0 ? styles.statsTrPending : ''}`}>
                         <td className={styles.statsTd}>
                           <button
-                            className={`${styles.watchBtn} ${feedbackWatchIds.has(r.id) ? styles.watchBtnOn : ''}`}
+                            className={`${styles.watchBtn} ${feedbackWatchIds.has(r.id) || reviewRequestPlayerIds.has(r.id) ? styles.watchBtnOn : ''}`}
                             onClick={() => toggleFeedbackWatch(r.id)}
                             title={feedbackWatchIds.has(r.id) ? (lang === 'ja' ? '監視解除' : 'Unwatch') : (lang === 'ja' ? '確認待ちに追加' : 'Watch for pending feedback')}>
-                            {feedbackWatchIds.has(r.id) ? '★' : '☆'}
+                            {reviewRequestPlayerIds.has(r.id) ? '❗' : feedbackWatchIds.has(r.id) ? '★' : '☆'}
                           </button>
                         </td>
                         <td className={styles.statsTdName}>{r.name}</td>

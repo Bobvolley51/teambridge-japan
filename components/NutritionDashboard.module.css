@@ -100,6 +100,21 @@
   padding: 2px 7px;
   white-space: nowrap;
 }
+.reviewRequestBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  background: #ffe4e6;
+  border: 1px solid #fda4af;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 .reviewBanner {
   font-size: 12px;
   font-weight: 700;
@@ -269,6 +284,8 @@
 .statsTr:hover { background: #fdf2f4; }
 .statsTrPending { background: #fffbeb !important; }
 .statsTrPending:hover { background: #fef9c3 !important; }
+.statsTrRequested { background: #fff1f1 !important; }
+.statsTrRequested:hover { background: #fee2e2 !important; }
 .statsTdName {
   padding: 10px 14px;
   font-weight: 600;
