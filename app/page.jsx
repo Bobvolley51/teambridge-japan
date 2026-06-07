@@ -121,6 +121,7 @@ export default function Home() {
   const [showBodyWeight,   setShowBodyWeight]   = useState(false);
   const [bwWeekStart,      setBwWeekStart]      = useState('');
   const [perfAlertCount,   setPerfAlertCount]   = useState(0);
+  const [nutritionBadge,   setNutritionBadge]   = useState(0);
   const [unreadChat,       setUnreadChat]       = useState(0);
   const [totalUnread,      setTotalUnread]      = useState(0);
   const [sectionUnread,    setSectionUnread]    = useState({});
@@ -601,8 +602,8 @@ export default function Home() {
                   }}>
                   <span className={styles.navIcon}><ItemIcon size={18} /></span>
                   {item.label[lang]}
-                  {isPlayersGroup && perfAlertCount > 0 && !playersActive && (
-                    <span className={styles.navBadge}>{perfAlertCount}</span>
+                  {isPlayersGroup && (perfAlertCount + nutritionBadge) > 0 && !playersActive && (
+                    <span className={styles.navBadge}>{perfAlertCount + nutritionBadge}</span>
                   )}
                   {item.id === 'chat' && unreadChat > 0 && nav !== 'chat' && (
                     <span className={styles.navBadge}>{unreadChat > 99 ? '99+' : unreadChat}</span>
@@ -632,6 +633,9 @@ export default function Home() {
                       {sub.label[lang]}
                       {sub.id === 'performance' && perfAlertCount > 0 && (
                         <span className={styles.navBadge}>{perfAlertCount}</span>
+                      )}
+                      {sub.id === 'nutrition' && nutritionBadge > 0 && (
+                        <span className={styles.navBadge}>{nutritionBadge}</span>
                       )}
                     </button>
                   );
@@ -691,7 +695,7 @@ export default function Home() {
           {nav==='travel'    && <Travel            lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='mystats'   && isPlayer         && <PlayerStats lang={lang} profile={profile} onEditWellness={() => setShowWellness(true)} />}
           {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} profile={profile} />}
-          {nav==='nutrition'    && canNutrition   && <NutritionDashboard   lang={lang} profile={profile} />}
+          {nav==='nutrition'    && canNutrition   && <NutritionDashboard   lang={lang} profile={profile} onBadgeCount={setNutritionBadge} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} profile={profile} />}
           {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} />}
           {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} isAdminUser={isAdminUser} />}

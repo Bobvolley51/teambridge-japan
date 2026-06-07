@@ -55,6 +55,23 @@
 .viewTab + .viewTab { border-left: 1px solid #7e0027; }
 .viewTab:hover { background: #fdf2f4; }
 .viewTabActive { background: #7e0027 !important; color: #fff !important; }
+.viewTabAlert { color: #7e0027; }
+.tabBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 5px;
+  line-height: 1;
+}
+.viewTabActive .tabBadge { background: rgba(255,255,255,0.9); color: #7e0027; }
 
 .trainerControls {
   display: flex;
@@ -99,6 +116,21 @@
   border-radius: 6px;
   padding: 2px 7px;
   white-space: nowrap;
+}
+.reviewRequestBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7e0027;
+  background: #ffe4e6;
+  border: 1px solid #fda4af;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 .reviewBanner {
   font-size: 12px;
@@ -175,6 +207,25 @@
 }
 .filterBtn:hover  { background: #f3f4f6; color: #111827; }
 .filterBtnActive  { background: #111827 !important; color: #fff !important; border-color: #111827 !important; }
+.filterBtnPending { background: #7e0027 !important; color: #fff !important; border-color: #7e0027 !important; }
+.filterSep { flex: 1; min-width: 8px; }
+
+.watchBtn {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: #d1d5db;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.watchBtn:hover { background: #f3f4f6; color: #9ca3af; border-color: #9ca3af; }
+.watchBtnOn { color: #7e0027 !important; border-color: #7e0027 !important; background: #fdf2f4 !important; }
+.watchBtnOn:hover { background: #fee2e2 !important; }
 .statsTableWrap {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -248,6 +299,10 @@
 }
 .statsTr { border-top: 1px solid #f3f4f6; }
 .statsTr:hover { background: #fdf2f4; }
+.statsTrPending { background: #fffbeb !important; }
+.statsTrPending:hover { background: #fef9c3 !important; }
+.statsTrRequested { background: #fff1f1 !important; }
+.statsTrRequested:hover { background: #fee2e2 !important; }
 .statsTdName {
   padding: 10px 14px;
   font-weight: 600;
@@ -323,6 +378,10 @@
 .dayPillUnrated { border-color: #dc2626; background: #fff1f1; }
 .dayPillUnrated .dayName { color: #dc2626; }
 .dayPillUnrated .dayNum  { color: #dc2626; }
+.dayPillRequested { border-color: #7e0027 !important; background: #ffe4e6 !important; animation: pulseDay 2s infinite; }
+.dayPillRequested .dayName { color: #7e0027; }
+.dayPillRequested .dayNum  { color: #7e0027; font-weight: 800; }
+@keyframes pulseDay { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(126,0,39,0.2); } }
 
 .dayName {
   font-size: 10px;
@@ -646,3 +705,33 @@
   justify-content: center;
 }
 .lightboxClose:hover { background: rgba(255, 255, 255, 0.35); }
+
+/* ── Requests tab ────────────────────────────────────────── */
+.requestsList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.requestItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: none;
+  border-top: 1px solid #f3f4f6;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+  width: 100%;
+}
+.requestItem:first-child { border-top: none; }
+.requestItem:hover { background: #fdf2f4; }
+.requestItemIcon { font-size: 22px; flex-shrink: 0; }
+.requestItemBody { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.requestItemName { font-size: 14px; font-weight: 700; color: #111827; }
+.requestItemMeta { font-size: 12px; color: #6b7280; }
+.requestItemArrow { font-size: 20px; color: #9ca3af; flex-shrink: 0; }
