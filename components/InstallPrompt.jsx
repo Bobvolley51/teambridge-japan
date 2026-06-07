@@ -7,6 +7,7 @@ import styles from './InstallPrompt.module.css';
 
 const PREFS = [
   { key: 'chat_dm',       en: 'Direct messages',        ja: 'ダイレクトメッセージ' },
+  { key: 'chat_channel',  en: 'Channel messages',       ja: 'チャンネルメッセージ' },
   { key: 'calendar',      en: 'Calendar changes',        ja: 'カレンダー変更・追加' },
   { key: 'tasks',         en: 'Task assignments',        ja: 'タスクの割り当て' },
   { key: 'announcements', en: 'Announcements',           ja: 'お知らせ' },

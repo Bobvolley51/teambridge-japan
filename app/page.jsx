@@ -358,7 +358,6 @@ export default function Home() {
   const checkPendingRPE = async (userId) => {
     // 3-day window: catches next-day logins after evening training
     const cutoff = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
-    const now    = new Date().toISOString();
 
     // Only confirmed attendees (status 'in' or null = default accepted)
     const { data: participation } = await supabase
@@ -377,7 +376,7 @@ export default function Home() {
       .in('id', eventIds)
       .in('category', ['Ball-Practice', 'Game'])
       .gte('start_time', cutoff)
-      .lte('start_time', now);
+      .lte('start_time', new Date().toISOString());
 
     if (!events || events.length === 0) return;
 

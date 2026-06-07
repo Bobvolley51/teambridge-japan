@@ -68,6 +68,12 @@
   color: #5c001a;
   white-space: nowrap;
 }
+.playerSelectWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .playerSelect {
   flex: 1;
   max-width: 200px;
@@ -78,6 +84,21 @@
   border-radius: 7px;
   background: #fff;
   color: #111827;
+}
+.playerSelectUnrated {
+  border-color: #dc2626 !important;
+  background: #fff1f1 !important;
+  color: #dc2626 !important;
+}
+.unratedBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #dc2626;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
 }
 .reviewBanner {
   font-size: 12px;
@@ -298,7 +319,10 @@
   transition: background 0.1s, border-color 0.1s;
 }
 .dayPill:hover { background: #fdf2f4; border-color: #f5c2ce; }
-.dayPillActive { background: #7e0027 !important; border-color: #7e0027 !important; }
+.dayPillActive  { background: #7e0027 !important; border-color: #7e0027 !important; }
+.dayPillUnrated { border-color: #dc2626; background: #fff1f1; }
+.dayPillUnrated .dayName { color: #dc2626; }
+.dayPillUnrated .dayNum  { color: #dc2626; }
 
 .dayName {
   font-size: 10px;

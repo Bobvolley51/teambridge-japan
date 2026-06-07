@@ -87,7 +87,8 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const [bodyTemp,        setBodyTemp]        = useState('');
   const [painParts,       setPainParts]       = useState([]);
   const [painLevels,      setPainLevels]      = useState({});
-  const [otherMessage,    setOtherMessage]    = useState('');
+  const [otherMessage,      setOtherMessage]      = useState('');
+  const [illnessOtherText,  setIllnessOtherText]  = useState('');
   const [saving,          setSaving]          = useState(false);
   const [submitError,     setSubmitError]     = useState('');
   const [skipConfirm,     setSkipConfirm]     = useState(0); // 0=hidden, 1=first, 2=second
@@ -119,7 +120,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
   const totalSteps = needsPage2 ? (needsPage3 ? 3 : 2) : 1;
 
   const ratedParts    = painParts.filter(k => k !== 'other');
-  const allPartsRated = (hasPain !== 'yes' || (ratedParts.length > 0 && ratedParts.every(k => painLevels[k] != null)))
+  const allPartsRated = (hasPain !== 'yes' || (painParts.length > 0 && ratedParts.every(k => painLevels[k] != null)))
     && (illness !== 'yes' || bodyTemp !== '');
 
   const toggleIllnessSymptom = key =>
@@ -198,8 +199,9 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
           const s = ILLNESS_SYMPTOMS.find(x => x.key === k);
           return s ? (lang === 'ja' ? s.ja : s.en) : k;
         }).join(', ');
-        const tempStr = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
-        const body = `${symptomList || 'Illness reported'}${tempStr}`;
+        const tempStr  = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
+        const otherNote = illnessOtherText.trim() ? ` — Other: ${illnessOtherText.trim()}` : '';
+        const body = `${symptomList || 'Illness reported'}${tempStr}${otherNote}`;
         await supabase.from('notifications').insert(
           recipients.map(r => ({
             user_id: r.id, type: 'wellness_illness',
@@ -500,15 +502,36 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                       );
                     })}
                   </div>
+                  {illnessSymptoms.includes('illness_other') && (
+                    <div className={styles.otherMessageBlock}>
+                      <label className={styles.otherMessageLabel}>
+                        {lang === 'ja' ? 'その他の症状を教えてください' : 'Please describe your other symptoms:'}
+                      </label>
+                      <textarea
+                        className={styles.otherMessageArea} rows={3}
+                        value={illnessOtherText} onChange={e => setIllnessOtherText(e.target.value)}
+                        placeholder={lang === 'ja' ? '例：目が充血している...' : 'e.g. Red eyes, dizziness…'}
+                      />
+                    </div>
+                  )}
                   <div className={styles.tempRow}>
                     <label className={styles.tempLabel}>
                       🌡️ {lang === 'ja' ? '体温（°C）' : 'Body temperature (°C)'}
+                      <span className={styles.tempRequired}>*</span>
                     </label>
-                    <input
-                      className={styles.tempInput} type="number" step="0.1" min="35" max="42"
-                      value={bodyTemp} onChange={e => setBodyTemp(e.target.value)}
-                      placeholder="e.g. 36.5"
-                    />
+                    <div className={styles.tempInputWrap}>
+                      <input
+                        className={`${styles.tempInput} ${bodyTemp === '' ? styles.tempInputEmpty : ''}`}
+                        type="number" step="0.1" min="35" max="42"
+                        value={bodyTemp} onChange={e => setBodyTemp(e.target.value)}
+                        placeholder="e.g. 36.5"
+                      />
+                      {bodyTemp === '' && (
+                        <span className={styles.tempHint}>
+                          {lang === 'ja' ? '必須' : 'Required'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

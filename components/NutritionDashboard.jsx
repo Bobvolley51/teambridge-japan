@@ -251,18 +251,37 @@ export default function NutritionDashboard({ lang, profile }) {
   const [uploading,    setUploading]    = useState({});
   const [lightbox,     setLightbox]     = useState(null);
   const [uploadError,  setUploadError]  = useState(null);
-  const [statsRows,      setStatsRows]      = useState(null); // null = not loaded yet
-  const [myStats,        setMyStats]        = useState(null); // player's own 14-day summary
-  const [positionFilter, setPositionFilter] = useState('');
+  const [statsRows,        setStatsRows]        = useState(null); // null = not loaded yet
+  const [myStats,          setMyStats]          = useState(null); // player's own 14-day summary
+  const [positionFilter,   setPositionFilter]   = useState('');
+  const [unratedPlayerIds, setUnratedPlayerIds] = useState(new Set());
+  const [unratedDays,      setUnratedDays]      = useState(new Set());
 
-  // Load player list for trainer dropdown
+  // Load player list + unrated-player set for trainer dropdown
   useEffect(() => {
     if (!isTrainer) return;
-    supabase.from('profiles').select('id, first_name, last_name, display_name, jersey_number, position').eq('role', 'Player').then(({ data }) => {
-      const sorted = (data ?? []).slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
+    Promise.all([
+      supabase.from('profiles').select('id, first_name, last_name, display_name, jersey_number, position').eq('role', 'Player'),
+      supabase.from('nutrition_entries').select('user_id').is('player_rating', null).gte('meal_date', DAYS[0]),
+    ]).then(([{ data: playerData }, { data: unratedData }]) => {
+      const sorted = (playerData ?? []).slice().sort((a, b) => (a.jersey_number ?? 9999) - (b.jersey_number ?? 9999));
       setPlayers(sorted);
+      setUnratedPlayerIds(new Set((unratedData ?? []).map(e => e.user_id)));
     });
   }, [isTrainer]);
+
+  // Load which days have unrated entries for the currently viewed player
+  useEffect(() => {
+    if (!isTrainer || !viewUserId) return;
+    supabase
+      .from('nutrition_entries')
+      .select('meal_date, player_rating')
+      .eq('user_id', viewUserId)
+      .gte('meal_date', DAYS[0])
+      .then(({ data }) => {
+        setUnratedDays(new Set((data ?? []).filter(e => !e.player_rating).map(e => e.meal_date)));
+      });
+  }, [viewUserId, isTrainer]);
 
   const MAX_MEALS = DAYS.length * MEALS.length; // 14 days × 4 meals = 56
 
@@ -551,16 +570,27 @@ export default function NutritionDashboard({ lang, profile }) {
         {isTrainer && view === 'diary' && (
           <div className={styles.trainerControls}>
             <span className={styles.playerLabel}>{lang === 'ja' ? '選手:' : 'Player:'}</span>
-            <select
-              className={styles.playerSelect}
-              value={viewUserId}
-              onChange={ev => {
-                const p = players.find(p => p.id === ev.target.value);
-                setViewUserId(ev.target.value);
-                setViewUserName(p?.display_name ?? '');
-              }}>
-              {players.map(p => <option key={p.id} value={p.id}>{playerFullLabel(p)}</option>)}
-            </select>
+            <div className={styles.playerSelectWrap}>
+              <select
+                className={`${styles.playerSelect} ${unratedPlayerIds.has(viewUserId) ? styles.playerSelectUnrated : ''}`}
+                value={viewUserId}
+                onChange={ev => {
+                  const p = players.find(p => p.id === ev.target.value);
+                  setViewUserId(ev.target.value);
+                  setViewUserName(p?.display_name ?? '');
+                }}>
+                {players.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {unratedPlayerIds.has(p.id) ? '⚠ ' : ''}{playerFullLabel(p)}
+                  </option>
+                ))}
+              </select>
+              {unratedPlayerIds.has(viewUserId) && (
+                <span className={styles.unratedBadge}>
+                  {lang === 'ja' ? '未評価あり' : 'Unrated'}
+                </span>
+              )}
+            </div>
             {reviewRequests > 0 && (
               <span className={styles.reviewBanner}>
                 ❗ {reviewRequests} {lang === 'ja' ? '件のフィードバック依頼' : `meal${reviewRequests > 1 ? 's' : ''} awaiting feedback`}
@@ -682,7 +712,7 @@ export default function NutritionDashboard({ lang, profile }) {
               return (
                 <button
                   key={d}
-                  className={`${styles.dayPill} ${d === selectedDay ? styles.dayPillActive : ''}`}
+                  className={`${styles.dayPill} ${d === selectedDay ? styles.dayPillActive : (isTrainer && unratedDays.has(d) ? styles.dayPillUnrated : '')}`}
                   onClick={() => setSelectedDay(d)}>
                   <span className={styles.dayName}>
                     {date.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'short' })}

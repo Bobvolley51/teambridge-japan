@@ -1346,6 +1346,26 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       }
     }
 
+    // Channel messages (no @mention): notify all channel members
+    if (!insertError && !isDM(activeChannel) && !text.includes('@')) {
+      const { data: members } = await supabase.from('channel_members')
+        .select('profile_id').eq('channel_id', activeChannel);
+      const recipientIds = (members?.length > 0
+        ? members.map(m => m.profile_id)
+        : profiles.map(p => p.id)
+      ).filter(id => id !== currentUser.id);
+
+      if (recipientIds.length > 0) {
+        sendPush(recipientIds, {
+          title:   `#${activeChannel}`,
+          body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+          url:     '/?nav=chat',
+          tag:     `channel-${activeChannel}`,
+          prefKey: 'chat_channel',
+        });
+      }
+    }
+
     if (insertError) {
       setError('Send failed: ' + insertError.message);
       setMessagesByChannel(prev => ({

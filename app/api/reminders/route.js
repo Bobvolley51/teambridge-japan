@@ -1,11 +1,12 @@
 // app/api/reminders/route.js
-// Vercel cron: runs every 2 hours.
+// Runs every hour (Supabase pg_cron: 0 * * * *)
 //
-// At 07:00 JST (22:00 UTC): sends wellness check reminder to players who
-//   haven't submitted today's entry yet.
+// Wellness (10:00 JST = 01:00 UTC): one reminder to players who haven't
+// submitted today's wellness entry yet.
 //
-// Every run: checks for Ball-Practice / Game events that started 30min–3h ago
-//   and sends RPE reminder to participants who haven't logged yet.
+// RPE: finds Ball-Practice/Game events that ended 30–90 min ago and sends
+// one reminder per event to participants who haven't logged RPE yet.
+// Deduplication via notifications table (type = 'rpe_reminder', ref_id = event id).
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -34,7 +35,6 @@ async function push(userIds, payload) {
 
 // ── Wellness reminder ─────────────────────────────────────────────────────────
 async function wellnessReminder(db, todayJST) {
-  // All players
   const { data: players } = await db
     .from('profiles')
     .select('id')
@@ -43,7 +43,6 @@ async function wellnessReminder(db, todayJST) {
 
   const playerIds = players.map(p => p.id);
 
-  // Who already submitted today?
   const { data: done } = await db
     .from('wellness_responses')
     .select('user_id')
@@ -55,7 +54,7 @@ async function wellnessReminder(db, todayJST) {
 
   return push(pending, {
     title: '🌅 Wellness Check',
-    body: 'Don\'t forget to fill in your daily wellness check.',
+    body: "Don't forget to fill in your daily wellness check.",
     url: '/?nav=dashboard',
     tag: 'wellness-reminder',
     prefKey: 'wellness_reminder',
@@ -64,59 +63,81 @@ async function wellnessReminder(db, todayJST) {
 
 // ── RPE reminder ──────────────────────────────────────────────────────────────
 async function rpeReminder(db, now) {
-  // Events that started 30 min – 3 hours ago
-  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString();
+  // Events that ended 30–90 min ago — guarantees reminder at least 30 min after end
+  const from = new Date(now.getTime() - 90 * 60 * 1000).toISOString();
   const to   = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
 
   const { data: events } = await db
     .from('events')
     .select('id, title')
     .in('category', ['Ball-Practice', 'Game'])
-    .gte('start_time', from)
-    .lte('start_time', to);
+    .gte('end_time', from)
+    .lte('end_time', to);
 
   if (!events?.length) return 0;
 
   const eventIds = events.map(e => e.id);
 
-  // All participants of those events
+  // Skip events we already sent an RPE reminder for
+  const { data: alreadySent } = await db
+    .from('notifications')
+    .select('ref_id')
+    .eq('type', 'rpe_reminder')
+    .in('ref_id', eventIds);
+
+  const notifiedIds = new Set((alreadySent ?? []).map(r => r.ref_id));
+  const pendingEvents = events.filter(e => !notifiedIds.has(e.id));
+  if (!pendingEvents.length) return 0;
+
+  const pendingEventIds = pendingEvents.map(e => e.id);
+
   const { data: participants } = await db
     .from('event_participants')
     .select('profile_id, event_id')
-    .in('event_id', eventIds);
+    .in('event_id', pendingEventIds);
 
   if (!participants?.length) return 0;
 
-  const participantIds = [...new Set(participants.map(p => p.profile_id))];
+  const allParticipantIds = [...new Set(participants.map(p => p.profile_id))];
 
-  // Who already logged RPE for any of these events?
   const { data: logged } = await db
     .from('session_rpe')
     .select('user_id, event_id')
-    .in('event_id', eventIds)
-    .in('user_id', participantIds);
+    .in('event_id', pendingEventIds)
+    .in('user_id', allParticipantIds);
 
   const loggedPairs = new Set((logged ?? []).map(r => `${r.user_id}:${r.event_id}`));
 
-  // Keep only players missing at least one RPE entry
-  const pending = participantIds.filter(uid =>
-    participants
-      .filter(p => p.profile_id === uid)
-      .some(p => !loggedPairs.has(`${uid}:${p.event_id}`))
-  );
+  let totalSent = 0;
 
-  if (!pending.length) return 0;
+  for (const event of pendingEvents) {
+    const eventParticipants = participants
+      .filter(p => p.event_id === event.id)
+      .map(p => p.profile_id);
 
-  // Use the first event title for the notification body
-  const eventTitle = events[0].title;
+    const pending = eventParticipants.filter(uid => !loggedPairs.has(`${uid}:${event.id}`));
+    if (!pending.length) continue;
 
-  return push(pending, {
-    title: '📊 Session Feedback',
-    body: `How was ${eventTitle}? Log your session RPE now.`,
-    url: '/?nav=dashboard',
-    tag: 'rpe-reminder',
-    prefKey: 'rpe_reminder',
-  });
+    // Insert dedup sentinel before pushing so a concurrent run can't double-send
+    await db.from('notifications').insert({
+      user_id:    pending[0],
+      type:       'rpe_reminder',
+      title:      '📊 Session Feedback',
+      body:       `How was ${event.title}? Log your RPE now.`,
+      nav_target: 'dashboard',
+      ref_id:     event.id,
+    });
+
+    totalSent += await push(pending, {
+      title:   '📊 Session Feedback',
+      body:    `How was ${event.title}? Log your RPE now.`,
+      url:     '/?nav=dashboard',
+      tag:     `rpe-reminder-${event.id}`,
+      prefKey: 'rpe_reminder',
+    });
+  }
+
+  return totalSent;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -134,18 +155,16 @@ export async function GET(request) {
   const db  = adminClient();
   const now = new Date();
 
-  // JST = UTC+9
-  const jstHour = (now.getUTCHours() + 9) % 24;
+  const jstHour  = (now.getUTCHours() + 9) % 24;
   const todayJST = new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
 
   const results = {};
 
-  // Wellness reminder at 09:00 JST
-  if (jstHour === 9) {
+  // Wellness reminder at 10:00 JST (01:00 UTC) — only once per day
+  if (jstHour === 10) {
     results.wellness = await wellnessReminder(db, todayJST);
   }
 
-  // RPE reminder every run
   results.rpe = await rpeReminder(db, now);
 
   return Response.json({ ok: true, ...results });
