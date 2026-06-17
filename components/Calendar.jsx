@@ -234,6 +234,8 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
   });
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState(null);
+  const [rpeWarning,     setRpeWarning]     = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
 
   const toggleParticipant = (id) => {
     setParticipantIds(prev =>
@@ -286,43 +288,10 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const startDate = new Date(start);
-    const endDate   = new Date(end);
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      setError(lang === 'ja' ? '開始と終了の日時を入力してください。' : 'Please enter a valid start and end time.');
-      return;
-    }
-    if (endDate <= startDate) {
-      setError(lang === 'ja' ? '終了は開始より後にしてください。' : 'End must be after start.');
-      return;
-    }
-    if (!isEditing && startDate < new Date(Date.now() + 60 * 60 * 1000)) {
-      setError(lang === 'ja' ? '開始時間は現在から1時間以上先にしてください。' : 'Start time must be at least 1 hour from now.');
-      return;
-    }
+  const performSave = async (payload) => {
     setSaving(true);
     setError(null);
-
     try {
-      let recurrenceValue = recurrence || null;
-      if (recurrence === 'weekly' && recurrenceDays.length > 0) {
-        recurrenceValue = `weekly:${[...recurrenceDays].sort((a, b) => a - b).join(',')}`;
-      }
-
-      const payload = {
-        title:          title.trim(),
-        description:    desc.trim() || null,
-        location:       location.trim() || null,
-        category,
-        start_time:     new Date(start).toISOString(),
-        end_time:       new Date(end).toISOString(),
-        all_day:        allDay,
-        recurrence:     recurrenceValue,
-        recurrence_end: recurrenceEnd || null,
-      };
-
       if (isEditing) {
         const { error: err } = await supabase.from('events').update({
           ...payload,
@@ -337,7 +306,6 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           );
           if (pErr) throw new Error(pErr.message);
         }
-        // Notify participants if event is within 36 h
         const hoursUntilEdit = (new Date(payload.start_time) - Date.now()) / 3600000;
         if (participantIds.length > 0 && hoursUntilEdit >= 0 && hoursUntilEdit <= 36) {
           const others = participantIds.filter(pid => pid !== currentUserId);
@@ -365,7 +333,7 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           );
           if (pErr) throw new Error(pErr.message);
           const body      = new Date(payload.start_time).toLocaleString(lang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-          const others     = participantIds.filter(pid => pid !== currentUserId);
+          const others    = participantIds.filter(pid => pid !== currentUserId);
           const notifs    = others.map(pid => ({
             user_id: pid, type: 'calendar_invite',
             title: lang === 'ja' ? `予定追加: ${payload.title}` : `Added to event: ${payload.title}`,
@@ -381,12 +349,64 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           ]);
         }
       }
-
       onSave(); onClose();
     } catch (caught) {
       setError(caught?.message ?? (lang === 'ja' ? '保存に失敗しました。再度お試しください。' : 'Save failed — please try again.'));
       setSaving(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const startDate = new Date(start);
+    const endDate   = new Date(end);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      setError(lang === 'ja' ? '開始と終了の日時を入力してください。' : 'Please enter a valid start and end time.');
+      return;
+    }
+    if (endDate <= startDate) {
+      setError(lang === 'ja' ? '終了は開始より後にしてください。' : 'End must be after start.');
+      return;
+    }
+    if (!isEditing && startDate < new Date(Date.now() + 60 * 60 * 1000)) {
+      setError(lang === 'ja' ? '開始時間は現在から1時間以上先にしてください。' : 'Start time must be at least 1 hour from now.');
+      return;
+    }
+
+    let recurrenceValue = recurrence || null;
+    if (recurrence === 'weekly' && recurrenceDays.length > 0) {
+      recurrenceValue = `weekly:${[...recurrenceDays].sort((a, b) => a - b).join(',')}`;
+    }
+
+    const payload = {
+      title:          title.trim(),
+      description:    desc.trim() || null,
+      location:       location.trim() || null,
+      category,
+      start_time:     new Date(start).toISOString(),
+      end_time:       new Date(end).toISOString(),
+      all_day:        allDay,
+      recurrence:     recurrenceValue,
+      recurrence_end: recurrenceEnd || null,
+    };
+
+    // Warn before rescheduling an event that already has RPE submissions
+    if (isEditing) {
+      const origDateStr = toLocalDT(new Date(editStartStr)).slice(0, 10);
+      if (start.slice(0, 10) !== origDateStr) {
+        const { count } = await supabase
+          .from('session_rpe')
+          .select('event_id', { count: 'exact', head: true })
+          .eq('event_id', event.id);
+        if (count > 0) {
+          setPendingPayload(payload);
+          setRpeWarning(true);
+          return;
+        }
+      }
+    }
+
+    await performSave(payload);
   };
 
   return (
@@ -531,14 +551,34 @@ function EventForm({ lang, initialDate, currentUserName, currentUserId, profiles
           )}
 
           {error && <div className={styles.formErr}>{error}</div>}
-          <div className={styles.formActions}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>
-              {lang === 'ja' ? 'キャンセル' : 'Cancel'}
-            </button>
-            <button type="submit" className={styles.saveBtn} disabled={saving}>
-              {saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}
-            </button>
-          </div>
+          {rpeWarning ? (
+            <div className={styles.rpeWarn}>
+              <p className={styles.rpeWarnText}>
+                {lang === 'ja'
+                  ? 'このイベントにはすでにRPEが記録されています。日付を変更すると、選手は新しいセッションのRPEを再度求められます。続けますか？'
+                  : 'Players have already submitted RPE for this event. Rescheduling it will prompt them to rate the new session again. Continue?'}
+              </p>
+              <div className={styles.formActions}>
+                <button type="button" className={styles.cancelBtn}
+                  onClick={() => { setRpeWarning(false); setPendingPayload(null); }}>
+                  {lang === 'ja' ? 'キャンセル' : 'Cancel'}
+                </button>
+                <button type="button" className={styles.saveBtn} disabled={saving}
+                  onClick={async () => { setRpeWarning(false); await performSave(pendingPayload); }}>
+                  {saving ? '…' : (lang === 'ja' ? '変更を確定' : 'Reschedule anyway')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.formActions}>
+              <button type="button" className={styles.cancelBtn} onClick={onClose}>
+                {lang === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+              <button type="submit" className={styles.saveBtn} disabled={saving}>
+                {saving ? '…' : (lang === 'ja' ? '保存' : 'Save')}
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
