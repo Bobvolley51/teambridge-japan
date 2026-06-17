@@ -381,15 +381,22 @@ export default function Home() {
 
     if (!events || events.length === 0) return;
 
-    // Only DB determines whether RPE was already submitted (no localStorage bypass)
+    // Only DB determines whether RPE was already submitted (no localStorage bypass).
+    // Match by event_id + the event's current JST date so that a rescheduled event
+    // (same event_id, different date) doesn't suppress the prompt for the new session.
     const { data: logged } = await supabase
       .from('session_rpe')
-      .select('event_id')
+      .select('event_id, event_date')
       .eq('user_id', userId)
       .in('event_id', events.map(e => e.id));
 
-    const loggedIds = new Set((logged ?? []).map(l => l.event_id));
-    const pending   = events.filter(e => !loggedIds.has(e.id));
+    const loggedKeys = new Set(
+      (logged ?? []).map(l => `${l.event_id}:${l.event_date}`)
+    );
+    const pending = events.filter(e => {
+      const eventDate = toJstDateStr(new Date(e.start_time));
+      return !loggedKeys.has(`${e.id}:${eventDate}`);
+    });
 
     if (pending.length > 0) {
       setPendingRPEEvents(pending);
