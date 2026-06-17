@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__apply_migration",
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__execute_sql",
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__list_migrations",
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__list_tables",
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__get_logs",
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__get_advisors"
+    ]
+  }
+}
