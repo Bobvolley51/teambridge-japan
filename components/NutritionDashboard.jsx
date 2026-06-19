@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated } from '@/lib/translate';
@@ -84,7 +84,7 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChang
   };
 
   const handleSaveComment = () => {
-    if (comment !== entry.comment || rating !== entry.rating) onSaveComment(comment, rating);
+    if (comment !== entry.comment || rating !== entry.rating || entry.coach_review_requested) onSaveComment(comment, rating);
   };
 
   const topRating = entry.allComments?.find(c => c.rating)?.rating;
@@ -238,7 +238,7 @@ function MealCard({ meal, entry, lang, isTrainer, isOwn, uploading, onNotesChang
 // ── Main component ────────────────────────────────────────────────────────
 export default function NutritionDashboard({ lang, profile, onBadgeCount }) {
   const isTrainer = TRAINER_ROLES.includes(profile?.role);
-  const DAYS = getLast14Days();
+  const DAYS = useMemo(() => getLast14Days(), []);
 
   const [view,         setView]         = useState(isTrainer ? 'stats' : 'diary');
   const [selectedDay,  setSelectedDay]  = useState(DAYS[DAYS.length - 1]);

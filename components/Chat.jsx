@@ -794,17 +794,35 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     }
   }, [currentUser?.id]);
 
-  // Load channels on mount
+  // Load channels — wait for profile so role-based filtering is applied on the first load
   useEffect(() => {
+    if (!currentUser?.id || !profile) return;
     async function loadChannels() {
-      const { data } = await supabase
-        .from('channels').select('id, name, description').order('sort_order').order('created_at');
-      const list = data ?? [];
+      const [{ data: allChannels }, { data: allMembers }] = await Promise.all([
+        supabase.from('channels').select('id, name, description').order('sort_order').order('created_at'),
+        supabase.from('channel_members').select('channel_id, profile_id'),
+      ]);
+      const isPlayer = profile.role === 'Player';
+      let list = allChannels ?? [];
+      if (isPlayer) {
+        const membersByChannel = {};
+        for (const m of allMembers ?? []) {
+          if (!membersByChannel[m.channel_id]) membersByChannel[m.channel_id] = [];
+          membersByChannel[m.channel_id].push(m.profile_id);
+        }
+        list = list.filter(ch => {
+          const members = membersByChannel[ch.id];
+          return !members || members.length === 0 || members.includes(currentUser.id);
+        });
+      }
       setChannels(list);
-      if (list.length > 0 && !activeChannel) setActiveChannel(list[0].id);
+      // Reset activeChannel if it's not in the accessible list (e.g. after role loads)
+      setActiveChannel(prev =>
+        list.find(c => c.id === prev) ? prev : (list[0]?.id ?? null)
+      );
     }
     loadChannels();
-  }, []);
+  }, [currentUser?.id, profile]);
 
   // Load profiles for @-mentions and DM picker
   useEffect(() => {
@@ -1200,16 +1218,18 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
     return publicUrl;
   }, [activeChannel]);
 
+  const mentionProfileFilter = (p, q) => {
+    const lq = q.toLowerCase();
+    return [profileFullName(p), p.display_name, p.email].some(s => s && s.toLowerCase().includes(lq));
+  };
   const mentionMatches = mentionQuery && !isActiveDM
     ? [
         // @all always at top when query matches "all" (or is blank/partial)
         ...('all'.startsWith(mentionQuery.query.toLowerCase()) ? [ALL_ENTRY] : []),
-        ...profiles
-          .filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase()))
-          .slice(0, 6),
+        ...profiles.filter(p => mentionProfileFilter(p, mentionQuery.query)).slice(0, 6),
       ]
     : mentionQuery
-      ? profiles.filter(p => (p.display_name || p.email || '').toLowerCase().includes(mentionQuery.query.toLowerCase())).slice(0, 6)
+      ? profiles.filter(p => mentionProfileFilter(p, mentionQuery.query)).slice(0, 6)
       : [];
 
   const insertMention = useCallback((p) => {
@@ -1322,8 +1342,9 @@ export default function Chat({ currentUser, uiLang = 'en', profile }) {
       } else if (mentionTokens.length > 0) {
         // Individual @mentions
         const mentionedProfiles = profiles.filter(p => {
-          const name = (profileFullName(p) || p.display_name || '').toLowerCase();
-          return mentionTokens.some(tok => name.includes(tok));
+          const haystack = [profileFullName(p), p.display_name, p.email]
+            .filter(Boolean).map(s => s.toLowerCase());
+          return mentionTokens.some(tok => haystack.some(h => h.includes(tok)));
         }).filter(p => p.id !== currentUser.id);
 
         if (mentionedProfiles.length > 0) {

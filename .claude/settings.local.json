@@ -35,7 +35,8 @@
       "mcp__claude_ai_Supabase__get_logs",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); text=data[0]['text']; logs=json.loads\\(text\\)['result']['result']; errors=[l for l in logs if l.get\\('level'\\) in \\('error','warning'\\) or 'error' in l.get\\('event_message',''\\).lower\\(\\) or l.get\\('status'\\) not in \\(None,'200','201'\\)]; print\\(json.dumps\\(errors[:20], indent=2\\)\\)\")",
       "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__apply_migration",
-      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__list_migrations"
+      "mcp__2d89f969-65c6-4d6f-9ece-c9deb6b498e1__list_migrations",
+      "Bash(dir \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan/app\" -Recurse -Include \"*.tsx\",\"*.ts\")"
     ]
   }
 }
