@@ -597,6 +597,16 @@ export default function NutritionDashboard({ lang, profile, onBadgeCount }) {
     }
     await supabase.from('nutrition_entries').update({ coach_review_requested: false }).eq('id', entry.id);
 
+    // Immediately remove processed request from UI state so navigating back to Requests
+    // doesn't show stale data (avoids race with loadAllRequests re-querying the DB).
+    const entryId = entry.id;
+    const userId = viewUserId;
+    setAllRequests(prev => (prev === null ? null : prev.filter(r => r.id !== entryId)));
+    if (allRequests !== null && !allRequests.some(r => r.user_id === userId && r.id !== entryId)) {
+      setReviewRequestPlayerIds(prev => { const n = new Set(prev); n.delete(userId); return n; });
+    }
+    setReviewRequestDays(prev => { const n = new Set(prev); n.delete(selectedDay); return n; });
+
     setEntries(e => ({
       ...e,
       [mealType]: {
