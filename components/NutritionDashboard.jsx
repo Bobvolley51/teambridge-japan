@@ -595,7 +595,7 @@ export default function NutritionDashboard({ lang, profile, onBadgeCount }) {
       const { data } = await supabase.from('nutrition_comments').insert(payload).select('id').single();
       commentId = data?.id ?? null;
     }
-    await supabase.from('nutrition_entries').update({ coach_review_requested: false }).eq('id', entry.id);
+    await supabase.rpc('clear_review_request', { entry_id: entry.id });
 
     // Immediately remove processed request from UI state so navigating back to Requests
     // doesn't show stale data (avoids race with loadAllRequests re-querying the DB).
