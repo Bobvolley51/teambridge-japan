@@ -316,7 +316,7 @@ export default function NutritionDashboard({ lang, profile, onBadgeCount }) {
         filter: 'coach_review_requested=eq.true',
       }, (payload) => {
         const playerId = payload.new?.user_id;
-        if (playerId) setReviewRequestPlayerIds(prev => new Set([...prev, playerId]));
+        if (playerId && payload.new?.coach_review_requested) setReviewRequestPlayerIds(prev => new Set([...prev, playerId]));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -602,9 +602,12 @@ export default function NutritionDashboard({ lang, profile, onBadgeCount }) {
     const entryId = entry.id;
     const userId = viewUserId;
     setAllRequests(prev => (prev === null ? null : prev.filter(r => r.id !== entryId)));
-    if (allRequests !== null && !allRequests.some(r => r.user_id === userId && r.id !== entryId)) {
-      setReviewRequestPlayerIds(prev => { const n = new Set(prev); n.delete(userId); return n; });
-    }
+    // Check remaining pending requests for this player in DB — works even when allRequests is null.
+    supabase.from('nutrition_entries').select('id', { count: 'exact', head: true })
+      .eq('user_id', userId).eq('coach_review_requested', true).gte('meal_date', DAYS[0])
+      .then(({ count }) => {
+        if (!count) setReviewRequestPlayerIds(prev => { const n = new Set(prev); n.delete(userId); return n; });
+      });
     setReviewRequestDays(prev => { const n = new Set(prev); n.delete(selectedDay); return n; });
 
     setEntries(e => ({
