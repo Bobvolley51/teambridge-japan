@@ -29,6 +29,7 @@ async function push(userIds, payload) {
 }
 
 export async function GET(request) {
+  try {
   const auth   = request.headers.get('authorization') ?? '';
   const secret = process.env.CRON_SECRET;
   if (secret && auth !== `Bearer ${secret}`) {
@@ -113,4 +114,8 @@ export async function GET(request) {
   }
 
   return Response.json({ ok: true, sent: totalSent, events: pending.length });
+  } catch (err) {
+    console.error('[special-event-notify]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

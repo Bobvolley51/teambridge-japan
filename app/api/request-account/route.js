@@ -4,8 +4,23 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(req) {
-  const { email, password, displayName, username, message } = await req.json();
+  try {
+  const body = await req.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { email, password, displayName, username, message } = body;
+
+  if (!email || typeof email !== 'string' || !EMAIL_RE.test(email)) {
+    return Response.json({ error: 'Valid email required.' }, { status: 400 });
+  }
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return Response.json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
+  }
+  if (!displayName || typeof displayName !== 'string' || !displayName.trim()) {
+    return Response.json({ error: 'Display name required.' }, { status: 400 });
+  }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return Response.json({ error: 'Server not configured.' }, { status: 500 });
@@ -87,4 +102,8 @@ export async function POST(req) {
   }
 
   return Response.json({ ok: true });
+  } catch (err) {
+    console.error('[request-account]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

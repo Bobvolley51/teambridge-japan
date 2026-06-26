@@ -496,3 +496,59 @@
 }
 
 .idleSignOutBtn:hover { color: #374151; }
+
+/* ── Focus visibility for keyboard navigation ──────────────── */
+.navItem:focus-visible { outline: 2px solid var(--tb-accent); outline-offset: -2px; }
+.navSubItem:focus-visible { outline: 2px solid var(--tb-accent); outline-offset: -2px; }
+.mobileNavItem:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.calSubBtn:focus-visible { outline: 2px solid var(--tb-accent); outline-offset: -2px; }
+.searchBtn:focus-visible { outline: 2px solid var(--tb-accent); outline-offset: -2px; }
+.idleStayBtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.idleSignOutBtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ── Offline indicator banner ───────────────────────────────── */
+.offlineBanner {
+  background: #fbbf24;
+  color: #1c1917;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  flex-shrink: 0;
+  z-index: 5;
+  border-bottom: 1px solid #f59e0b;
+}
+
+/* ── App loading state ──────────────────────────────────────── */
+.appLoadingWrap {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tb-night);
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--tb-font-sans);
+}
+
+.appLoadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: var(--tb-accent);
+  border-radius: 50%;
+  animation: pullSpin 0.75s linear infinite;
+}
+
+.appLoadingText {
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+}
+
+/* ── Pull-to-refresh label ─────────────────────────────────── */
+.pullLabel {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 4px;
+}

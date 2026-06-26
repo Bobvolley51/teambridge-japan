@@ -9,10 +9,17 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
-  const { text, targetLang } = await request.json();
+  try {
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { text, targetLang } = body;
 
   if (!text || !targetLang) {
     return NextResponse.json({ error: 'Missing text or targetLang' }, { status: 400 });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'AI not configured' }, { status: 503 });
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -44,4 +51,8 @@ export async function POST(request) {
   const translation = data.content?.[0]?.text ?? '';
 
   return NextResponse.json({ translation });
+  } catch (err) {
+    console.error('[api/route]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

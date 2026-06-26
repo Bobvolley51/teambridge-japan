@@ -8,11 +8,14 @@ import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req) {
+  try {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     return Response.json({ ok: false, reason: 'no_credentials' });
   }
 
-  const { participantIds, eventTitle, eventStart, eventLocation, addedBy, changedBy, type = 'invite' } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { participantIds, eventTitle, eventStart, eventLocation, addedBy, changedBy, type = 'invite' } = body;
   if (!participantIds?.length) return Response.json({ ok: true });
 
   const hoursUntil = (new Date(eventStart) - Date.now()) / 3600000;
@@ -102,4 +105,8 @@ export async function POST(req) {
   }
 
   return Response.json({ ok: true, sent: emails.length - failed.length, failed: failed.length, errors });
+  } catch (err) {
+    console.error('[notify-email]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

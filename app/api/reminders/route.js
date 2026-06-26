@@ -142,30 +142,35 @@ async function rpeReminder(db, now) {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function GET(request) {
-  const auth   = request.headers.get('authorization') ?? '';
-  const secret = process.env.CRON_SECRET;
-  if (secret && auth !== `Bearer ${secret}`) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth   = request.headers.get('authorization') ?? '';
+    const secret = process.env.CRON_SECRET;
+    if (secret && auth !== `Bearer ${secret}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return Response.json({ error: 'Server not configured.' }, { status: 500 });
+    }
+
+    const db  = adminClient();
+    const now = new Date();
+
+    const jstHour  = (now.getUTCHours() + 9) % 24;
+    const todayJST = new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
+
+    const results = {};
+
+    // Wellness reminder at 10:00 JST (01:00 UTC) — only once per day
+    if (jstHour === 10) {
+      results.wellness = await wellnessReminder(db, todayJST);
+    }
+
+    results.rpe = await rpeReminder(db, now);
+
+    return Response.json({ ok: true, ...results });
+  } catch (err) {
+    console.error('[reminders]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return Response.json({ error: 'Server not configured.' }, { status: 500 });
-  }
-
-  const db  = adminClient();
-  const now = new Date();
-
-  const jstHour  = (now.getUTCHours() + 9) % 24;
-  const todayJST = new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
-
-  const results = {};
-
-  // Wellness reminder at 10:00 JST (01:00 UTC) — only once per day
-  if (jstHour === 10) {
-    results.wellness = await wellnessReminder(db, todayJST);
-  }
-
-  results.rpe = await rpeReminder(db, now);
-
-  return Response.json({ ok: true, ...results });
 }

@@ -163,8 +163,9 @@ export default function ProfileSetup({ userId, currentRole, lang, onComplete }) 
             type="submit"
             className={styles.btn}
             disabled={!canSubmit || saving}
+            aria-busy={saving}
           >
-            {saving ? '…' : (isJa ? '保存して始める →' : 'Save & Continue →')}
+            {saving ? <span className={styles.spinner} /> : (isJa ? '保存して始める →' : 'Save & Continue →')}
           </button>
         </form>
       </div>

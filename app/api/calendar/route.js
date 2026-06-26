@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(req) {
+  try {
   const { searchParams } = new URL(req.url);
   const uid = searchParams.get('uid');
 
@@ -89,14 +90,24 @@ export async function GET(req) {
       'Cache-Control':       'no-cache, no-store',
     },
   });
+  } catch (err) {
+    console.error('[calendar]', err);
+    return new Response('Internal server error', { status: 500 });
+  }
 }
 
 function formatDT(iso) {
-  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  if (!iso) return '19700101T000000Z';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '19700101T000000Z';
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
 function formatDate(iso) {
-  return new Date(iso).toISOString().slice(0, 10).replace(/-/g, '');
+  if (!iso) return '19700101';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '19700101';
+  return d.toISOString().slice(0, 10).replace(/-/g, '');
 }
 
 function escapeICS(str) {

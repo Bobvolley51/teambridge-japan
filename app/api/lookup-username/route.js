@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req) {
-  const { username } = await req.json();
+  try {
+  const body = await req.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { username } = body;
   if (!username) return Response.json({ error: 'Missing username.' }, { status: 400 });
 
   const admin = createClient(
@@ -18,4 +21,8 @@ export async function POST(req) {
 
   if (!data?.email) return Response.json({ error: 'Username not found.' }, { status: 404 });
   return Response.json({ email: data.email });
+  } catch (err) {
+    console.error('[lookup-username]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

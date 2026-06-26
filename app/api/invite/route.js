@@ -5,8 +5,17 @@
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(req) {
-  const { requestId, userId } = await req.json();
+  try {
+  const body = await req.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+
+  const { requestId, userId } = body;
+  if (!requestId || !userId || !UUID_RE.test(userId)) {
+    return Response.json({ error: 'Missing or invalid requestId / userId.' }, { status: 400 });
+  }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return Response.json({ error: 'Server not configured.' }, { status: 500 });
@@ -86,4 +95,8 @@ export async function POST(req) {
   }
 
   return Response.json({ ok: true });
+  } catch (err) {
+    console.error('[invite]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

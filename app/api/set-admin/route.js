@@ -4,7 +4,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req) {
-  const { targetUserId, isAdmin, token } = await req.json();
+  try {
+  const body = await req.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { targetUserId, isAdmin, token } = body;
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return Response.json({ error: 'Server not configured.' }, { status: 500 });
@@ -36,4 +39,8 @@ export async function POST(req) {
   if (error) return Response.json({ error: error.message }, { status: 400 });
 
   return Response.json({ ok: true });
+  } catch (err) {
+    console.error('[set-admin]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

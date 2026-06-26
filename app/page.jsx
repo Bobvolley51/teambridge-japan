@@ -128,6 +128,7 @@ export default function Home() {
   const [showSearch,       setShowSearch]       = useState(false);
   const [showIdleWarning,  setShowIdleWarning]  = useState(false);
   const [idleCountdown,    setIdleCountdown]    = useState(120);
+  const [isOnline,         setIsOnline]         = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const idleTimer       = useRef(null);
   const warnTimer       = useRef(null);
   const navRef          = useRef(nav);
@@ -177,6 +178,18 @@ export default function Home() {
       clearInterval(warnTimer.current);
     };
   }, [session, resetIdleTimer]);
+
+  // Online/offline state
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Auth listener
   useEffect(() => {
@@ -305,6 +318,7 @@ export default function Home() {
       el.removeEventListener('touchend',   onTouchEnd);
     };
   }, []);
+
 
   // Global search keyboard shortcut
   useEffect(() => {
@@ -524,8 +538,9 @@ export default function Home() {
 
   if (session === undefined) {
     return (
-      <div style={{ height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:'#9ca3af' }}>
-        Loading…
+      <div className={styles.appLoadingWrap}>
+        <div className={styles.appLoadingSpinner} />
+        <div className={styles.appLoadingText}>TeamBridge</div>
       </div>
     );
   }
@@ -574,7 +589,7 @@ export default function Home() {
           </div>
         </div>
         <div className={styles.headerRight}>
-          <button className={styles.searchBtn} onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
+          <button className={styles.searchBtn} onClick={() => setShowSearch(true)} aria-label={lang === 'ja' ? '検索 (Ctrl+K)' : 'Search (Ctrl+K)'}>
             <IconSearch size={15} />
           </button>
           <button className={`${styles.langBtn} ${lang==='en'?styles.langActive:''}`} onClick={()=>{setLang('en');localStorage.setItem('tb_lang','en');}}>EN</button>
@@ -583,6 +598,12 @@ export default function Home() {
           <UserMenu user={user} profile={profile} lang={lang} onProfileUpdate={() => loadProfile(user.id, false)} />
         </div>
       </header>
+
+      {!isOnline && (
+        <div className={styles.offlineBanner} role="status" aria-live="polite">
+          {lang === 'ja' ? 'オフライン — インターネット接続がありません' : 'Offline — no internet connection'}
+        </div>
+      )}
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
@@ -596,6 +617,8 @@ export default function Home() {
               <div key={item.id}>
                 <button
                   className={`${styles.navItem} ${(nav===item.id || (isCalGroup && calActive) || (isPlayersGroup && playersActive)) ? styles.navActive : ''}`}
+                  aria-current={nav === item.id || (isCalGroup && calActive) || (isPlayersGroup && playersActive) ? 'page' : undefined}
+                  aria-label={item.label[lang]}
                   onClick={() => {
                     if (isPlayersGroup) {
                       setPlayersGroupOpen(o => !o);
@@ -624,7 +647,8 @@ export default function Home() {
                   return (
                     <button key={sub.id}
                       className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
-                      onClick={() => navigate(sub.id)}>
+                      onClick={() => navigate(sub.id)}
+                      aria-current={nav===sub.id ? 'page' : undefined}>
                       <span className={styles.navIcon}><SubIcon size={16} /></span>
                       {sub.label[lang]}
                     </button>
@@ -635,7 +659,8 @@ export default function Home() {
                   return (
                     <button key={sub.id}
                       className={`${styles.navSubItem} ${nav===sub.id ? styles.navActive : ''}`}
-                      onClick={() => navigate(sub.id)}>
+                      onClick={() => navigate(sub.id)}
+                      aria-current={nav===sub.id ? 'page' : undefined}>
                       <span className={styles.navIcon}><SubIcon size={16} /></span>
                       {sub.label[lang]}
                       {sub.id === 'performance' && perfAlertCount > 0 && (
@@ -659,6 +684,11 @@ export default function Home() {
           {(pullDelta > 0 || refreshing) && (
             <div className={styles.pullIndicator} style={{ transform: `translateY(${refreshing ? 0 : pullDelta - 48}px)` }}>
               <div className={styles.pullSpinner} style={{ opacity: refreshing ? 1 : pullDelta / PULL_THRESHOLD }} />
+              {pullDelta >= PULL_THRESHOLD && !refreshing && (
+                <div className={styles.pullLabel}>
+                  {lang === 'ja' ? 'リリースして更新' : 'Release to refresh'}
+                </div>
+              )}
             </div>
           )}
           {/* Mobile calendar sub-nav strip */}
@@ -669,7 +699,8 @@ export default function Home() {
                 return (
                   <button key={sub.id}
                     className={`${styles.calSubBtn} ${nav === sub.id ? styles.calSubBtnActive : ''}`}
-                    onClick={() => navigate(sub.id)}>
+                    onClick={() => navigate(sub.id)}
+                    aria-current={nav === sub.id ? 'page' : undefined}>
                     <SubIcon size={15} />
                     {sub.label[lang]}
                   </button>
@@ -685,7 +716,8 @@ export default function Home() {
                 return (
                   <button key={sub.id}
                     className={`${styles.calSubBtn} ${nav === sub.id ? styles.calSubBtnActive : ''}`}
-                    onClick={() => navigate(sub.id)}>
+                    onClick={() => navigate(sub.id)}
+                    aria-current={nav === sub.id ? 'page' : undefined}>
                     <SubIcon size={15} />
                     {sub.label[lang]}
                   </button>
@@ -729,7 +761,8 @@ export default function Home() {
                 if (item.id === 'chat') setUnreadChat(0);
                 setSectionUnread(prev => ({ ...prev, [item.id]: 0 }));
               }
-            }}>
+            }}
+            aria-current={(nav===item.id || (item.id==='players' && PLAYERS_IDS.has(nav))) ? 'page' : undefined}>
             <span className={styles.mobileNavIconWrap}>
               <MIcon size={26} />
               {item.id === 'performance' && perfAlertCount > 0 && (
@@ -809,7 +842,7 @@ export default function Home() {
             <div className={styles.idleTitle}>
               {lang === 'ja' ? 'まだいますか？' : 'Still there?'}
             </div>
-            <div className={styles.idleMsg}>
+            <div className={styles.idleMsg} role="status" aria-live="polite" aria-atomic="true">
               {lang === 'ja'
                 ? `操作がないため、${idleCountdown}秒後に自動ログアウトします。`
                 : `You'll be logged out in ${idleCountdown}s due to inactivity.`}

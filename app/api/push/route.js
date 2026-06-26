@@ -6,7 +6,10 @@ import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req) {
-  const { userIds, title, body, url = '/', tag, prefKey } = await req.json();
+  try {
+  const reqBody = await req.json().catch(() => null);
+  if (!reqBody) return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { userIds, title, body, url = '/', tag, prefKey } = reqBody;
   if (!userIds?.length || !title) return Response.json({ error: 'Missing fields' }, { status: 400 });
 
   const vapidPublic  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -76,4 +79,8 @@ export async function POST(req) {
   const sent   = results.filter(r => r.status === 'fulfilled').length;
   const failed = results.filter(r => r.status === 'rejected').length;
   return Response.json({ sent, failed });
+  } catch (err) {
+    console.error('[push]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

@@ -270,6 +270,20 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
 
   const stepLabel = s => `${s}/${totalSteps}`;
 
+  const wellnessLabel = (v) => {
+    if (v == null) return '—';
+    if (v < 40) return lang === 'ja' ? '低い' : 'Low';
+    if (v < 60) return lang === 'ja' ? '中程度' : 'Moderate';
+    return lang === 'ja' ? '高い' : 'High';
+  };
+
+  const painLabel = (v) => {
+    if (v == null) return '—';
+    if (v < 40) return lang === 'ja' ? '軽い' : 'Mild';
+    if (v < 70) return lang === 'ja' ? '中程度' : 'Moderate';
+    return lang === 'ja' ? '強い' : 'Severe';
+  };
+
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
@@ -317,12 +331,16 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                           className={styles.slider}
                           style={{ accentColor: color }}
                           onChange={e => setScores(p => ({ ...p, [q.key]: +e.target.value }))}
+                          aria-valuetext={`${val ?? 50}, ${wellnessLabel(val)}`}
                         />
                         <span className={styles.sliderVal} style={{ color, borderColor: color }}>
                           {val ?? '—'}
                         </span>
                       </div>
                       <span className={styles.scaleLabel}>{lang === 'ja' ? '完璧' : '100'}</span>
+                    </div>
+                    <div className={styles.sliderHint} style={{ color }}>
+                      {wellnessLabel(val)}
                     </div>
                   </div>
                 );
@@ -576,11 +594,15 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                                 className={styles.slider}
                                 style={{ accentColor: color }}
                                 onChange={e => setPainLevels(p => ({ ...p, [partKey]: +e.target.value }))}
+                                aria-valuetext={`${val ?? 50}, ${painLabel(val)}`}
                               />
                               <span className={styles.sliderVal} style={{ color, borderColor: color }}>
                                 {val ?? '—'}
                               </span>
                             </div>
+                          </div>
+                          <div className={styles.sliderHint} style={{ color }}>
+                            {painLabel(val)}
                           </div>
                         );
                       })}
@@ -597,7 +619,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
               <button className={styles.submitBtn} disabled={saving || !allPartsRated} onClick={handleNextPage2}>
                 {needsPage3
                   ? (lang === 'ja' ? '次へ →' : 'Next →')
-                  : (saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit'))}
+                  : (saving ? <span className={styles.spinner} /> : (lang === 'ja' ? '送信する' : 'Submit'))}
               </button>
             </div>
           </>
@@ -650,7 +672,7 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                 ← {lang === 'ja' ? '戻る' : 'Back'}
               </button>
               <button className={styles.submitBtn} disabled={saving || !otherMessage.trim()} onClick={handleSubmit}>
-                {saving ? '…' : (lang === 'ja' ? '送信する' : 'Submit')}
+                {saving ? <span className={styles.spinner} /> : (lang === 'ja' ? '送信する' : 'Submit')}
               </button>
             </div>
           </>

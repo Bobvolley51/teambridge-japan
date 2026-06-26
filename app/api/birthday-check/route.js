@@ -29,6 +29,7 @@ function birthdayDateStr(dob, year) {
 }
 
 export async function GET(request) {
+  try {
   // Auth: Vercel cron sends Bearer CRON_SECRET automatically.
   // If CRON_SECRET is not configured, allow requests from same origin (admin UI).
   const auth   = request.headers.get('authorization') ?? '';
@@ -183,4 +184,8 @@ export async function GET(request) {
   }
 
   return Response.json({ ok: true, processed: withBirthday.length, log });
+  } catch (err) {
+    console.error('[birthday-check]', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

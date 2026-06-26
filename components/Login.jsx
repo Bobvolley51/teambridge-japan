@@ -18,6 +18,8 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
   const [reqMsg,      setReqMsg]      = useState('');
   const [loading,     setLoading]     = useState(false);
   const [message,     setMessage]     = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched,     setTouched]     = useState({});
 
   const t = {
     en: {
@@ -76,6 +78,39 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
   };
 
   const switchMode = (next) => { setMode(next); setMessage(null); };
+
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field);
+  };
+
+  const validateField = (field) => {
+    const errors = { ...fieldErrors };
+    switch (field) {
+      case 'reqPassword':
+        if (reqPassword.length < 8) {
+          errors.reqPassword = t.passwordShort;
+        } else {
+          delete errors.reqPassword;
+        }
+        break;
+      case 'reqConfirm':
+        if (reqPassword && reqConfirm !== reqPassword) {
+          errors.reqConfirm = t.passwordMismatch;
+        } else {
+          delete errors.reqConfirm;
+        }
+        break;
+      case 'username':
+        if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+          errors.username = t.usernameInvalid;
+        } else {
+          delete errors.username;
+        }
+        break;
+    }
+    setFieldErrors(errors);
+  };
 
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
@@ -154,7 +189,11 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
                 <label className={styles.label}>{t.usernameLabel}</label>
                 <input className={styles.input} type="text" value={username}
                   onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))}
+                  onBlur={() => handleBlur('username')}
                   placeholder={t.usernamePlaceholder} autoComplete="username" />
+                {touched.username && fieldErrors.username && (
+                  <div className={styles.fieldError}>{fieldErrors.username}</div>
+                )}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>{t.email}</label>
@@ -165,14 +204,22 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
               <div className={styles.field}>
                 <label className={styles.label}>{t.newPassword}</label>
                 <input className={styles.input} type="password" value={reqPassword}
-                  onChange={e => setReqPassword(e.target.value)} required
+                  onChange={e => setReqPassword(e.target.value)}
+                  onBlur={() => handleBlur('reqPassword')} required
                   placeholder="••••••••" autoComplete="new-password" />
+                {touched.reqPassword && fieldErrors.reqPassword && (
+                  <div className={styles.fieldError}>{fieldErrors.reqPassword}</div>
+                )}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>{t.confirmPassword}</label>
                 <input className={styles.input} type="password" value={reqConfirm}
-                  onChange={e => setReqConfirm(e.target.value)} required
+                  onChange={e => setReqConfirm(e.target.value)}
+                  onBlur={() => handleBlur('reqConfirm')} required
                   placeholder="••••••••" autoComplete="new-password" />
+                {touched.reqConfirm && fieldErrors.reqConfirm && (
+                  <div className={styles.fieldError}>{fieldErrors.reqConfirm}</div>
+                )}
               </div>
               <div className={styles.field}>
                 <textarea className={styles.textarea} value={reqMsg}
@@ -184,8 +231,8 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
                   {message.text}
                 </div>
               )}
-              <button className={styles.submitBtn} type="submit" disabled={loading || !!message?.type === 'success'}>
-                {loading ? '…' : t.sendRequest}
+              <button className={styles.submitBtn} type="submit" disabled={loading || !!message?.type === 'success'} aria-busy={loading}>
+                {loading ? <span className={styles.spinner} /> : t.sendRequest}
               </button>
             </form>
             <button className={styles.switchBtn} onClick={() => switchMode('password')}>
@@ -215,8 +262,8 @@ export default function Login({ lang: initialLang = 'en', onLangChange }) {
                   {message.text}
                 </div>
               )}
-              <button className={styles.submitBtn} type="submit" disabled={loading}>
-                {loading ? '…' : t.signIn}
+              <button className={styles.submitBtn} type="submit" disabled={loading} aria-busy={loading}>
+                {loading ? <span className={styles.spinner} /> : t.signIn}
               </button>
             </form>
 
