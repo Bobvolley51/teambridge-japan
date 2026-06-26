@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDateStr } from '@/lib/date';
 import { sendAlertDM } from '@/lib/alertDM';
@@ -585,25 +585,27 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
                         const val   = painLevels[partKey];
                         const color = painColor(val);
                         return (
-                          <div key={partKey} className={styles.partRatingRow}>
-                            <div className={styles.partRatingLabel}>{lang === 'ja' ? part.ja : part.en}</div>
-                            <div className={styles.sliderWrap} style={{ flex: 1 }}>
-                              <input
-                                type="range" min={0} max={100} step={5}
-                                value={val ?? 50}
-                                className={styles.slider}
-                                style={{ accentColor: color }}
-                                onChange={e => setPainLevels(p => ({ ...p, [partKey]: +e.target.value }))}
-                                aria-valuetext={`${val ?? 50}, ${painLabel(val)}`}
-                              />
-                              <span className={styles.sliderVal} style={{ color, borderColor: color }}>
-                                {val ?? '—'}
-                              </span>
+                          <React.Fragment key={partKey}>
+                            <div className={styles.partRatingRow}>
+                              <div className={styles.partRatingLabel}>{lang === 'ja' ? part.ja : part.en}</div>
+                              <div className={styles.sliderWrap} style={{ flex: 1 }}>
+                                <input
+                                  type="range" min={0} max={100} step={5}
+                                  value={val ?? 50}
+                                  className={styles.slider}
+                                  style={{ accentColor: color }}
+                                  onChange={e => setPainLevels(p => ({ ...p, [partKey]: +e.target.value }))}
+                                  aria-valuetext={`${val ?? 50}, ${painLabel(val)}`}
+                                />
+                                <span className={styles.sliderVal} style={{ color, borderColor: color }}>
+                                  {val ?? '—'}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className={styles.sliderHint} style={{ color }}>
-                            {painLabel(val)}
-                          </div>
+                            <div className={styles.sliderHint} style={{ color }}>
+                              {painLabel(val)}
+                            </div>
+                          </React.Fragment>
                         );
                       })}
                     </div>
