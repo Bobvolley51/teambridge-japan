@@ -285,6 +285,7 @@ export default function Dashboard({
   const [nutritionProgress, setNutritionProgress] = useState(null); // { submitted, total }
   const [rpeCounter,        setRpeCounter]        = useState([]);   // [{id,title,category,startTime,expected,submitted}]
   const [acwrAlerts,        setAcwrAlerts]        = useState([]);
+  const [sickReports,       setSickReports]       = useState([]);
   const [overlapAlerts,     setOverlapAlerts]     = useState([]);
   const [calChanges,        setCalChanges]        = useState([]);
   const [availability,      setAvailability]      = useState([]);
@@ -401,6 +402,7 @@ export default function Dashboard({
       { data: myRpeCountData },
       { data: myNutritionCountData },
       { data: nutriSubmittedData },
+      { data: sickReportData },
     ] = await Promise.all([
       // My participation events — base rows only (occurrence_date = sentinel) so recurring series are included once
       currentUserId
@@ -517,6 +519,13 @@ export default function Dashboard({
       canSeeWellness
         ? supabase.from('nutrition_entries').select('user_id').gte('meal_date', todayDateStr).lt('meal_date', tomorrowDateStr)
         : Promise.resolve({ data: [] }),
+      // Unresolved sick reports (persistent until staff resolves)
+      canSeeWellness
+        ? supabase.from('sick_reports')
+            .select('id, player_name, symptoms, temperature, wellness_date, reported_at')
+            .is('resolved_at', null)
+            .order('reported_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
     ]);
 
     // ── Events merge (recurring-aware) ──
@@ -627,6 +636,8 @@ export default function Dashboard({
       setAcwrAlerts(alerts);
     }
 
+    setSickReports(sickReportData ?? []);
+
     // Availability merge
     const avMap = Object.fromEntries((avData ?? []).map(a => [a.player_id, a]));
     const mergedAv = (playerProfiles ?? []).map(p => avMap[p.id] ?? {
@@ -665,6 +676,13 @@ export default function Dashboard({
       await supabase.from('task_dismissals')
         .upsert({ user_id: currentUserId, task_id: id }, { onConflict: 'user_id,task_id' });
     }
+  };
+
+  const resolveSickReport = async (id) => {
+    setSickReports(prev => prev.filter(r => r.id !== id));
+    await supabase.from('sick_reports')
+      .update({ resolved_at: new Date().toISOString(), resolved_by: profile?.display_name ?? 'Staff' })
+      .eq('id', id);
   };
 
   // ── #5: Inline RSVP ──────────────────────────────────────────────────────────
@@ -1132,8 +1150,8 @@ export default function Dashboard({
                 <div className={styles.cardHead}>
                   <span className={styles.cardTitle}>
                     ⚠️ {lang === 'ja' ? '健康・パフォーマンスアラート' : 'Health & Performance'}
-                    {(wellnessAlerts.length + acwrAlerts.length) > 0 && (
-                      <span className={styles.countBadge}>{wellnessAlerts.length + acwrAlerts.length}</span>
+                    {(sickReports.length + wellnessAlerts.length + acwrAlerts.length) > 0 && (
+                      <span className={styles.countBadge}>{sickReports.length + wellnessAlerts.length + acwrAlerts.length}</span>
                     )}
                   </span>
                 </div>
@@ -1192,6 +1210,37 @@ export default function Dashboard({
                       </div>
                     );
                   })}
+
+                  {/* Persistent sick reports — cleared only when staff resolves */}
+                  {sickReports.length > 0 && (
+                    <div className={styles.alertSection}>
+                      <SectionLabel>🤒 {lang === 'ja' ? '体調不良（要確認）' : 'Sick / Unwell'}</SectionLabel>
+                      {sickReports.map(r => (
+                        <div key={r.id} className={styles.alertItem}>
+                          <span className={styles.alertDot} style={{ background: '#ef4444' }} />
+                          <div style={{ flex: 1 }}>
+                            <div className={styles.alertText}>{r.player_name}</div>
+                            <div className={styles.alertSub}>
+                              {r.symptoms?.length ? r.symptoms.join(', ') : lang === 'ja' ? '症状なし' : 'No symptoms listed'}
+                              {r.temperature != null ? ` — ${r.temperature.toFixed(1)}°C` : ''}
+                              {' · '}{r.wellness_date}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => resolveSickReport(r.id)}
+                            style={{
+                              marginLeft: 8, padding: '2px 8px', fontSize: 11,
+                              border: '1px solid #10b981', borderRadius: 4,
+                              background: 'transparent', color: '#10b981', cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {lang === 'ja' ? '回復済み' : 'Resolved'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {wellnessAlerts.length === 0 && acwrAlerts.length === 0 ? (
                     <EmptyState>{lang === 'ja' ? '✓ アラートはありません。' : '✓ No alerts.'}</EmptyState>

@@ -189,6 +189,21 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       await supabase.from('wellness_body_pain').insert(painRows);
     }
 
+    // Persist illness as a sick report (stays until staff resolves it)
+    if (illness === 'yes') {
+      const symptomKeys = illnessSymptoms.map(k => {
+        const s = ILLNESS_SYMPTOMS.find(x => x.key === k);
+        return s ? s.en : k;
+      });
+      await supabase.from('sick_reports').upsert({
+        player_id:    userId,
+        player_name:  userName,
+        symptoms:     symptomKeys,
+        temperature:  tempVal != null && !isNaN(tempVal) ? tempVal : null,
+        wellness_date: today,
+      }, { onConflict: 'player_id,wellness_date' });
+    }
+
     // Notify on illness — in-app notification + push to Headcoach / Therapist / Athletic Trainer
     if (illness === 'yes') {
       const { data: recipients } = await supabase
@@ -253,12 +268,16 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
         return s ? (lang === 'ja' ? s.ja : s.en) : k;
       }).join(', ');
       const tempStr = tempVal != null && !isNaN(tempVal) ? ` — Temp: ${tempVal.toFixed(1)}°C` : '';
-      alerts.push(`🤒 Illness${symptomList ? `: ${symptomList}` : ''}${tempStr}`);
+      const illnessOtherNote = illnessOtherText.trim() ? ` — Other: ${illnessOtherText.trim()}` : '';
+      alerts.push(`🤒 Illness${symptomList ? `: ${symptomList}` : ''}${tempStr}${illnessOtherNote}`);
     }
     const highPainParts = ratedParts.filter(k => (painLevels[k] ?? 0) >= 40);
     if (highPainParts.length > 0) {
       const partList = highPainParts.map(k => `${BODY_PART_LABELS[k] ?? k} (${painLevels[k]}/100)`).join(', ');
       alerts.push(`🩹 Pain: ${partList}`);
+    }
+    if (needsPage3 && otherMessage.trim()) {
+      alerts.push(`🩹 Other (unlisted): ${otherMessage.trim()}`);
     }
     if (alerts.length > 0) {
       sendAlertDM(userId, userName, [`📋 Wellness — ${userName}`, ...alerts]).catch(() => {});
