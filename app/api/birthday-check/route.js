@@ -51,7 +51,7 @@ export async function GET(request) {
   // ── 1. Load all profiles with a date_of_birth ──────────────────────────────
   const { data: profiles, error: profErr } = await db
     .from('profiles')
-    .select('id, display_name, first_name, last_name, date_of_birth, role');
+    .select('id, display_name, first_name, last_name, email, date_of_birth, role');
 
   if (profErr) return Response.json({ error: profErr.message }, { status: 500 });
 
@@ -164,6 +164,7 @@ export async function GET(request) {
         .from('notifications')
         .select('id')
         .eq('type', 'birthday')
+        .eq('title', `🎂 ${name} hat heute Geburtstag! (${age})`)
         .gte('created_at', `${todayStr}T00:00:00`)
         .in('user_id', headcoachIds)
         .limit(1);
