@@ -102,6 +102,8 @@ function countdown(startTime, lang) {
   return lang === 'ja' ? `${h}時間${m}分後` : `in ${h}h ${m}m`;
 }
 
+// Organisation Staff can see availability status/reason but not sickness details —
+// WELLNESS_ALERT_ROLES (used to gate sick_reports data) intentionally excludes this role.
 const WELLNESS_ALERT_ROLES      = ['GM / Director', 'Headcoach', 'Coaching Staff', 'Athletic Trainer', 'Therapist'];
 const AVAILABILITY_VIEWER_ROLES = ['GM / Director', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff'];
 
@@ -745,7 +747,8 @@ export default function Dashboard({
   const canSeeWellness     = WELLNESS_ALERT_ROLES.includes(profile?.role);
   const canSeeAvailability = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
   const avIssues           = availability.filter(p => p.status !== 'full');
-  const sickByPlayerId     = new Map(sickReports.map(r => [r.player_id, r]));
+  const sickByPlayerId     = new Map();
+  sickReports.forEach(r => { if (!sickByPlayerId.has(r.player_id)) sickByPlayerId.set(r.player_id, r); });
   const avFull             = availability.filter(p => p.status === 'full').length;
   const isPlayer           = profile?.role === 'Player';
 
