@@ -101,7 +101,11 @@ export default function Home() {
   const [lang,          setLang]          = useState(() =>
     (typeof window !== 'undefined' && localStorage.getItem('tb_lang')) || 'en'
   );
-  const navigate = (id) => { setNav(id); navRef.current = id; localStorage.setItem('tb_nav', id); };
+  const [medicalDeepLinkPlayer, setMedicalDeepLinkPlayer] = useState(null);
+  const navigate = (id, payload) => {
+    setNav(id); navRef.current = id; localStorage.setItem('tb_nav', id);
+    setMedicalDeepLinkPlayer(id === 'medical' && payload?.playerName ? payload.playerName : null);
+  };
 
   const [calGroupOpen,     setCalGroupOpen]     = useState(() =>
     ['calendar', 'tasks', 'feed', 'travel'].includes(
@@ -736,7 +740,7 @@ export default function Home() {
           {nav==='wellness'     && canWellness    && <WellnessDashboard    lang={lang} profile={profile} />}
           {nav==='nutrition'    && canNutrition   && <NutritionDashboard   lang={lang} profile={profile} onBadgeCount={setNutritionBadge} />}
           {nav==='performance'  && canPerformance && <PerformanceDashboard lang={lang} profile={profile} />}
-          {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} />}
+          {nav==='medical'      && canMedical     && <MedicalDashboard     lang={lang} profile={profile} currentUserName={displayName} deepLinkPlayer={medicalDeepLinkPlayer} />}
           {nav==='admin'        && isAdmin        && <RoleManager          lang={lang} currentUserId={user.id} currentUserRole={profile?.role} isSuperAdmin={profile?.is_super_admin === true} isAdminUser={isAdminUser} />}
         </main>
       </div>

@@ -464,8 +464,8 @@ function BodyMap({ medStatusMap, wellnessCounts, lang }) {
 
 // ── Player Pain Card ──────────────────────────────────────────────────────────
 
-function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTherapist, onEditRecord, onPushRecord }) {
-  const [open, setOpen] = useState(false);
+function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTherapist, onEditRecord, onPushRecord, cardId, autoOpen }) {
+  const [open, setOpen] = useState(!!autoOpen);
 
   const avStatus = availability?.status ?? 'full';
   const avCfg = STATUS_CFG[avStatus] ?? STATUS_CFG.full;
@@ -492,7 +492,7 @@ function PlayerPainCard({ player, painRows, medRecords, availability, lang, isTh
   if (!hasConcern) return null; // Only show players with something to report
 
   return (
-    <div className={`${styles.painCard} ${activeRecs.length > 0 ? styles.painCardActive : monitorRecs.length > 0 ? styles.painCardMonitor : styles.painCardPain}`}>
+    <div id={cardId} className={`${styles.painCard} ${activeRecs.length > 0 ? styles.painCardActive : monitorRecs.length > 0 ? styles.painCardMonitor : styles.painCardPain}`}>
       <button className={styles.painCardHead} onClick={() => setOpen(o => !o)}>
         <div className={styles.painCardLeft}>
           <span className={styles.painCardName}>{player.player_name}</span>
@@ -677,7 +677,7 @@ const THERAPIST_ROLES = ['Therapist', 'Athletic Trainer'];
 const SHARED_ROLES    = ['Therapist', 'Headcoach', 'Athletic Trainer', 'GM / Director', 'Coaching Staff'];
 const POSITIONS       = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
 
-export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '' }) {
+export default function MedicalDashboard({ lang = 'en', profile, currentUserName = '', deepLinkPlayer = null }) {
   const toast        = useToast();
   const isTherapist  = THERAPIST_ROLES.includes(profile?.role);
   const canViewShared = SHARED_ROLES.includes(profile?.role);
@@ -751,6 +751,16 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
   }, [isTherapist]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (deepLinkPlayer) setTab('pain');
+  }, [deepLinkPlayer]);
+
+  useEffect(() => {
+    if (!deepLinkPlayer || tab !== 'pain' || loading) return;
+    const el = document.getElementById(`paincard-${encodeURIComponent(deepLinkPlayer)}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [deepLinkPlayer, tab, loading]);
 
   if (!canViewShared) return (
     <div style={{ padding: 32, color: '#6b7280' }}>
@@ -1014,6 +1024,8 @@ export default function MedicalDashboard({ lang = 'en', profile, currentUserName
                           isTherapist={isTherapist}
                           onEditRecord={setRecForm}
                           onPushRecord={pushRecordToCoaches}
+                          cardId={`paincard-${encodeURIComponent(name)}`}
+                          autoOpen={name === deepLinkPlayer}
                         />
                       );
                     })}

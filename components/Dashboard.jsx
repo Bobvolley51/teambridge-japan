@@ -1128,7 +1128,7 @@ export default function Dashboard({
                         const label = isOut ? (lang === 'ja' ? '練習不可' : 'Out') : (lang === 'ja' ? '制限あり' : 'Limited');
                         const sick  = sickByPlayerId.get(p.player_id);
                         return (
-                          <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical')} style={{ cursor: 'pointer' }}>
+                          <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical', { playerName: p.player_name })} style={{ cursor: 'pointer' }}>
                             <span className={styles.alertDot} style={{ background: color }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div className={styles.alertText}>{p.player_name}</div>
