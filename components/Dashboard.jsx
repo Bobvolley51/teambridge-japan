@@ -522,7 +522,7 @@ export default function Dashboard({
       // Unresolved sick reports (persistent until staff resolves)
       canSeeWellness
         ? supabase.from('sick_reports')
-            .select('id, player_name, symptoms, temperature, wellness_date, reported_at')
+            .select('id, player_id, player_name, symptoms, temperature, wellness_date, reported_at')
             .is('resolved_at', null)
             .order('reported_at', { ascending: false })
         : Promise.resolve({ data: [] }),
@@ -745,6 +745,7 @@ export default function Dashboard({
   const canSeeWellness     = WELLNESS_ALERT_ROLES.includes(profile?.role);
   const canSeeAvailability = AVAILABILITY_VIEWER_ROLES.includes(profile?.role);
   const avIssues           = availability.filter(p => p.status !== 'full');
+  const sickByPlayerId     = new Map(sickReports.map(r => [r.player_id, r]));
   const avFull             = availability.filter(p => p.status === 'full').length;
   const isPlayer           = profile?.role === 'Player';
 
@@ -1122,12 +1123,19 @@ export default function Dashboard({
                         const color = isOut ? '#dc2626' : '#d97706';
                         const bg    = isOut ? '#fee2e2' : '#fef3c7';
                         const label = isOut ? (lang === 'ja' ? '練習不可' : 'Out') : (lang === 'ja' ? '制限あり' : 'Limited');
+                        const sick  = sickByPlayerId.get(p.player_id);
                         return (
                           <div key={p.player_id} className={styles.alertItem} onClick={() => onNavigate('medical')} style={{ cursor: 'pointer' }}>
                             <span className={styles.alertDot} style={{ background: color }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div className={styles.alertText}>{p.player_name}</div>
                               {p.reason && <div className={styles.alertSub}>{p.reason}</div>}
+                              {sick && (
+                                <div className={styles.alertSub} style={{ color: '#b91c1c' }}>
+                                  🤒 {sick.symptoms?.length ? sick.symptoms.join(', ') : (lang === 'ja' ? '症状なし' : 'No symptoms listed')}
+                                  {sick.temperature != null ? ` — ${sick.temperature.toFixed(1)}°C` : ''}
+                                </div>
+                              )}
                             </div>
                             <span className={styles.avStatusPill} style={{ color, background: bg }}>{label}</span>
                           </div>
