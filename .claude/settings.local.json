@@ -1,4 +1,20 @@
 {
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NonInteractive -File \".claude/pre-build-lint.ps1\"",
+            "shell": "powershell",
+            "timeout": 60,
+            "statusMessage": "Lint check before build..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\Git\\\\cmd;C:\\\\Users\\\\Bob\\\\AppData\\\\Roaming\\\\npm\"; cd \"c:\\\\Users\\\\Bob\\\\Dropbox\\\\Bob\\\\Volleyball\\\\Teambridge Japan\\\\teambridge-japan\"; vercel --prod 2>&1 | head -40)",

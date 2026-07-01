@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { computeEWMA } from '@/lib/acwr';
+import { playerLabel as formatPlayerLabel } from '@/lib/usePlayerProfiles';
 import styles from './PerformanceDashboard.module.css';
 import VertDashboard from './VertDashboard';
 
@@ -66,12 +67,9 @@ export default function PerformanceDashboard({ lang, profile }) {
       });
   }, []);
 
-  // Full Latin name + jersey from profile; falls back to stored user_name
+  // display_name + jersey from profile; falls back to stored user_name
   function playerLabel(userId, fallbackName) {
-    const p = playerProfiles[userId];
-    if (!p) return fallbackName ?? '—';
-    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || fallbackName;
-    return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
+    return formatPlayerLabel(playerProfiles[userId], fallbackName);
   }
 
   function playerPosition(userId) {

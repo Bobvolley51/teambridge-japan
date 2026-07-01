@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './VertDashboard.module.css';
+import { playerLabel as formatPlayerLabel } from '@/lib/usePlayerProfiles';
 
 // Thresholds from VERT legend (OH/M volleyball) — avg-mode fields only
 const T = {
@@ -92,7 +93,7 @@ export default function VertDashboard({ lang, profile }) {
   const canUpload = ['Headcoach', 'Athletic Trainer', 'Coaching Staff', 'GM / Director'].includes(profile?.role);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, position')
+    supabase.from('profiles').select('id, display_name, position, jersey_number')
       .eq('role', 'Player').order('display_name')
       .then(({ data }) => setPlayers(data || []));
     loadSessions();
@@ -284,7 +285,7 @@ export default function VertDashboard({ lang, profile }) {
   // Per-session rows (for 'sessions' mode)
   const sessionRows = filtered.map(s => {
     const player = players.find(pl => pl.id === s.user_id);
-    return { ...s, name: player?.display_name || s.vert_name || '—' };
+    return { ...s, name: formatPlayerLabel(player, s.vert_name || '—') };
   });
 
   // Averaged rows (for 'avg' mode)
@@ -297,7 +298,7 @@ export default function VertDashboard({ lang, profile }) {
   const avgRows = Object.values(byPlayer).map(p => {
     const player = players.find(pl => pl.id === p.user_id);
     return {
-      name:     player?.display_name || p.vert_name || '—',
+      name:     formatPlayerLabel(player, p.vert_name || '—'),
       position: player?.position || '',
       count:    p.rows.length,
       ...Object.fromEntries(NUMERIC_FIELDS.map(f => [f, avgField(p.rows, f)])),
@@ -549,7 +550,7 @@ export default function VertDashboard({ lang, profile }) {
           const key = s.user_id || s.vert_name;
           if (!trendMap[key]) {
             const pl = players.find(p => p.id === s.user_id);
-            trendMap[key] = { name: pl?.display_name || s.vert_name || '—', position: pl?.position || '', sessions: [] };
+            trendMap[key] = { name: formatPlayerLabel(pl, s.vert_name || '—'), position: pl?.position || '', sessions: [] };
           }
           trendMap[key].sessions.push(s);
         }
@@ -678,7 +679,7 @@ export default function VertDashboard({ lang, profile }) {
                 weekSet.add(week);
                 if (!playerWeeks[s.user_id]) {
                   const pl = players.find(p => p.id === s.user_id);
-                  playerWeeks[s.user_id] = { name: pl?.display_name || s.vert_name || '—', data: {} };
+                  playerWeeks[s.user_id] = { name: formatPlayerLabel(pl, s.vert_name || '—'), data: {} };
                 }
                 playerWeeks[s.user_id].data[week] = (playerWeeks[s.user_id].data[week] || 0) + (s.jumps || 0);
               }
@@ -921,7 +922,7 @@ export default function VertDashboard({ lang, profile }) {
                     }
                     const gamePlayers = [...playerSet].map(uid => {
                       const pl = players.find(p => p.id === uid);
-                      return { uid, name: pl?.display_name || uid };
+                      return { uid, name: formatPlayerLabel(pl, uid) };
                     }).sort((a, b) => a.name.localeCompare(b.name));
 
                     return (
@@ -1083,7 +1084,7 @@ export default function VertDashboard({ lang, profile }) {
                         value={row.user_id}
                         onChange={e => updateRow(sIdx, rIdx, 'user_id', e.target.value)}>
                         <option value="">— unlinked —</option>
-                        {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+                        {players.map(p => <option key={p.id} value={p.id}>{formatPlayerLabel(p)}</option>)}
                       </select>
                     </td>
                     {NUMERIC_FIELDS.map(field => (

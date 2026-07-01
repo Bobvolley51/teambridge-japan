@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDateStr, toJstDateStart, dateToYmd } from '@/lib/date';
+import { playerLabel as formatPlayerLabel } from '@/lib/usePlayerProfiles';
 import AvatarPhoto from './AvatarPhoto';
 import styles from './WellnessDashboard.module.css';
 
@@ -301,12 +302,9 @@ export default function WellnessDashboard({ lang }) {
     return m;
   }, [profiles]);
 
-  // Returns "#jersey FirstName LastName" for a display_name (nickname) key
+  // Returns "#jersey DisplayName" for a display_name (nickname) key
   function nameLabel(nickname) {
-    const p = profileByNickname[nickname];
-    if (!p) return nickname ?? '—';
-    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || nickname;
-    return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
+    return formatPlayerLabel(profileByNickname[nickname], nickname);
   }
 
   const bwMap = {};
@@ -346,7 +344,9 @@ export default function WellnessDashboard({ lang }) {
     if (!playerDayMap[r.user_name][r.response_date]) playerDayMap[r.user_name][r.response_date] = [];
     playerDayMap[r.user_name][r.response_date].push(r.score);
   }
-  const heatmapPlayers = Object.keys(playerDayMap).sort((a, b) => {
+  const heatmapPlayers = Object.keys(playerDayMap)
+    .filter(name => !positionFilter || profileByNickname[name]?.position === positionFilter)
+    .sort((a, b) => {
     const aAvg = avg(Object.values(playerDayMap[a]).flat()) ?? 100;
     const bAvg = avg(Object.values(playerDayMap[b]).flat()) ?? 100;
     return aAvg - bAvg;

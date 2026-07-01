@@ -1032,9 +1032,19 @@ export default function Calendar({ lang = 'en', currentUserName = '', role = 'Pl
       events.flatMap(ev => [ev.title, ev.location, ev.description]).filter(Boolean)
     )];
     if (!unique.length) { setTitleMap(new Map()); return; }
-    Promise.all(unique.map(async t => [t, await translate(t, lang)]))
-      .then(pairs => { if (!cancelled) setTitleMap(new Map(pairs)); });
-    return () => { cancelled = true; };
+    let retryTimer;
+    const run = async () => {
+      const pairs = await Promise.all(unique.map(async t => [t, await translate(t, lang)]));
+      if (cancelled) return;
+      const successPairs = pairs.filter(([, v]) => v !== null);
+      setTitleMap(new Map(successPairs));
+      // If any translations failed (quota), retry in 10 minutes
+      if (successPairs.length < pairs.length) {
+        retryTimer = setTimeout(run, 10 * 60 * 1000);
+      }
+    };
+    run();
+    return () => { cancelled = true; clearTimeout(retryTimer); };
   }, [events, lang]);
 
   const tTitle = useCallback(

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/lib/toast';
 import { useTranslated } from '@/lib/translate';
+import { playerLabel as formatPlayerLabel } from '@/lib/usePlayerProfiles';
 import AvatarPhoto from './AvatarPhoto';
 import styles from './MedicalDashboard.module.css';
 
@@ -237,7 +238,7 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
   const handlePlayerChange = (e) => {
     const p = players.find(pl => pl.id === e.target.value);
     setPlayerId(e.target.value);
-    setPlayerName([p?.first_name, p?.last_name].filter(Boolean).join(' ') || p?.display_name || e.target.value);
+    setPlayerName(p?.display_name || [p?.first_name, p?.last_name].filter(Boolean).join(' ') || e.target.value);
   };
 
   const submit = async (e) => {
@@ -274,7 +275,7 @@ function RecordForm({ record, players, lang, currentUserName, onSave, onClose })
                 <option value="">{lang === 'ja' ? '選択してください' : 'Select player'}</option>
                 {players.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.jersey_number != null ? `#${p.jersey_number} ` : ''}{[p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name}
+                    {formatPlayerLabel(p)}
                   </option>
                 ))}
               </select>

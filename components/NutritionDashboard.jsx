@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toJstDate, dateToYmd } from '@/lib/date';
 import { useTranslated } from '@/lib/translate';
+import { playerLabel as playerFullLabel } from '@/lib/usePlayerProfiles';
 import styles from './NutritionDashboard.module.css';
 
 const MEALS = [
@@ -21,11 +22,6 @@ const RATINGS = [
 
 const TRAINER_ROLES = ['Athletic Trainer', 'Therapist', 'Headcoach', 'Coaching Staff', 'GM / Director'];
 const POSITIONS = ['Setter', 'Outside Hitter', 'Opposite', 'Middle Blocker', 'Libero'];
-
-function playerFullLabel(p) {
-  const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.display_name || '—';
-  return p.jersey_number != null ? `#${p.jersey_number} ${name}` : name;
-}
 
 function getLast14Days() {
   const days = [];
