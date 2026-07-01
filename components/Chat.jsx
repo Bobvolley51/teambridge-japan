@@ -96,8 +96,7 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
                    onReply, onReact, onEdit, onDelete, onPin, replyMsg, editingId, editText,
                    onEditChange, onEditSave, onEditCancel, isFirst, isChannel,
                    receiptStatus, isOnline, canPin }) {
-  const [jaText, setJaText] = useState(null);
-  const [enText, setEnText] = useState(null);
+  const [translatedText, setTranslatedText] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -132,10 +131,10 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
   useEffect(() => {
     if (!showTranslations) return;
     let cancelled = false;
-    Promise.all([translate(msg.content, 'ja'), translate(msg.content, 'en')])
-      .then(([ja, en]) => { if (!cancelled) { setJaText(ja); setEnText(en); } });
+    translate(msg.content, uiLang)
+      .then(t => { if (!cancelled) setTranslatedText(t); });
     return () => { cancelled = true; };
-  }, [msg.content, showTranslations]);
+  }, [msg.content, uiLang, showTranslations]);
 
   const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
   const isEditing = editingId === msg.id;
@@ -247,10 +246,12 @@ function Message({ msg, isMe, uiLang, avatarUrl, senderName, msgReactions, curre
             <button className={styles.translateBtn} onClick={() => setShowTranslations(v => !v)}>
               {showTranslations ? (uiLang === 'ja' ? '翻訳を隠す' : 'Hide') : (uiLang === 'ja' ? '翻訳' : 'Translate')}
             </button>
-            {showTranslations && (
+            {showTranslations && translatedText && translatedText !== msg.content && (
               <div className={styles.translations}>
-                {enText && enText !== msg.content && <div className={styles.translation}><span className={styles.translationLabel}>EN:</span>{enText}</div>}
-                {jaText && jaText !== msg.content && <div className={styles.translation}><span className={styles.translationLabel}>日本語:</span>{jaText}</div>}
+                <div className={styles.translation}>
+                  <span className={styles.translationLabel}>{uiLang === 'ja' ? '日本語:' : 'EN:'}</span>
+                  {translatedText}
+                </div>
               </div>
             )}
           </>
