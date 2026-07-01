@@ -50,14 +50,17 @@ missing data going forward.
    Goal: exactly one Pain & Medical card per player, consolidating all their
    records regardless of historical name spelling.
 
-4. **Propagate the shared `playerLabel` helper (`lib/usePlayerProfiles.js`) to the
-   remaining files** that still build name labels ad hoc instead of using it:
-   `Calendar.jsx`, `Chat.jsx`, `Dashboard.jsx`, `Travel.jsx`, `Tasks.jsx`,
-   `RoleManager.jsx`, `Tactics.jsx`, `UserMenu.jsx`, `GlobalSearch.jsx`,
-   `app/page.jsx`, `app/api/birthday-check/route.js`, `app/api/invite/route.js`.
-   Jersey-number suffix only applied in `RoleManager.jsx` and the Dashboard player
-   list, per scope decision above; everywhere else keeps plain `display_name` (with
-   existing email fallback where present).
+4. **Fix the two remaining files with the wrong name-priority bug.** A closer read
+   of `Calendar.jsx`, `Dashboard.jsx`, `Travel.jsx`, `Tasks.jsx`, `RoleManager.jsx`,
+   `Tactics.jsx`, `UserMenu.jsx`, `GlobalSearch.jsx`, and `app/page.jsx` shows they
+   already use `display_name` as primary (with an `email` fallback) — no change
+   needed there. Only `Chat.jsx` (`profileFullName`, used for avatar initials +
+   search matching) and `app/api/birthday-check/route.js` (`fullName`, used for
+   birthday event titles) still prefer `first_name`+`last_name` over `display_name`.
+   Flip both to `display_name`-first.
+   `RoleManager.jsx`'s user list already shows a jersey badge for players — no
+   change needed there either; add the jersey number only to the Dashboard
+   player-availability card, per scope decision above.
    (Already done in an earlier pass: `PerformanceDashboard.jsx`, `WellnessDashboard.jsx`,
    `MedicalDashboard.jsx` display labels, `NutritionDashboard.jsx`, `VertDashboard.jsx`.)
 
