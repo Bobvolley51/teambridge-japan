@@ -4,7 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const VALID_ROLES = new Set(['Player', 'Coach', 'Headcoach', 'Staff', 'Supporter']);
+const VALID_ROLES = new Set(['GM', 'Headcoach', 'Athletic Trainer', 'Therapist', 'Coaching Staff', 'Organisation Staff', 'Player']);
 
 export async function POST(req) {
   try {
