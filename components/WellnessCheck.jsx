@@ -204,6 +204,25 @@ export default function WellnessCheck({ userId, userName, lang, onComplete }) {
       }, { onConflict: 'player_id,wellness_date' });
     }
 
+    // Auto-set availability to Out on illness — unless already Out, which
+    // means an existing injury reason is in place and must not be disturbed.
+    if (illness === 'yes') {
+      const { data: currentAvail } = await supabase
+        .from('player_availability')
+        .select('status')
+        .eq('player_id', userId)
+        .maybeSingle();
+      if (!currentAvail || currentAvail.status !== 'out') {
+        await supabase.from('player_availability').upsert({
+          player_id:   userId,
+          player_name: userName,
+          status:      'out',
+          updated_by:  'Wellness Check (auto)',
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'player_id' });
+      }
+    }
+
     // Notify on illness — in-app notification + push to Headcoach / Therapist / Athletic Trainer
     if (illness === 'yes') {
       const { data: recipients } = await supabase
